@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Implement `RemoveCassaforte.groovy` (standalone Jenkins script) and `PuliziaAmbienti.groovy` (DBB task) to clean ISP cassaforte libraries during the build pipeline.
+**Goal:** Implement `PuliziaCassaforte.groovy` (standalone Jenkins script) and `PuliziaPostBuild.groovy` (DBB task) to clean ISP cassaforte libraries during the build pipeline.
 
 **Architecture:** A thin abstraction layer (`ZosFileOps` trait) decouples business logic from z/OS platform APIs. Business logic lives in pure-Groovy classes with no IBM imports; DBB wrappers are thin adapters. Local development and tests run with `LocalFileOps` (java.nio + `/tmp/zos-sim/`); mainframe execution uses `ZosFileOpsUSS` (ZFile/BPXWDYN).
 
@@ -44,8 +44,8 @@ scripts/
 ├── build-data/
 │   ├── stage-map.csv                # map layer operativo + build environment to stage name
 │   └── rules.csv                    # Deployed deletion rules (ISP-provided)
-├── RemoveCassaforte.groovy          # Standalone entry point (Jenkins, groovyz)
-└── PuliziaAmbienti.groovy           # DBB task wrapper (@BaseScript TaskScript)
+├── PuliziaCassaforte.groovy          # Standalone entry point (Jenkins, groovyz)
+└── PuliziaPostBuild.groovy           # DBB task wrapper (@BaseScript TaskScript)
 ```
 
 ---
@@ -1077,10 +1077,10 @@ git commit -m "feat: PrevEnvCleanLogic — DELETE_PREV_ENV_AFTER_BUILD algorithm
 
 ---
 
-## Task 11: RemoveCassaforte.groovy (standalone entry point)
+## Task 11: PuliziaCassaforte.groovy (standalone entry point)
 
 **Files:**
-- Create: `scripts/RemoveCassaforte.groovy`
+- Create: `scripts/PuliziaCassaforte.groovy`
 - Create: `scripts/build-data/rules.csv` (placeholder — overwritten by ISP deployment)
 
 - [ ] **Step 1: Create placeholder rules file**
@@ -1092,14 +1092,14 @@ git commit -m "feat: PrevEnvCleanLogic — DELETE_PREV_ENV_AFTER_BUILD algorithm
 # %CPYCOB*;LTM00.D9P${C1STAGE}.PE000.LING.COB@@@@@.@@.COPY;NO
 ```
 
-- [ ] **Step 2: Implement RemoveCassaforte.groovy**
+- [ ] **Step 2: Implement PuliziaCassaforte.groovy**
 
 ```groovy
-// scripts/RemoveCassaforte.groovy
-// Invocation: groovyz -cp lib:tasks RemoveCassaforte.groovy <file-lista> <build-group> <environment>
+// scripts/PuliziaCassaforte.groovy
+// Invocation: groovyz -cp lib:tasks PuliziaCassaforte.groovy <file-lista> <build-group> <environment>
 
 if (args.size() < 3) {
-    System.err.println "Usage: RemoveCassaforte.groovy <file-lista> <build-group> <environment>"
+    System.err.println "Usage: PuliziaCassaforte.groovy <file-lista> <build-group> <environment>"
     System.exit(1)
 }
 
@@ -1153,7 +1153,7 @@ new File(listFile).eachLine { raw ->
     }
 }
 
-println "RemoveCassaforte: processed=$processed errors=$errors"
+println "PuliziaCassaforte: processed=$processed errors=$errors"
 if (errors > 0) System.exit(1)
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -1188,31 +1188,31 @@ Edit the script temporarily: replace `new ZosFileOpsUSS()` with `new LocalFileOp
 ```bash
 echo "C,/dbb/DEE/IBM/yn_r_01_ato_r1/src/cobol/batch/pgmcobol.cbl" > /tmp/test-lista.txt
 cd scripts
-groovy -cp lib:tasks RemoveCassaforte.groovy /tmp/test-lista.txt yn_r_01_ato_r1 ATO
+groovy -cp lib:tasks PuliziaCassaforte.groovy /tmp/test-lista.txt yn_r_01_ato_r1 ATO
 ```
 
-Expected: `RemoveCassaforte: processed=1 errors=0`
+Expected: `PuliziaCassaforte: processed=1 errors=0`
 
 Revert to `ZosFileOpsUSS()` before committing.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add scripts/RemoveCassaforte.groovy scripts/build-data/rules.csv
-git commit -m "feat: RemoveCassaforte.groovy — standalone Jenkins entry point for C/S actions"
+git add scripts/PuliziaCassaforte.groovy scripts/build-data/rules.csv
+git commit -m "feat: PuliziaCassaforte.groovy — standalone Jenkins entry point for C/S actions"
 ```
 
 ---
 
-## Task 12: PuliziaAmbienti.groovy (DBB task wrapper)
+## Task 12: PuliziaPostBuild.groovy (DBB task wrapper)
 
 **Files:**
-- Create: `scripts/PuliziaAmbienti.groovy`
+- Create: `scripts/PuliziaPostBuild.groovy`
 
 - [ ] **Step 1: Implement**
 
 ```groovy
-// scripts/PuliziaAmbienti.groovy
+// scripts/PuliziaPostBuild.groovy
 // DBB task wrapper — invoked by DBB Language pipeline as type:task step.
 // Required TaskVariables: MEMBER, FILE_EXT, CLI_BUILDENV, CLI_BUILDGROUP
 // Optional TaskVariables: C1SYSTEM (defaults to derivation from build group)
@@ -1240,7 +1240,7 @@ def prevClean   = new PrevEnvCleanLogic(deleteLogic: deleteLogic)
 
 def count = prevClean.execute(sourcePath, fileExt, environment, system, buildGroup)
 
-println "PuliziaAmbienti: env=$environment predecessor=${new EnvironmentChain().getPredecessor(environment)} deleted=$count"
+println "PuliziaPostBuild: env=$environment predecessor=${new EnvironmentChain().getPredecessor(environment)} deleted=$count"
 
 return 0   // RC 0 = success; DBB requires Integer return
 ```
@@ -1252,8 +1252,8 @@ The DBB framework emits `BGZZB0043W` and defaults to RC 0 if the script returns 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add scripts/PuliziaAmbienti.groovy
-git commit -m "feat: PuliziaAmbienti.groovy — DBB task wrapper for DELETE_PREV_ENV_AFTER_BUILD"
+git add scripts/PuliziaPostBuild.groovy
+git commit -m "feat: PuliziaPostBuild.groovy — DBB task wrapper for DELETE_PREV_ENV_AFTER_BUILD"
 ```
 
 ---
@@ -1364,8 +1364,8 @@ git commit -m "feat: ZosFileOpsUSS — mainframe ZFile/BPXWDYN implementation"
 | # | Question | Where it matters |
 |---|----------|-----------------|
 | 1 | Exact `C1STAGE` values per (environment, layer) — current values in `EnvironmentChain.STAGE_BY_ENV` are placeholders | `EnvironmentChain.groovy` |
-| 2 | `C1SYSTEM` derivation from build group / repository name | `RemoveCassaforte.groovy` `extractSystem()`, `PuliziaAmbienti.groovy` |
-| 3 | File extension → 8-char ISP type code mapping | `RemoveCassaforte.groovy` `resolveFileType()` |
-| 4 | DBB build-result map client API to replace `LocalBuildMapClient` on USS | `RemoveCassaforte.groovy`, `PuliziaAmbienti.groovy` |
+| 2 | `C1SYSTEM` derivation from build group / repository name | `PuliziaCassaforte.groovy` `extractSystem()`, `PuliziaPostBuild.groovy` |
+| 3 | File extension → 8-char ISP type code mapping | `PuliziaCassaforte.groovy` `resolveFileType()` |
+| 4 | DBB build-result map client API to replace `LocalBuildMapClient` on USS | `PuliziaCassaforte.groovy`, `PuliziaPostBuild.groovy` |
 | 5 | For `PuliziaAmbienti` SJCL special case: confirm direction of copy (current env → predecessor TOCOLB?) | `PrevEnvCleanLogic.groovy` TODO |
-| 6 | `context.getBuildFile()` or equivalent DBB API for source path in `PuliziaAmbienti` | `PuliziaAmbienti.groovy` |
+| 6 | `context.getBuildFile()` or equivalent DBB API for source path in `PuliziaAmbienti` | `PuliziaPostBuild.groovy` |

@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Design and implementation of two IBM z/OS Groovy scripts that manage **cassaforte libraries** — staging libraries used by the promote/deploy process (not the runtime) in the Intesa San Paolo ISP build pipeline.
 
-The project is currently in the design phase. Architecture documents are in `docs/`, no Groovy source yet.
+Architecture documents in `docs/`. Implementation in `scripts/`.
 
-## Scripts to implement
+## Scripts
 
 ### `PuliziaCassaforte.groovy` (standalone, `groovyz`)
 Called by Jenkins **before** DBB build. Handles three scenarios via an action list file:
@@ -16,12 +16,12 @@ Called by Jenkins **before** DBB build. Handles three scenarios via an action li
 - `S` — delete + conditional restore from upstream environment (JCL types only: `SJCL*`)
 
 ```bash
-groovyz PuliziaCassaforte.groovy <file-lista> <environment>
+groovyz -cp lib:tasks PuliziaCassaforte.groovy <file-lista> <build-group> <environment>
 ```
 
 Input file format: one line per object, `<action>,<full-source-path>`
 
-### `PuliziaAmbienti.groovy` (DBB task, `type: task`)
+### `PuliziaPostBuild.groovy` (DBB task, `type: task`)
 Called by DBB **during** build, after successful compile step. Handles one scenario:
 - Deletes member from the **predecessor environment's** cassaforte library to prevent stale objects in concatenated libraries.
 - Runs only in ST and PR (not ATI/ATO).

@@ -1,4 +1,4 @@
-// scripts/PuliziaAmbienti.groovy
+// scripts/PuliziaPostBuild.groovy
 // DBB task wrapper — invoked by DBB Language pipeline as type:task step.
 // Required TaskVariables: MEMBER, FILE_EXT, CLI_BUILDENV, CLI_BUILDGROUP
 // Optional TaskVariables: C1SYSTEM (defaults to derivation from build group)
@@ -27,6 +27,6 @@ def prevClean   = new PrevEnvCleanLogic(deleteLogic: deleteLogic)
 
 def count = prevClean.execute(sourcePath, fileExt, environment, system, buildGroup)
 
-println "PuliziaAmbienti: env=${environment} predecessor=${new EnvironmentChain().getPredecessor(environment)} deleted=${count}"
+println "PuliziaPostBuild: env=${environment} predecessor=${new EnvironmentChain().getPredecessor(environment)} deleted=${count}"
 
 return 0   // DBB requires Integer return — any other type triggers BGZZB0043W warning with RC 0

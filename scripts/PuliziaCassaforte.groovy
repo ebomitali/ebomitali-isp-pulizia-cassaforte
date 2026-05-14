@@ -1,8 +1,8 @@
-// scripts/RemoveCassaforte.groovy
-// Invocation: groovyz -cp lib:tasks RemoveCassaforte.groovy <file-lista> <build-group> <environment>
+// scripts/PuliziaCassaforte.groovy
+// Invocation: groovyz -cp lib:tasks PuliziaCassaforte.groovy <file-lista> <build-group> <environment>
 
 if (args.size() < 3) {
-    System.err.println "Usage: RemoveCassaforte.groovy <file-lista> <build-group> <environment>"
+    System.err.println "Usage: PuliziaCassaforte.groovy <file-lista> <build-group> <environment>"
     System.exit(1)
 }
 
@@ -54,7 +54,7 @@ new File(listFile).eachLine { raw ->
     }
 }
 
-println "RemoveCassaforte: processed=${processed} errors=${errors}"
+println "PuliziaCassaforte: processed=${processed} errors=${errors}"
 if (errors > 0) System.exit(1)
 
 // ─── helpers ────────────────────────────────────────────────────────────────
