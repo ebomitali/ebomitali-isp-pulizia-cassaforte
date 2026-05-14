@@ -1,0 +1,10 @@
+# Deployed deletion rules — format: <type-pattern>;<library-template>;<NO|BUILD MAP>
+# See test/fixtures/rules.csv for examples.
+# This file is populated by ISP deployment process.
+%CPYCOB*;LTM00.D9P${C1STAGE}.PE000.LING.COB@@@@@.@@.COPY;NO
+%CPYD2  ;LTM00.D9P${C1STAGE.PE000.LING.COB@@@@@.@@.COPY;NO
+SZFSSWG ;LTM00.D9P${C1STAGE.PE000.LING.MAP@@@@@.@@.COPY;BUILD MAP
+SZFSSWG ;LTM00.D9P${C1STAGE.PE000.@@@@.@@@@@@@@.@@.ZARA;NO
+%CB2%R  ;LTM00.D9P${C1STAGE.PE000.@@@@.@@@@@@@@.@@.NCAL;NO
+%CB2%R  ;LTM00.D9P${C1STAGE.PE000.MAIN.@@@@@@@@.@@.NCAL;NO
+%CB2%   ;LTM00.D9P${C1STAGE.PE000.SYST.${C1SYSTEM}@@@@@@@.BT.LOAD;NO
