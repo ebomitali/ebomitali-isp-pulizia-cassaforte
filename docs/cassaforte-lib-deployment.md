@@ -52,7 +52,7 @@ tasks:
 ```bash
 groovyz -cp /u/app/cassaforte/lib:/u/app/cassaforte/tasks \
         /u/app/cassaforte/PuliziaCassaforte.groovy \
-        <file-lista> <build-group> <environment>
+        <file-lista> <environment>
 ```
 
 ### Script thin wrapper — `PuliziaPostBuild.groovy`
@@ -124,7 +124,7 @@ tasks:
 ```bash
 groovyz -cp /u/app/cassaforte/cassaforte-lib-1.0.jar \
         /u/app/cassaforte/PuliziaCassaforte.groovy \
-        <file-lista> <build-group> <environment>
+        <file-lista> <environment>
 ```
 
 ---
