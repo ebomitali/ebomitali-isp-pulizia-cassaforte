@@ -1,6 +1,7 @@
 // scripts/lib/ZosFileOpsUSS.groovy
 // Mainframe-only. Must be compiled and run with groovyz on z/OS USS.
 // After upload to USS: chtag -tc IBM-1047 ZosFileOpsUSS.groovy
+// ZFile javadoc https://www.ibm.com/docs/en/sdk-java-technology/8?topic=jzos-zfile
 import com.ibm.jzos.ZFile
 import com.ibm.jzos.ZFileException
 
