@@ -31,8 +31,8 @@ Groovy compila i file `.groovy` on-demand al primo caricamento e li mette in cac
 │   └── PrevEnvCleanLogic.groovy
 ├── build-data/
 │   └── rules.csv
-├── RemoveCassaforte.groovy
-└── PuliziaAmbienti.groovy
+├── PuliziaCassaforte.groovy
+└── PuliziaPostBuild.groovy
 ```
 
 ### Configurazione DBB task (Language YAML)
@@ -41,7 +41,7 @@ Groovy compila i file `.groovy` on-demand al primo caricamento e li mette in cac
 tasks:
   - name: CleanPrevEnv
     type: task
-    script: /u/app/cassaforte/PuliziaAmbienti.groovy
+    script: /u/app/cassaforte/PuliziaPostBuild.groovy
     classpath:
       - /u/app/cassaforte/lib
       - /u/app/cassaforte/tasks
@@ -51,31 +51,41 @@ tasks:
 
 ```bash
 groovyz -cp /u/app/cassaforte/lib:/u/app/cassaforte/tasks \
-        /u/app/cassaforte/RemoveCassaforte.groovy \
-        <file-lista> <environment>
+        /u/app/cassaforte/PuliziaCassaforte.groovy \
+        <file-lista> <build-group> <environment>
 ```
 
-### Script thin wrapper — `PuliziaAmbienti.groovy`
+### Script thin wrapper — `PuliziaPostBuild.groovy`
 
 ```groovy
 @groovy.transform.BaseScript com.ibm.dbb.groovy.TaskScript baseScript
 
+def member      = config.getStringVariable('MEMBER')
 def fileExt     = config.getStringVariable('FILE_EXT')
 def environment = config.getStringVariable('CLI_BUILDENV')
 def buildGroup  = config.getStringVariable('CLI_BUILDGROUP') ?: config.getStringVariable('BUILDGROUP')
 def system      = config.getStringVariable('C1SYSTEM') ?: buildGroup?.tokenize('_')?.first()?.toUpperCase() ?: ''
 
+def sourcePath  = context.getBuildFile()
+
+def rulesPath   = new File(context.getWorkingDirectory(), 'build-data/rules.csv').absolutePath
 def ops         = new ZosFileOpsUSS()
-def rules       = new DeletionRulesLoader().load(
-    new File(context.getWorkingDirectory(), 'build-data/rules.csv').absolutePath
-)
-def buildMap    = [getGeneratedObjects: { sp, bg -> [] }] as BuildMapClient  // TODO: DBB build-result map client
+def rules       = new DeletionRulesLoader().load(rulesPath)
+
+// TODO: replace with DBB build-result map client when available
+def bmFile      = new File(context.getWorkingDirectory(), 'build-data/buildmap.json')
+def buildMap    = bmFile.exists()
+    ? new LocalBuildMapClient(bmFile.absolutePath)
+    : [getGeneratedObjects: { sp, bg -> [] }] as BuildMapClient
+
 def deleteLogic = new DeleteCassaforteLogic(ops: ops, rules: rules, buildMap: buildMap)
 def prevClean   = new PrevEnvCleanLogic(deleteLogic: deleteLogic)
 
-def count = prevClean.execute(context.getBuildFile(), fileExt, environment, system, buildGroup)
-println "PuliziaAmbienti: env=${environment} deleted=${count}"
-return 0
+def count = prevClean.execute(sourcePath, fileExt, environment, system, buildGroup)
+
+println "PuliziaPostBuild: env=${environment} predecessor=${new EnvironmentChain().getPredecessor(environment)} deleted=${count}"
+
+return 0   // DBB requires Integer return — any other type triggers BGZZB0043W warning with RC 0
 ```
 
 ---
@@ -104,7 +114,7 @@ jar cf /u/app/cassaforte/cassaforte-lib-1.0.jar \
 tasks:
   - name: CleanPrevEnv
     type: task
-    script: /u/app/cassaforte/PuliziaAmbienti.groovy
+    script: /u/app/cassaforte/PuliziaPostBuild.groovy
     classpath:
       - /u/app/cassaforte/cassaforte-lib-1.0.jar
 ```
@@ -113,7 +123,7 @@ tasks:
 
 ```bash
 groovyz -cp /u/app/cassaforte/cassaforte-lib-1.0.jar \
-        /u/app/cassaforte/RemoveCassaforte.groovy \
+        /u/app/cassaforte/PuliziaCassaforte.groovy \
         <file-lista> <build-group> <environment>
 ```
 
