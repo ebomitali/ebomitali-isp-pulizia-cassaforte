@@ -27,7 +27,7 @@ groovy -cp build/libs/pulizia-cassaforte.jar scripts/PuliziaCassaforte.groovy <f
 groovyz -cp ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte.jar:${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte-zos.jar PuliziaCassaforte.groovy <file-lista> <environment> <build-group>
 ```
 
-Input file format: one line per object, `<action>;<full-source-path>
+Input file format: one line per object, `<action>;<full-source-path>`
 
 ### `PuliziaPostBuild.groovy` (DBB task, `type: task`)
 Called by DBB **during** build, after successful compile step. Handles one scenario:
