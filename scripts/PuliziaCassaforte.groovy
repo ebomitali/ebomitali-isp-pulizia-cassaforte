@@ -1,14 +1,14 @@
 // scripts/PuliziaCassaforte.groovy
-// Invocation: groovyz -cp lib:tasks PuliziaCassaforte.groovy <file-lista> <build-group> <environment>
+// Invocation: groovyz -cp ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte.jar:${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte-zos.jar PuliziaCassaforte.groovy <file-lista> <environment> <build-group>
 
 if (args.size() < 3) {
-    System.err.println "Usage: PuliziaCassaforte.groovy <file-lista> <build-group> <environment>"
+    System.err.println "Usage: PuliziaCassaforte.groovy <file-lista> <environment> <build-group>"
     System.exit(1)
 }
 
 def listFile    = args[0]
-def buildGroup  = args[1]
-def environment = args[2]
+def environment = args[1]
+def buildGroup  = args[2]
 
 def rulesPath = new File('.', 'build-data/rules.csv').canonicalPath
 
