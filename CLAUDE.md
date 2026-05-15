@@ -16,7 +16,15 @@ Called by Jenkins **before** DBB build. Handles three scenarios via an action li
 - `S` — delete + conditional restore from upstream environment (JCL types only: `SJCL*`)
 
 ```bash
-groovyz -cp lib:tasks PuliziaCassaforte.groovy <file-lista> <environment> <build-group>
+# Local dev (no IBM deps — uses LocalFileOps via Spock tests):
+./gradlew test
+
+# Local smoke (Gradle-built jar, uses groovy not groovyz):
+./gradlew jar
+groovy -cp build/libs/pulizia-cassaforte.jar scripts/PuliziaCassaforte.groovy <file-lista> <environment> <build-group>
+
+# On USS (jars deployed to ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/):
+groovyz -cp ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte.jar:${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte-zos.jar PuliziaCassaforte.groovy <file-lista> <environment> <build-group>
 ```
 
 Input file format: one line per object, `<action>;<full-source-path>
@@ -31,15 +39,26 @@ Called by DBB **during** build, after successful compile step. Handles one scena
 See `docs/groovy-zos-file-ops-architecture.md` for the full design. Summary:
 
 ```
-CassaforteDeleteLogic  ←  ZosFileOps (trait)
-                               ├── LocalFileOps     (local dev, java.nio)
-                               └── ZosFileOpsUSS    (mainframe, ZFile/BPXWDYN)
+src/main/groovy/          — compiled into pulizia-cassaforte.jar (no IBM deps)
+  DeleteCassaforteLogic  ←  ZosFileOps (trait)
+                                 ├── LocalFileOps     (local testing, java.nio)
+                                 └── ZosFileOpsUSS    (on USS via pulizia-cassaforte-zos.jar)
+src/zos/groovy/
+  ZosFileOpsUSS            (USS-only; compiled with IBM jars → pulizia-cassaforte-zos.jar)
+
+USS deployment: ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/
+  pulizia-cassaforte.jar       ← ./gradlew jar
+  pulizia-cassaforte-zos.jar   ← ./gradlew zosJar (requires IBM jars in libs/)
+
+scripts/
+  PuliziaCassaforte.groovy  (USS entry point, uses groovyz)
+  PuliziaPostBuild.groovy   (DBB task entry point)
 ```
 
 - Business logic lives in `CassaforteDeleteLogic` — zero IBM/DBB imports.
 - DBB wrappers (`@BaseScript TaskScript`) are thin adapters that read `TaskVariables`/`BuildContext` and call the logic.
-- Local dev: `groovy -cp lib:tasks run_local.groovy`
-- USS (non-DBB): `groovyz -cp lib:tasks run_uss.groovy`
+- Local dev: `./gradlew test` (Spock specs in src/test/groovy/ use LocalFileOps — no IBM deps)
+- USS entry: `groovyz -cp ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte.jar:${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte-zos.jar PuliziaCassaforte.groovy`
 
 ## Environment chain
 
@@ -71,6 +90,19 @@ Library names use `${C1STAGE}` and `${C1SYSTEM}` as substitution parameters.
 ```
 
 Requires `pandoc` installed (`brew install pandoc`).
+
+```bash
+# Run tests (local — no IBM deps required)
+./gradlew test
+
+# Build common jar (output: build/libs/pulizia-cassaforte.jar)
+./gradlew jar
+
+# Build USS-only jar (requires IBM jars in libs/)
+./gradlew zosJar
+# Output: build/libs/pulizia-cassaforte-zos.jar
+# Deploy both jars to ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/ on USS
+```
 
 ## Key implementation notes
 
