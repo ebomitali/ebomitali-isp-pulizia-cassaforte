@@ -16,10 +16,10 @@ Called by Jenkins **before** DBB build. Handles three scenarios via an action li
 - `S` — delete + conditional restore from upstream environment (JCL types only: `SJCL*`)
 
 ```bash
-groovyz -cp lib:tasks PuliziaCassaforte.groovy <file-lista> <build-group> <environment>
+groovyz -cp lib:tasks PuliziaCassaforte.groovy <file-lista> <environment> <build-group>
 ```
 
-Input file format: one line per object, `<action>,<full-source-path>`
+Input file format: one line per object, `<action>;<full-source-path>
 
 ### `PuliziaPostBuild.groovy` (DBB task, `type: task`)
 Called by DBB **during** build, after successful compile step. Handles one scenario:

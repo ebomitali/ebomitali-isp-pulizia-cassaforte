@@ -1,5 +1,7 @@
 # Allineamento librerie di cassaforte - Analisi di dettaglio
 
+Attività legata ad udc
+
 ## Contesto e principi
 
 *   Le **librerie di cassaforte** alimentano **solo il processo di promote/deploy**, non il runtime.
@@ -32,12 +34,19 @@ Script invocato dalla pipeline Jenkins prima dell’invocazione del domando di b
 
 ### Utilizzo
 
-groovyz PuliziaCassaforte.groovy \<file-lista\> \<environment\>
+groovyz PuliziaCassaforte.groovy \<lista oggetti da cancellare\> \<environment\> \<build group\>
 
 * file-lista: \<AZIONE\>,\<PATH_COMPLETO\>, una per riga dove AZIONE:
     *   `C` = cancellazione
     *   `S` = sfilamento
-* environment: ATI, ATO, SAD, PA
+
+* lista ambienti
+	*    ATI Build eseguita da pipeline di GENERATE per ATI1
+	*    ATO Build eseguita in Application
+    *    ST  Build eseguita in System Test
+	*    PR  Build eseguita in Produzione
+	*	 EM  Build eseguita in Emergenza
+    *    SDD Build eseguita in SD
 
 **Funzioni**
 Usa le seguenti funzioni
@@ -116,9 +125,9 @@ Evitare che oggetti di ambienti precedenti sovrascrivano quelli appena compilati
 **Dove**
 *   Solo in ambienti **successivi ad ATO** (SAD, PR)
 *   ATO e ATI non prevedono pulizia all'indietro
-*   La catena è [ATI ->] ATO -> SAD -> PA per cui
-    *   SAD -> ATO
-    *   PR -> SAD
+*   La catena è [ATI ->] ATO -> ST -> PR per cui
+    *   ST -> ATO
+    *   PR -> ST
     *   EM non ha predecessori e non genera cancellazioni
 
 **Passi**
@@ -132,8 +141,8 @@ La cancellazione del predecessore avviene solo per SAD e PA. Questa la tabella d
 
 | Corrente   | Precedente |
 | ---------- | ---------- |
-|    SAD     |    ATO     |
-|    PA      |    SAD     |
+|    ST      |    ATO     |
+|    PR      |    ST      |
 
 ### Algoritmo: Sfilamento (`SFILAMENTO`)
 
@@ -141,18 +150,19 @@ La cancellazione del predecessore avviene solo per SAD e PA. Questa la tabella d
 Allineare le librerie quando un sorgente viene “ritirato” da un ambiente.
 
 **Dove**
-*   Solo in ambienti SAD, PA (❓ o in ATO, SAD)
+*   Solo in ambienti ST, ❓ ATO
 
 **Passi**
 1. Cancellazione base (DELETE_CASSAFORTE) dell’elemento
 2. Se il type è **SJCL\*** (JCL):
-    -  Individuare gli **ambienti superiori**
+    -  Individuare gli **ambienti superiori** o solo PR
     -  Cercare la **prima occorrenza disponibile**
     -  Copiare l’oggetto da quell’ambiente nella libreria TOCOLB
 
 **Nota**
 
 *   Lo sfilamento segue la cancellazione ed effettua un **ripristino condizionale** in base al tipo.
+*   Il ripristino solo per i JCL, ovvero estensione “.SJCL*"
 *   Nessun ripristino per gli ambienti generati
 *   La libreria TOCOLB è ottenuta dalla libreria cassaforte utilizzata per la cancellazione tramite la modifica del quarto componente da “@@@@“ a “TO@@“ e del quinto componente da "@@@@@@@@" a “COLB@@@@“.
 
@@ -183,20 +193,21 @@ Schema operativo:
 *   Elenco
     *	ATI
     *   ATO
-    *   SAD (system test)
-    *   PA (produzione)
+    *   ST (system test)
+    *   PR (produzione)
     *   EM (emergenza)
+    *   SD
 
 *   Catena Ambienti:
-    *  [ATI] —> ATO -> SAD -> PA
+    *  [ATI] —> ATO -> ST -> PR
     *  EM in mappa a PR
 
 | Ambiente | `DELETE_CASSAFORTE` | `DELETE_PREV_ENV_AFTER_BUILD` | `SFILAMENTO` |
 | -------- | :-----------------: | :---------------------------: | :----------: |
 | ATI      |                     |                               |              |
 | ATO      | ✓                   |                               |              |
-| SAD      | ✓                   | ✓ (predecessore: ATO)         | ✓            |
-| PA       | ✓                   | ✓ (predecessore: SAD)         |              |
+| ST       | ✓                   | ✓ (predecessore: ATO)         | ✓            |
+| PR       | ✓                   | ✓ (predecessore: ST)          |              |
 | EM       |                     |                               |              |
 
 
@@ -215,7 +226,6 @@ SZFSSWG ;LTM00.D9P${C1STAGE.PE000.@@@@.@@@@@@@@.@@.ZARA;NO
 
 ### Tipologie
 
-*   ❓  Oltre a JCL (estensione SJCL*) quali altri type richiedono **ripristino** nello sfilamento?
-    *   Caso S su file non SJCL*, ignorato o errore
+*   Solo JCL (estensione SJCL*)
 
 

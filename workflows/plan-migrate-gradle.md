@@ -4,7 +4,11 @@
 
 **Goal:** Migrate flat-classpath Groovy scripts project to canonical Gradle structure with `src/main/groovy`, `src/test/groovy`, and Spock test suite.
 
-**Architecture:** All business logic classes (no IBM deps) move to `src/main/groovy/`. IBM USS-only code (`ZosFileOpsUSS`) moves to a `src/zos/groovy/` source set compiled only when IBM jars are present in `libs/`. Entry-point scripts (`PuliziaCassaforte.groovy`, `PuliziaPostBuild.groovy`) stay in `scripts/` — they are USS deployment artifacts, not compiled library code. Plain-Groovy assertion tests become Spock specifications.
+**Architecture:** All business logic classes (no IBM deps) move to `src/main/groovy/` and compile into `pulizia-cassaforte.jar` — usable both locally (testing) and on USS. IBM USS-only code (`ZosFileOpsUSS`) moves to a `src/zos/groovy/` source set compiled separately into `pulizia-cassaforte-zos.jar` only when IBM jars are present in `libs/`. Entry-point scripts stay in `scripts/` — USS deployment artifacts, not compiled library code. Plain-Groovy assertion tests become Spock specifications.
+
+**Two environments:**
+- **Local** — no IBM/DBB jars. `./gradlew test` runs Spock specs via `LocalFileOps`.
+- **USS** — IBM/DBB jars available. Classpath: `${DBB_BUILD}/groovy/pulizia-cassaforte/lib` containing `pulizia-cassaforte.jar` (common classes) + `pulizia-cassaforte-zos.jar` (ZosFileOpsUSS, requires IBM jars to build) or sos groovy sources if no compilation may be performed.
 
 **Tech Stack:** Groovy 4.0.25 (`org.apache.groovy:groovy-all`), Spock 2.3-groovy-4.0, JUnit 5, Gradle 8.12 (via wrapper bootstrapped from installed Gradle 6.3)
 
@@ -64,6 +68,10 @@ gradlew.bat
 - `scripts/tasks/`
 - `scripts/test/`
 
+**USS deployment target (`${DBB_BUILD}/groovy/pulizia-cassaforte/lib/`):**
+- `pulizia-cassaforte.jar` — from `./gradlew jar` (no IBM deps, built locally)
+- `pulizia-cassaforte-zos.jar` — from `./gradlew zosJar` (requires IBM jars in `libs/`)
+
 ---
 
 ## Task 1: Bootstrap Gradle
@@ -110,6 +118,14 @@ sourceSets {
         compileClasspath += main.output + configurations.compileClasspath + fileTree('libs') { include '*.jar' }
     }
 }
+
+// Packages ZosFileOpsUSS.class into a jar for USS deployment alongside pulizia-cassaforte.jar.
+// Run only when IBM jars are present in libs/: ./gradlew zosJar
+tasks.register('zosJar', Jar) {
+    dependsOn compileZosGroovy
+    from sourceSets.zos.output
+    archiveBaseName = 'pulizia-cassaforte-zos'
+}
 ```
 
 - [ ] **Step 3: Create .gitignore**
@@ -129,13 +145,17 @@ libs/*.jar
 ```markdown
 # libs/
 
-IBM JZOS and DBB jars required to compile `src/zos/groovy/ZosFileOpsUSS.groovy`.
+IBM JZOS and DBB jars required to compile `src/zos/groovy/ZosFileOpsUSS.groovy`
+into `build/libs/pulizia-cassaforte-zos.jar` for USS deployment.
 
 These jars are NOT on Maven Central. Obtain from your z/OS installation or DBB toolkit:
 - `jzos-2.x.x.jar` — from z/OS Java SDK (`/usr/lpp/java/...`)
 - `dbb-zappbuild-*.jar` — from DBB toolkit
 
-Place jars here, then run: `./gradlew compileZosGroovy`
+Place jars here, then run: `./gradlew zosJar`
+
+Output: `build/libs/pulizia-cassaforte-zos.jar` — deploy to `${DBB_BUILD}/groovy/pulizia-cassaforte/lib/`
+alongside `pulizia-cassaforte.jar`.
 
 The main build (`./gradlew build`) and tests do NOT require these jars.
 ```
@@ -262,9 +282,7 @@ class EnvironmentChainSpec extends Specification {
         where:
         env   | expected
         'ST'  | 'ATO'
-        'SAD' | 'ATO'
         'PR'  | 'ST'
-        'PA'  | 'SAD'
         'ATO' | null
     }
 
@@ -275,8 +293,7 @@ class EnvironmentChainSpec extends Specification {
 
         where:
         env   | expected
-        'ST'  | ['PR', 'PA']
-        'SAD' | ['PR', 'PA']
+        'ST'  | ['PR']
         'PR'  | []
     }
 
@@ -290,9 +307,7 @@ class EnvironmentChainSpec extends Specification {
         'ATI' | 'I1'
         'ATO' | 'O1'
         'ST'  | 'S1'
-        'SAD' | 'S1'
         'PR'  | 'P1'
-        'PA'  | 'P1'
     }
 
     def "getStage throws IllegalArgumentException on unknown environment"() {
@@ -324,7 +339,6 @@ class EnvironmentChainSpec extends Specification {
         where:
         env   | expected
         'ST'  | true
-        'SAD' | true
         'ATO' | false
         'PR'  | false
     }
@@ -855,23 +869,22 @@ class LibraryNameResolver {
 class EnvironmentChain {
 
     static final Map<String, String> PREDECESSORS = [
-        ST: 'ATO', SAD: 'ATO',
-        PR: 'ST',  PA:  'SAD',
+        ST: 'ATO',
+        PR: 'ST',
     ]
 
     static final Map<String, List<String>> SUPERIORS = [
-        ST:  ['PR', 'PA'],
-        SAD: ['PR', 'PA'],
+        ST:  ['PR'],
         ATI: ['ATO'],
-        ATO: ['ST', 'SAD'],
+        ATO: ['ST'],
     ]
 
-    // TODO: verify these values against actual ISP build configuration.
+    // TODO: verify EM and SDD stage codes against actual ISP build configuration.
     static final Map<String, String> STAGE_BY_ENV = [
         ATI: 'I1',
         ATO: 'O1',
-        ST:  'S1', SAD: 'S1',
-        PR:  'P1', PA:  'P1',
+        ST:  'S1',
+        PR:  'P1',
         EM:  'E1',
     ]
 
@@ -894,7 +907,7 @@ class EnvironmentChain {
     }
 
     boolean supportsSfilamento(String env) {
-        env?.toUpperCase() in ['ST', 'SAD']
+        env?.toUpperCase() == 'ST'
     }
 }
 ```
@@ -1166,7 +1179,16 @@ class ZosFileOpsUSS implements ZosFileOps {
 
 Expected: `BUILD SUCCESSFUL` (same as before — zos source set is not compiled by default).
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Verify zosJar builds when IBM jars present (skip if libs/*.jar not available locally)**
+
+```bash
+./gradlew zosJar
+ls build/libs/pulizia-cassaforte-zos.jar
+```
+
+Expected: `BUILD SUCCESSFUL` and jar exists. If IBM jars are not locally available, skip and note that this must be verified before USS deployment.
+
+- [ ] **Step 4: Commit**
 
 ```bash
 git add src/zos/groovy/ZosFileOpsUSS.groovy
@@ -1220,17 +1242,20 @@ Replace the classpath invocation examples:
 
 Old text to find:
 ```bash
-groovyz -cp lib:tasks PuliziaCassaforte.groovy <file-lista> <build-group> <environment>
+groovyz -cp lib:tasks PuliziaCassaforte.groovy <file-lista> <environment> <build-group>
 ```
 
 New text:
 ```bash
-# Local dev (Gradle-built jar):
-./gradlew jar
-groovyz -cp build/libs/pulizia-cassaforte.jar scripts/PuliziaCassaforte.groovy <file-lista> <build-group> <environment>
+# Local dev (no IBM deps — uses LocalFileOps via Spock tests):
+./gradlew test
 
-# On USS (after uploading jar + scripts/ to USS):
-groovyz -cp pulizia-cassaforte.jar PuliziaCassaforte.groovy <file-lista> <build-group> <environment>
+# Local smoke (Gradle-built jar, uses groovy not groovyz):
+./gradlew jar
+groovy -cp build/libs/pulizia-cassaforte.jar scripts/PuliziaCassaforte.groovy <file-lista> <environment> <build-group>
+
+# On USS (jars deployed to ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/):
+groovyz -cp ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte.jar:${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte-zos.jar PuliziaCassaforte.groovy <file-lista> <environment> <build-group>
 ```
 
 - [ ] **Step 2: Update the Architecture section** to reflect new source paths
@@ -1244,12 +1269,17 @@ CassaforteDeleteLogic  ←  ZosFileOps (trait)
 
 With:
 ```
-src/main/groovy/          — compiled into pulizia-cassaforte.jar
+src/main/groovy/          — compiled into pulizia-cassaforte.jar (no IBM deps)
   DeleteCassaforteLogic  ←  ZosFileOps (trait)
-                                 ├── LocalFileOps     (local dev, java.nio)
-                                 └── (see src/zos/groovy)
+                                 ├── LocalFileOps     (local testing, java.nio)
+                                 └── ZosFileOpsUSS    (on USS via pulizia-cassaforte-zos.jar)
 src/zos/groovy/
-  ZosFileOpsUSS            (mainframe-only, requires IBM jzos jars in libs/)
+  ZosFileOpsUSS            (USS-only; compiled with IBM jars → pulizia-cassaforte-zos.jar)
+
+USS deployment: ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/
+  pulizia-cassaforte.jar       ← ./gradlew jar
+  pulizia-cassaforte-zos.jar   ← ./gradlew zosJar (requires IBM jars in libs/)
+
 scripts/
   PuliziaCassaforte.groovy  (USS entry point, uses groovyz)
   PuliziaPostBuild.groovy   (DBB task entry point)
@@ -1260,14 +1290,16 @@ scripts/
 Add after the `generate_doc.sh` block:
 
 ```bash
-# Run tests
+# Run tests (local — no IBM deps required)
 ./gradlew test
 
-# Build jar (output: build/libs/pulizia-cassaforte.jar)
+# Build common jar (output: build/libs/pulizia-cassaforte.jar)
 ./gradlew jar
 
-# Compile USS-only code (requires IBM jars in libs/)
-./gradlew compileZosGroovy
+# Build USS-only jar (requires IBM jars in libs/)
+./gradlew zosJar
+# Output: build/libs/pulizia-cassaforte-zos.jar
+# Deploy both jars to ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/ on USS
 ```
 
 - [ ] **Step 4: Update Local dev note** — remove reference to run_local.groovy if present
@@ -1280,8 +1312,8 @@ Replace:
 
 With:
 ```
-- Local dev: `./gradlew test` (Spock specs in src/test/groovy/ use LocalFileOps)
-- USS entry: `groovyz -cp pulizia-cassaforte.jar PuliziaCassaforte.groovy`
+- Local dev: `./gradlew test` (Spock specs in src/test/groovy/ use LocalFileOps — no IBM deps)
+- USS entry: `groovyz -cp ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte.jar:${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte-zos.jar PuliziaCassaforte.groovy`
 ```
 
 - [ ] **Step 5: Run tests one final time**
@@ -1309,6 +1341,9 @@ git commit -m "docs: update CLAUDE.md for Gradle-based project structure"
 |---|---|
 | All business logic classes compile under Gradle | Task 4 |
 | ZosFileOpsUSS not on local classpath | Task 5 (zos source set) |
+| pulizia-cassaforte.jar usable locally and on USS | Task 4 + Task 7 |
+| pulizia-cassaforte-zos.jar built from zos source set | Task 1 (zosJar task) + Task 5 |
+| USS classpath uses ${DBB_BUILD}/groovy/pulizia-cassaforte/lib | Task 7 |
 | All 9 test files converted to Spock | Task 2 |
 | Fixture files accessible via classpath in tests | Task 3 |
 | Old directories removed | Task 6 |
