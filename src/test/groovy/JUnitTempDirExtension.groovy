@@ -40,18 +40,23 @@ class JUnitTempDirExtension implements IGlobalExtension {
                 tempDirFields.each { FieldInfo field ->
                     def tmpDir = field.readValue(invocation.instance) as Path
                     if (tmpDir != null && Files.exists(tmpDir)) {
-                        Files.walkFileTree(tmpDir, new SimpleFileVisitor<Path>() {
-                            @Override
-                            FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                                Files.delete(file)
-                                FileVisitResult.CONTINUE
-                            }
-                            @Override
-                            FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                                Files.delete(dir)
-                                FileVisitResult.CONTINUE
-                            }
-                        })
+                        try {
+                            Files.walkFileTree(tmpDir, new SimpleFileVisitor<Path>() {
+                                @Override
+                                FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                                    Files.delete(file)
+                                    FileVisitResult.CONTINUE
+                                }
+                                @Override
+                                FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                                    if (exc != null) throw exc
+                                    Files.delete(dir)
+                                    FileVisitResult.CONTINUE
+                                }
+                            })
+                        } catch (IOException ignored) {
+                            // best-effort cleanup; don't fail the test on teardown errors
+                        }
                     }
                 }
                 invocation.proceed()
