@@ -14,3 +14,15 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Gradle
+.gradle/
+build/
+
+# Python
+.venv/
+*.pyc
+__pycache__/
+
+# IBM jars (not committed; obtain from z/OS or DBB toolkit)
+libs/*.jar

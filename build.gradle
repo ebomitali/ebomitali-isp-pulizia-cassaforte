@@ -1,0 +1,34 @@
+plugins {
+    id 'groovy'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.apache.groovy:groovy-all:4.0.25'
+    testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+// ZosFileOpsUSS: separate source set requiring IBM jars in libs/.
+// Only compiles when libs/*.jar are present; never included in main compilation or tests.
+sourceSets {
+    zos {
+        groovy.srcDirs = ['src/zos/groovy']
+        compileClasspath += main.output + configurations.compileClasspath + fileTree('libs') { include '*.jar' }
+    }
+}
+
+// Packages ZosFileOpsUSS.class into a jar for USS deployment alongside pulizia-cassaforte.jar.
+// Run only when IBM jars are present in libs/: ./gradlew zosJar
+tasks.register('zosJar', Jar) {
+    dependsOn compileZosGroovy
+    from sourceSets.zos.output
+    archiveBaseName = 'pulizia-cassaforte-zos'
+}
