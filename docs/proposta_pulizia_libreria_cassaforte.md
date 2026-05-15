@@ -32,9 +32,9 @@ Script invocato dalla pipeline Jenkins prima dell’invocazione del domando di b
 
 ### Utilizzo
 
-groovyz PuliziaCassaforte.groovy <file-lista> <environment>
+groovyz PuliziaCassaforte.groovy \<file-lista\> \<environment\>
 
-* file-lista: <AZIONE>,<PATH_COMPLETO>, una per riga dove AZIONE:
+* file-lista: \<AZIONE\>,\<PATH_COMPLETO\>, una per riga dove AZIONE:
     *   `C` = cancellazione
     *   `S` = sfilamento
 * environment: ATI, ATO, SAD, PA
@@ -204,7 +204,7 @@ Schema operativo:
 
 *   Formato dei dati
     * file in build-data
-    * <pattern>;<libreria parametrica>;<flag build map>
+    * \<pattern\>;\<libreria parametrica\>;\<flag build map\>
 
 Esempio:
 ```csv
