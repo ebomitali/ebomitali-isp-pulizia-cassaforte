@@ -2,6 +2,19 @@ import org.junit.jupiter.api.io.TempDir
 import spock.lang.Specification
 import java.nio.file.*
 
+/**
+ * Spock specification for {@link SfilamentoLogic}.
+ *
+ * <p>Verifies the S-action (sfilamento) scenarios:
+ * <ul>
+ *   <li>For ST + {@code SJCL*} types: the current-env member is deleted and then
+ *       restored from the first superior environment that holds a copy.</li>
+ *   <li>No restore when no copy exists in any superior environment (returns {@code false}).</li>
+ *   <li>No restore for non-eligible environments or non-JCL file types (returns {@code false}).</li>
+ * </ul>
+ *
+ * <p>Uses {@link LocalFileOps} rooted at a JUnit 5 {@code @TempDir} for filesystem isolation.
+ */
 class SfilamentoLogicSpec extends Specification {
 
     @TempDir

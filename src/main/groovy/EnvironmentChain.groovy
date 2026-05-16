@@ -1,3 +1,33 @@
+/**
+ * Models the ISP build pipeline's ordered environment chain and the relationships
+ * between environments used by the cassaforte cleanup scripts.
+ *
+ * <h3>Environment chain</h3>
+ * <pre>
+ *   ATI → ATO → ST → PR
+ *   EM  (standalone, no predecessor)
+ * </pre>
+ *
+ * <h3>Stage codes (C1STAGE)</h3>
+ * <pre>
+ *   ATI → I1 | ATO → O1 | ST → S1 | PR → P1 | EM → E1
+ * </pre>
+ *
+ * <h3>Key relationships</h3>
+ * <ul>
+ *   <li><b>Predecessor</b> ({@link #getPredecessor}): the environment immediately before in
+ *       the chain; used by {@link PrevEnvCleanLogic} to delete stale cassaforte members
+ *       after a successful build.</li>
+ *   <li><b>Superiors</b> ({@link #getSuperiors}): environments further ahead in the chain
+ *       that may hold a stable copy to restore from; used by {@link SfilamentoLogic}.</li>
+ * </ul>
+ *
+ * <h3>Capability flags</h3>
+ * <ul>
+ *   <li>{@link #requiresPrevEnvClean} — true for ST and PR (they have a predecessor).</li>
+ *   <li>{@link #supportsSfilamento}   — true only for ST (the SAD restore step).</li>
+ * </ul>
+ */
 class EnvironmentChain {
 
     static final Map<String, String> PREDECESSORS = [

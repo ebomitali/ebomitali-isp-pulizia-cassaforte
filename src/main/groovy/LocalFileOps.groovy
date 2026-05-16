@@ -1,5 +1,22 @@
 import java.nio.file.*
 
+/**
+ * Local-filesystem adapter of the {@link ZosFileOps} trait used during unit testing.
+ *
+ * <p>Simulates a z/OS PDS environment by mapping z/OS-style dataset paths onto ordinary
+ * directories under a configurable {@code baseDir} (default: {@code /tmp/zos-sim/}):
+ * <pre>
+ *   //DATASET.NAME(MEMBER)  →  &lt;baseDir&gt;/DATASET.NAME/MEMBER   (PDS member = file)
+ *   //DATASET.NAME          →  &lt;baseDir&gt;/DATASET.NAME           (PDS = directory)
+ *   /path/to/file           →  /path/to/file                     (USS path, passed through)
+ * </pre>
+ *
+ * <p>Uses {@link java.nio.file.Files} for all I/O — no IBM/DBB dependencies.
+ * Tests inject a JUnit 5 {@code @TempDir} as {@code baseDir} for full isolation.
+ *
+ * @see ZosFileOps
+ * @see ZosFileOpsUSS
+ */
 class LocalFileOps implements ZosFileOps {
     final String baseDir
 

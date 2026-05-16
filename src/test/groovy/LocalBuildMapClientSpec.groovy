@@ -1,5 +1,12 @@
 import spock.lang.Specification
 
+/**
+ * Spock specification for {@link LocalBuildMapClient}.
+ *
+ * <p>Verifies that the JSON fixture ({@code src/test/resources/fixtures/buildmap.json})
+ * is parsed correctly and that {@code getGeneratedObjects()} returns the right list
+ * of output objects for known source paths, and an empty list for unknown ones.
+ */
 class LocalBuildMapClientSpec extends Specification {
 
     LocalBuildMapClient client

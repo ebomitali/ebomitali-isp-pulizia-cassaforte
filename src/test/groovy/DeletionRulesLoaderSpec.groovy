@@ -1,5 +1,14 @@
 import spock.lang.Specification
 
+/**
+ * Spock specification for {@link DeletionRulesLoader}.
+ *
+ * <p>Verifies that the CSV parser correctly converts each non-blank,
+ * non-comment row into a {@link DeletionRule}, maps the three semicolon-separated
+ * fields to the right properties, and raises on malformed input.
+ *
+ * <p>Uses {@code src/test/resources/fixtures/rules.csv} as the test fixture.
+ */
 class DeletionRulesLoaderSpec extends Specification {
 
     def "load parses all rules from fixture CSV skipping comment line"() {

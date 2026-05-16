@@ -1,6 +1,14 @@
 import spock.lang.Specification
 import spock.lang.Unroll
 
+/**
+ * Spock specification for {@link EnvironmentChain}.
+ *
+ * <p>Exercises the full environment model: predecessor lookup, superior lists,
+ * stage-code resolution, and capability flags ({@code requiresPrevEnvClean},
+ * {@code supportsSfilamento}).  Uses {@code @Unroll} to generate one test per
+ * environment entry, making failures easy to identify.
+ */
 class EnvironmentChainSpec extends Specification {
 
     def chain = new EnvironmentChain()

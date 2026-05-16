@@ -1,5 +1,16 @@
 import spock.lang.Specification
 
+/**
+ * Spock specification for {@link LibraryNameResolver}.
+ *
+ * <p>Covers:
+ * <ul>
+ *   <li>{@code resolve()} — substitution of {@code ${C1STAGE}} and {@code ${C1SYSTEM}}
+ *       placeholders in library templates.</li>
+ *   <li>{@code toTocolbLibrary()} — derivation of the TOCOLB restore target from a
+ *       resolved cassaforte library name (qualifier 4/5 transformation).</li>
+ * </ul>
+ */
 class LibraryNameResolverSpec extends Specification {
 
     def resolver = new LibraryNameResolver()

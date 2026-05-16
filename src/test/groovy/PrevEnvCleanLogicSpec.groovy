@@ -2,6 +2,18 @@ import org.junit.jupiter.api.io.TempDir
 import spock.lang.Specification
 import java.nio.file.*
 
+/**
+ * Spock specification for {@link PrevEnvCleanLogic}.
+ *
+ * <p>Verifies that the post-build predecessor cleanup:
+ * <ul>
+ *   <li>Deletes the matching cassaforte member from the predecessor environment's PDS
+ *       when running in ST or PR.</li>
+ *   <li>Is a no-op (returns 0) for environments without a predecessor (ATI, ATO, EM).</li>
+ * </ul>
+ *
+ * <p>Uses {@link LocalFileOps} rooted at a JUnit 5 {@code @TempDir} for filesystem isolation.
+ */
 class PrevEnvCleanLogicSpec extends Specification {
 
     @TempDir

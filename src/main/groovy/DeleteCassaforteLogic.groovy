@@ -1,3 +1,25 @@
+/**
+ * Core business logic for deleting members from cassaforte (staging) PDS libraries.
+ *
+ * <p>For each source file to process, the caller provides its path, resolved file type,
+ * environment stage code, system identifier, and DBB build group.  This class:
+ * <ol>
+ *   <li>Filters the loaded {@link DeletionRule} list by matching the file type against
+ *       each rule's {@code typePattern} via {@link PatternMatcher}.</li>
+ *   <li>Resolves the target PDS name from the rule's {@code libraryTemplate} using
+ *       {@link LibraryNameResolver}.</li>
+ *   <li>Determines the PDS member name — either directly from the source filename, or
+ *       by querying the {@link BuildMapClient} when {@code useBuildMap = true}.</li>
+ *   <li>Calls {@link ZosFileOps#delete} on each matching member that exists.</li>
+ * </ol>
+ *
+ * <p>This class has zero IBM/DBB imports; all environment interaction is injected
+ * via the {@link ZosFileOps} and {@link BuildMapClient} traits.
+ *
+ * @see DeletionRule
+ * @see SfilamentoLogic
+ * @see PrevEnvCleanLogic
+ */
 class DeleteCassaforteLogic {
     ZosFileOps          ops
     List<DeletionRule>  rules

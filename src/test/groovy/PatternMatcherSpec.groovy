@@ -1,6 +1,17 @@
 import spock.lang.Specification
 import spock.lang.Unroll
 
+/**
+ * Spock specification for {@link PatternMatcher}.
+ *
+ * <p>Verifies all wildcard combinations:
+ * <ul>
+ *   <li>Exact match (no wildcards)</li>
+ *   <li>{@code %} — single-character wildcard</li>
+ *   <li>{@code *} — zero-or-more-character wildcard</li>
+ *   <li>Combinations (e.g. {@code SJCL*}) and non-matching cases</li>
+ * </ul>
+ */
 class PatternMatcherSpec extends Specification {
 
     def matcher = new PatternMatcher()

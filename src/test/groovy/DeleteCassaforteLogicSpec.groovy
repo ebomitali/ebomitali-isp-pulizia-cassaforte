@@ -2,6 +2,20 @@ import org.junit.jupiter.api.io.TempDir
 import spock.lang.Specification
 import java.nio.file.*
 
+/**
+ * Spock specification for {@link DeleteCassaforteLogic}, the core deletion engine.
+ *
+ * <p>Uses {@link LocalFileOps} (rooted at a JUnit 5 {@code @TempDir}) and
+ * {@link LocalBuildMapClient} (reading {@code fixtures/buildmap.json}) to exercise
+ * the full delete flow — including build-map-driven member resolution — without
+ * any IBM/DBB dependencies.
+ *
+ * <p>Test fixtures:
+ * <ul>
+ *   <li>{@code src/test/resources/fixtures/rules.csv}       — deletion rules</li>
+ *   <li>{@code src/test/resources/fixtures/buildmap.json}   — pre-captured DBB build map</li>
+ * </ul>
+ */
 class DeleteCassaforteLogicSpec extends Specification {
 
     @TempDir
