@@ -16,19 +16,8 @@ class ZosFileOpsUSS implements ZosFileOps {
     void delete(String path) {
         if (path.startsWith('//')) {
             def (dsn, member) = parseDsn(path)
-            if (member) {
-                // PDS member deletion via alloc+free with delete disposition.
-                // TODO: verify behaviour with ISP team — on some z/OS configurations
-                // FREE DELETE on a PDS member reference scratches the whole PDS.
-                // Alternative: use an IEHPROGM step or TSO DELETE command via ZUtil.
-                def ddname = 'D' + UUID.randomUUID().toString().replace('-', '').substring(0, 7).toUpperCase()
-                ZFile.bpxwdyn("alloc fi(${ddname}) da('${dsn}(${member})') old msg(2)")
-                ZFile.bpxwdyn("free fi(${ddname}) delete")
-            } else {
-                def ddname = 'D' + UUID.randomUUID().toString().replace('-', '').substring(0, 7).toUpperCase()
-                ZFile.bpxwdyn("alloc fi(${ddname}) da('${dsn}') old msg(2)")
-                ZFile.bpxwdyn("free fi(${ddname}) delete")
-            }
+            def spec = member ? "${dsn}(${member})" : dsn
+            ZFile.remove("//'${spec}'")
             return
         }
         new File(path).delete()

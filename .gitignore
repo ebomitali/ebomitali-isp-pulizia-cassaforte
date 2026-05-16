@@ -8,7 +8,6 @@
 *.swp
 *.swo
 *~
-.DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
@@ -23,6 +22,15 @@ build/
 .venv/
 *.pyc
 __pycache__/
+
+# VS Code
+.vscode/
+
+# exclusion
+*.save
+*.tmp
+*.bak
+*.log
 
 # IBM jars (not committed; obtain from z/OS or DBB toolkit)
 libs/*.jar
