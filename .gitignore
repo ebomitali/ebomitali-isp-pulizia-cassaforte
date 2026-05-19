@@ -17,6 +17,7 @@ Thumbs.db
 # Gradle
 .gradle/
 build/
+gradle/wrapper/dists/gradle-8.12-bin.zip
 
 # Python
 .venv/
@@ -34,3 +35,4 @@ __pycache__/
 
 # IBM jars (not committed; obtain from z/OS or DBB toolkit)
 libs/*.jar
+
