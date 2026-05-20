@@ -1,6 +1,6 @@
 [
   {
-    "buildFile": "/dbb/DEE/IBM/yn_r_01_ato_r1/src/mapasm/batch/mapobj.asm",
+    "buildFile": "/repo/build/yn_r_01_ato_r1/src/mapasm/batch/mapobj.asm",
     "group": "yn_r_01_ato_r1",
     "outputs": [
       {

@@ -16,11 +16,14 @@ def rulesPath   = new File(context.getWorkingDirectory(), 'build-data/rules.csv'
 def ops         = new ZosFileOpsUSS()
 def rules       = new DeletionRulesLoader().load(rulesPath)
 
-// TODO: replace with DBB build-result map client when available
-def bmFile      = new File(context.getWorkingDirectory(), 'build-data/buildmap.json')
-def buildMap    = bmFile.exists()
-    ? new LocalBuildMapClient(bmFile.absolutePath)
-    : [getGeneratedObjects: { sp, bg -> [] }] as BuildMapClient
+def buildMap = {
+    def bg = context.get('BUILD_GROUP')
+    if (bg) return new ZosBuildMapClient(bg as com.ibm.dbb.metadata.BuildGroup)
+    // MetadataInit not in pipeline — fall back to JSON fixture or empty stub
+    def bmFile = new File(context.getWorkingDirectory(), 'build-data/buildmap.json')
+    if (bmFile.exists()) return new LocalBuildMapClient(bmFile.absolutePath)
+    return [getGeneratedObjects: { sp, grp -> [] }] as BuildMapClient
+}()
 
 def deleteLogic = new DeleteCassaforteLogic(ops: ops, rules: rules, buildMap: buildMap)
 def prevClean   = new PrevEnvCleanLogic(deleteLogic: deleteLogic)

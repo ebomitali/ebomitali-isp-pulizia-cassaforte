@@ -13,9 +13,9 @@ import com.ibm.dbb.metadata.BuildMap
  *   <li><b>DBB task context</b> ({@code PuliziaPostBuild.groovy}): the {@code MetadataInit}
  *       built-in task populates {@code BUILD_GROUP} in the {@link com.ibm.dbb.task.BuildContext};
  *       pass {@code context.get('BUILD_GROUP') as BuildGroup} directly.</li>
- *   <li><b>Standalone USS script</b> ({@code PuliziaCassaforte.groovy}): create the store from
- *       {@code $DBB_HOME/conf/db2Connection.conf}, then call
- *       {@code MetadataStoreFactory.createDb2MetadataStore(...).getBuildGroup(name)}.</li>
+ *   <li><b>Standalone USS script</b> ({@code PuliziaCassaforte.groovy}): use
+ *       {@link #fromConf(String, String, String)} which reads {@code db2Connection.conf}
+ *       and constructs the client in one call.</li>
  * </ul>
  *
  * <p>If no build map has been recorded for the given source path within the group, an empty
@@ -40,6 +40,32 @@ class ZosBuildMapClient implements BuildMapClient {
      */
     ZosBuildMapClient(BuildGroup buildGroup) {
         this.buildGroup = buildGroup
+    }
+
+    /**
+     * Creates a client by reading DB2 connection properties from {@code db2Connection.conf}
+     * in {@code confDir} and connecting to the named build group.
+     *
+     * <p>Mirrors the connection pattern used by {@code GetBuildMapFields.groovy} and
+     * {@code QueryBuildMap.groovy}: reads {@code url}, {@code user}, and {@code password}
+     * keys from the conf file, then delegates to
+     * {@link MetadataStoreFactory#createDb2MetadataStore(String, String, Properties)}.
+     *
+     * @param confDir        Directory containing {@code db2Connection.conf}
+     *                       (typically {@code $DBB_CONF} or {@code $DBB_HOME/conf}).
+     * @param buildGroupName Name of the DBB build group to look up.
+     * @param userId         DB2 user ID.
+     * @param pwFilePath     Path to the DB2 password file.
+     * @throws IllegalStateException if the build group is not found in the metadata store.
+     */
+    static ZosBuildMapClient fromConf(String confDir, String buildGroupName,
+                                      String userId, String pwFilePath) {
+        def store = MetadatastoreFactory.connect(userId, pwFilePath,
+                                                 new File(confDir, 'db2Connection.conf'))
+        BuildGroup group = store.getBuildGroup(buildGroupName)
+        if (!group) throw new IllegalStateException(
+            "Build group '${buildGroupName}' not found in metadata store")
+        return new ZosBuildMapClient(group)
     }
 
     /**
