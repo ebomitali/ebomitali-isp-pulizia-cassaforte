@@ -1,9 +1,57 @@
-{
-  "yn_r_01_ato_r1:/dbb/DEE/IBM/yn_r_01_ato_r1/src/mapasm/batch/mapobj.asm": [
-    {"library": "LTM00.D9PO1.PE000.LING.MAP@@@@@.@@.COPY", "member": "MAPOBJ"}
-  ],
-  "yn_r_01_ato_r1:/dbb/DEE/IBM/yn_r_01_ato_r1/src/cobol/batch/pgmcobol.cbl": [
-    {"library": "LTM00.D9PO1.PE000.LING.COB@@@@@.@@.COPY", "member": "PGMCOBOL"},
-    {"library": "LTM00.D9PO1.PE000.SYST.MYSYS@@@@@@@.BT.LOAD", "member": "PGMCOBOL"}
-  ]
-}
+[
+  {
+    "buildFile": "/dbb/DEE/IBM/yn_r_01_ato_r1/src/mapasm/batch/mapobj.asm",
+    "group": "yn_r_01_ato_r1",
+    "outputs": [
+      {
+        "member": "MAPOBJ",
+        "dataset": "LTM00.D9PO1.PE000.LING.MAP@@@@@.@@.COPY"
+      }
+    ]
+  },
+  {
+    "created": "Mon Apr 27 11:59:57 GMT+02:00 2026",
+    "createdBy": "PJENK",
+    "lastUpdated": "Mon Apr 27 12:00:15 GMT+02:00 2026",
+    "lastUpdatedBy": "PJENK",
+    "owner": "PJENK",
+    "permission": "664",
+    "buildFile": "ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP",
+    "group": "ATO",
+    "description": "cafc0ee8cee13ffa1f213c8bc7ebd23ef35818f4c07d525ddd29ec307a8efac1",
+    "sources": [
+      {
+        "ref": "yo_y_01_ato_r1",
+        "url": "https://vobadm:CebTuv01@sbitbucket.intesasanpaolo.com:443/scm/isp-test/yo_y_01_ato_r1.git",
+        "type": "git",
+        "branch": "feature/U083742/D260420",
+        "location": "/prodotti/DEE/test/jenkins/sjenkins-mainframe/sya1node0/workspace/isp-test/Application/ATO/yo_y_01_ato_r1",
+        "snapshot": "e58a98c3652ed4e8b646591cec5a51058648ea66",
+        "id": 728
+      }
+    ],
+    "inputs": [
+      {
+        "lName": "YO8AMADD",
+        "category": "SELF                            ",
+        "path": "ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP",
+        "sourceRef": "yo_y_01_ato_r1",
+        "version": "e58a98c3652ed4e8b646591cec5a51058648ea66",
+        "id": 2963
+      }
+    ],
+    "binaryInputs": [],
+    "outputs": [
+      {
+        "member": "YO8AMADD",
+        "dataset": "LTM00.D9PX2A.PE000.@@@@.@@@@@@@@.@@.JINP",
+        "path": null,
+        "deployType": "JCL",
+        "version": null,
+        "fingerprint": null,
+        "id": 5902
+      }
+    ],
+    "id": 3006
+  }
+]

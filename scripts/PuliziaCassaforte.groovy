@@ -67,11 +67,40 @@ ZosFileOps loadFileOps() {
     }
 }
 
-BuildMapClient buildMapClient(String bg) {
-    // TODO: on USS replace with DBB build-result map client
-    def f = new File('.', 'build-data/buildmap.json')
-    if (f.exists()) return new LocalBuildMapClient(f.canonicalPath)
-    return [getGeneratedObjects: { sp, g -> [] }] as BuildMapClient
+BuildMapClient buildMapClient(String buildGroupName) {
+    try {
+        // Resolve DB2 conf: DBB_CONF env var, or ${DBB_HOME}/conf
+        String confDir = System.getenv('DBB_CONF') ?: "${System.getenv('DBB_HOME')}/conf"
+        Properties db2Props = new Properties()
+        new File(confDir, 'db2Connection.conf').withInputStream { db2Props.load(it) }
+
+        String url    = db2Props.remove('url') as String
+        String userId = (db2Props.remove('user') as String) ?: System.getenv('LOGNAME')
+        String passwd = db2Props.remove('password') as String
+
+        // MetadataStoreFactory is in IBM jars — accessed via reflection to keep local build clean
+        def factory = Class.forName('com.ibm.dbb.metadata.MetadataStoreFactory')
+        def store   = passwd
+            ? factory.createDb2MetadataStore(url, userId, passwd)
+            : factory.createDb2MetadataStore(url, userId, db2Props)
+
+        def group = store.getBuildGroup(buildGroupName)
+        if (!group) {
+            System.err.println "WARN: build group '${buildGroupName}' not found in metadata store — build map lookups will return empty"
+            return [getGeneratedObjects: { sp, g -> [] }] as BuildMapClient
+        }
+
+        // ZosBuildMapClient constructor takes a single BuildGroup arg — find via reflection
+        // to avoid referencing the IBM BuildGroup type in this script
+        def ctor = Class.forName('ZosBuildMapClient').constructors.find { it.parameterCount == 1 }
+        return ctor.newInstance(group) as BuildMapClient
+
+    } catch (ClassNotFoundException ignored) {
+        // Local dev: IBM jars not on classpath — fall back to JSON fixture or empty stub
+        def f = new File('.', 'build-data/buildmap.json')
+        if (f.exists()) return new LocalBuildMapClient(f.canonicalPath)
+        return [getGeneratedObjects: { sp, g -> [] }] as BuildMapClient
+    }
 }
 
 String extractSystem(String buildGroup) {
