@@ -8,17 +8,8 @@ TARGET="${1:-/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_
 # Directories are copied recursively; files are copied as-is.
 ITEMS=(
     build/libs/pulizia-cassaforte.jar
-    scripts/PuliziaCassaforte.groovy
-    scripts/PuliziaPostBuild.groovy
-    scripts/build-data/
-    scripts/build-data/
+    scripts/
     src/
-    .gradle/8.12/
-    gradle/
-    gradlew
-    gradlep
-    build.gradle
-    settings.gradle
 )
 # ───────────────────────────────────────────────────────────────────────────────
 

@@ -31,7 +31,8 @@ class PuliziaCassaforteImpl {
             buildMap = BuildMapClientFactory.fromConf(buildGroup, userId, pwFilePath, db2ConfigFile)
         } catch (IllegalStateException e) {
             System.err.println "WARN: ${e.message} — build map lookups will return empty"
-            buildMap = [getGeneratedObjects: { sp, g -> [] }] as BuildMapClient
+            //return a stub that always answer with empty list: buildMap = [getGeneratedObjects: { sp, g -> [] }] as BuildMapClient
+            System.exit(1)
         }
         return execute(listFile, environment, buildGroup, buildMap, ZosFileOpsFactory.createOnZos())
     }
