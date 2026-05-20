@@ -32,11 +32,21 @@ class MetadatastoreFactory {
     /** Convenience overload accepting the password file as a path string. */
     static MetadataStore connect(String userId, String pwFilePath,
                                  File configFile = defaultConfigFile()) {
-        return connect(userId, new File(pwFilePath), configFile)
+        // verify that pwFile exists before proceeding
+        File pwFile = new File(pwFilePath)
+        if (!pwFile.exists()) {
+            throw new IllegalStateException("DB2 password file not found at ${pwFile.canonicalPath}")
+        }
+        return connect(userId, pwFile, configFile)
     }
 
     private static File defaultConfigFile() {
         String confDir = System.getenv('DBB_CONF') ?: "${System.getenv('DBB_HOME')}/conf"
-        return new File(confDir, 'db2Connection.conf')
+        // check that the file exists before returning it, to avoid confusion with a missing env var or typo in DBB_HOME
+        File confFile = new File(confDir, 'db2Connection.conf')
+        if (!confFile.exists()) {
+            throw new IllegalStateException("DB2 config file not found at ${confFile.canonicalPath} — check DBB_CONF or DBB_HOME environment variables")
+        }
+        return confFile
     }
 }

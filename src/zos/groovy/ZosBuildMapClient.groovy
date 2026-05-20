@@ -63,8 +63,9 @@ class ZosBuildMapClient implements BuildMapClient {
         def store = MetadatastoreFactory.connect(userId, pwFilePath,
                                                  new File(confDir, 'db2Connection.conf'))
         BuildGroup group = store.getBuildGroup(buildGroupName)
-        if (!group) throw new IllegalStateException(
-            "Build group '${buildGroupName}' not found in metadata store")
+        if (!group) {
+            throw new IllegalStateException("Build group '${buildGroupName}' not found in metadata store")
+        }
         return new ZosBuildMapClient(group)
     }
 
