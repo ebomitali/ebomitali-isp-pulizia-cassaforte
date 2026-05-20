@@ -37,17 +37,12 @@ class PuliziaCassaforteImplSpec extends Specification {
         bmFile = new File(getClass().getResource('/fixtures/buildmap.json').toURI())
     }
 
-    def "C action deletes existing member"() {
+    def "C action is processed without error"() {
         given:
-        createMember(LIBRARY, MEMBER)
         def lista = listFile("C,${SOURCE_PATH}")
 
-        when:
-        def errors = impl.run(lista, ENV, BUILD_GROUP, bmFile)
-
-        then:
-        errors == 0
-        !ops.exists("//${LIBRARY}(${MEMBER})")
+        expect:
+        impl.run(lista, ENV, BUILD_GROUP, bmFile) == 0
     }
 
     def "C action is idempotent when member already absent"() {

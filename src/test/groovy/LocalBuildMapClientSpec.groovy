@@ -16,21 +16,22 @@ class LocalBuildMapClientSpec extends Specification {
         client = new LocalBuildMapClient(jsonFile)
     }
 
-    def "getGeneratedObjects returns mapped objects for known mapasm source"() {
+    def "getGeneratedObjects returns mapped objects for known JCL source"() {
         when:
         def results = client.getGeneratedObjects(
-            '/dbb/DEE/IBM/yn_r_01_ato_r1/src/mapasm/batch/mapobj.asm',
-            'yn_r_01_ato_r1'
+            'ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP',
+            'ATO'
         )
 
         then:
         results.size() == 1
-        results[0].library == 'LTM00.D9PO1.PE000.LING.MAP@@@@@.@@.COPY'
-        results[0].member  == 'MAPOBJ'
+        results[0].library == 'LTM00.D9PX2A.PE000.@@@@.@@@@@@@@.@@.JINP'
+        results[0].member  == 'YO8AMADD'
     }
 
     def "getGeneratedObjects returns empty list for unknown source path"() {
         expect:
-        client.getGeneratedObjects('/dbb/DEE/IBM/yn_r_01_ato_r1/src/unknown/file.cbl', 'yn_r_01_ato_r1') == []
+        client.getGeneratedObjects('ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP', 'UNKNOWN') == []
+        client.getGeneratedObjects('ATO/no/such/file.cbl', 'ATO') == []
     }
 }

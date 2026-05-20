@@ -63,16 +63,28 @@ class DeleteCassaforteLogicSpec extends Specification {
 
     def "execute resolves member name via BUILD MAP and deletes by generated object"() {
         given:
-        def lib    = 'LTM00.D9PO1.PE000.LING.MAP@@@@@.@@.COPY'
-        def member = tempDir.resolve("${lib}/MAPOBJ")
+        def sourcePath = '/dbb/DEE/IBM/yn_r_01_ato_r1/src/mapasm/batch/mapobj.asm'
+        def buildGroup = 'yn_r_01_ato_r1'
+        def lib        = 'LTM00.D9PO1.PE000.LING.MAP@@@@@.@@.COPY'
+        def member     = tempDir.resolve("${lib}/MAPOBJ")
         Files.createDirectories(member.parent)
         Files.writeString(member, 'content')
 
-        when:
-        def count = logic.execute(
-            '/dbb/DEE/IBM/yn_r_01_ato_r1/src/mapasm/batch/mapobj.asm',
-            'SZFSSWG ', 'O1', '', 'yn_r_01_ato_r1'
+        // Inline mock — fixture no longer contains the mapasm entry
+        def buildMapMock = [getGeneratedObjects: { sp, bg ->
+            sp == sourcePath && bg == buildGroup
+                ? [[library: lib, member: 'MAPOBJ']]
+                : []
+        }] as BuildMapClient
+
+        def localLogic = new DeleteCassaforteLogic(
+            ops:      ops,
+            rules:    logic.rules,
+            buildMap: buildMapMock
         )
+
+        when:
+        def count = localLogic.execute(sourcePath, 'SZFSSWG ', 'O1', '', buildGroup)
 
         then:
         count == 1
