@@ -1,0 +1,38 @@
+/**
+ * Extracts per-file template variables from a source path.
+ *
+ * <p>Identifies the application segment in the path (the component whose
+ * underscore-delimited tokens satisfy {@code tokens[2] =~ /\d+/}), then
+ * looks up the C1STAGE in the stage map using {@code PATH_LO|buildEnv}.
+ *
+ * <p>Returns a map with keys {@code C1STAGE}, {@code C1SYSTEM}, {@code HLQ}.
+ *
+ * @see StageMapLoader
+ * @see LibraryNameResolver
+ */
+class PathVariableExtractor {
+
+    Map<String, String> extract(String sourcePath, String buildEnv,
+                                Map<String, String> stageMap, String hlq) {
+        def segment = sourcePath.tokenize('/').find { part ->
+            def tokens = part.split('_')
+            tokens.size() >= 5 && tokens[2] ==~ /\d+/
+        }
+        if (!segment)
+            throw new IllegalArgumentException(
+                "No application segment found in source path: '${sourcePath}'"
+            )
+
+        def tokens   = segment.split('_')
+        def c1system = tokens[1]
+        def pathLo   = tokens[2]
+        def key      = "${pathLo}|${buildEnv}"
+        def c1stage  = stageMap[key]
+        if (!c1stage)
+            throw new IllegalArgumentException(
+                "No stage-map entry for '${key}' (path: '${sourcePath}')"
+            )
+
+        [C1STAGE: c1stage, C1SYSTEM: c1system, HLQ: hlq ?: '']
+    }
+}
