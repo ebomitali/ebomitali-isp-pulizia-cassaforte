@@ -2,6 +2,7 @@ plugins {
     id 'base'
 }
 
-// Scripts in scripts/ are USS entry points, not compiled.
-// Runtime dependency on :library — run with:
+// Scripts in scripts/ are USS entry points, not compiled by Gradle.
+// Scripts depend on the :library jar at runtime — no Gradle dependency declaration needed.
+// Run on USS with:
 //   groovyz -cp ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte.jar <script>.groovy
