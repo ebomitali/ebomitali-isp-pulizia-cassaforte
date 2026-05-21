@@ -35,7 +35,7 @@ class StageMapLoaderSpec extends Specification {
         def path = new File(getClass().getResource('/fixtures/stage-map.csv').toURI()).canonicalPath
 
         expect:
-        loader.load(path).size() == 10
+        loader.load(path).size() == 17
     }
 
     def "load throws on malformed row missing semicolon"() {

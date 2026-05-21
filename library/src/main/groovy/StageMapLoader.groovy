@@ -15,7 +15,7 @@ class StageMapLoader {
         new File(csvPath).readLines()
             .findAll { it.trim() }
             .collectEntries { line ->
-                def parts = line.trim().split(';')
+                def parts = line.trim().split(';', -1)
                 if (parts.size() < 2)
                     throw new IllegalArgumentException("Malformed stage-map row: '$line'")
                 def key   = parts[0].trim().replace('"', '')
