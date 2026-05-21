@@ -16,7 +16,7 @@ ITEMS=(
 set -euo pipefail
 
 SCRIPT_DIR="${0:A:h}"
-PROJECT_ROOT="${SCRIPT_DIR:h}"
+PROJECT_ROOT="${SCRIPT_DIR:h:h}"
 
 echo "Target : $TARGET"
 echo "Source : $PROJECT_ROOT"
