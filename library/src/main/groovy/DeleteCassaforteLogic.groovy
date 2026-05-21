@@ -27,15 +27,15 @@ class DeleteCassaforteLogic {
     PatternMatcher      matcher  = new PatternMatcher()
     LibraryNameResolver resolver = new LibraryNameResolver()
 
-    // stage and system are pre-resolved by the caller (via EnvironmentChain + path parser).
+    // vars map must contain C1STAGE, C1SYSTEM, HLQ — resolved by caller per source file.
     // Returns number of delete operations performed.
-    int execute(String sourcePath, String fileType, String stage, String system, String buildGroup) {
+    int execute(String sourcePath, String fileType, Map<String,String> vars, String buildGroup) {
         def member   = memberName(sourcePath)
         def matching = rules.findAll { matcher.matches(it.typePattern, fileType) }
         int count    = 0
 
         matching.each { rule ->
-            def lib = resolver.resolve(rule.libraryTemplate, stage, system)
+            def lib = resolver.resolve(rule.libraryTemplate, vars)
             if (rule.useBuildMap) {
                 buildMap.getGeneratedObjects(sourcePath, buildGroup).each { obj ->
                     if (obj.library == lib) {

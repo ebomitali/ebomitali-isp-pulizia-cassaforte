@@ -32,7 +32,7 @@ class SfilamentoLogic {
     // Returns true if a JCL restore to TOCOLB was performed.
     boolean execute(String sourcePath, String fileType, String environment, String system, String buildGroup) {
         def stage = envChain.getStage(environment)
-        deleteLogic.execute(sourcePath, fileType, stage, system, buildGroup)
+        deleteLogic.execute(sourcePath, fileType, [C1STAGE: stage, C1SYSTEM: system, HLQ: ''], buildGroup)
 
         if (!matcher.matches('SJCL*', fileType)) return false
         if (!envChain.supportsSfilamento(environment)) return false

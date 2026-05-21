@@ -26,6 +26,6 @@ class PrevEnvCleanLogic {
         if (!envChain.requiresPrevEnvClean(environment)) return 0
         def prevEnv   = envChain.getPredecessor(environment)
         def prevStage = envChain.getStage(prevEnv)
-        deleteLogic.execute(sourcePath, fileType, prevStage, system, buildGroup)
+        deleteLogic.execute(sourcePath, fileType, [C1STAGE: prevStage, C1SYSTEM: system, HLQ: ''], buildGroup)
     }
 }

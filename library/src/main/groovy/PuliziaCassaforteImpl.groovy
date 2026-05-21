@@ -84,7 +84,7 @@ class PuliziaCassaforteImpl {
             try {
                 switch (action) {
                     case 'C':
-                        deleteLogic.execute(sourcePath, fileType, stage, system, buildGroup)
+                        deleteLogic.execute(sourcePath, fileType, [C1STAGE: stage, C1SYSTEM: system, HLQ: ''], buildGroup)
                         processed++
                         break
                     case 'S':

@@ -2,20 +2,6 @@ import org.junit.jupiter.api.io.TempDir
 import spock.lang.Specification
 import java.nio.file.*
 
-/**
- * Spock specification for {@link DeleteCassaforteLogic}, the core deletion engine.
- *
- * <p>Uses {@link LocalFileOps} (rooted at a JUnit 5 {@code @TempDir}) and
- * {@link LocalBuildMapClient} (reading {@code fixtures/buildmap.json}) to exercise
- * the full delete flow — including build-map-driven member resolution — without
- * any IBM/DBB dependencies.
- *
- * <p>Test fixtures:
- * <ul>
- *   <li>{@code src/test/resources/fixtures/rules.csv}       — deletion rules</li>
- *   <li>{@code src/test/resources/fixtures/buildmap.json}   — pre-captured DBB build map</li>
- * </ul>
- */
 class DeleteCassaforteLogicSpec extends Specification {
 
     @TempDir
@@ -37,7 +23,7 @@ class DeleteCassaforteLogicSpec extends Specification {
 
     def "execute deletes member by source name (NO flag)"() {
         given:
-        def lib    = 'LTM00.D9PO1.PE000.LING.COB@@@@@.@@.COPY'
+        def lib    = 'LTM00.D9PX2A.PE000.LING.COB@@@@@.@@.COPY'
         def member = tempDir.resolve("${lib}/PGMCOBOL")
         Files.createDirectories(member.parent)
         Files.writeString(member, 'content')
@@ -45,7 +31,9 @@ class DeleteCassaforteLogicSpec extends Specification {
         when:
         def count = logic.execute(
             '/dbb/DEE/IBM/yn_r_01_ato_r1/src/cobol/batch/pgmcobol.cbl',
-            'ACPYCOB ', 'O1', '', 'yn_r_01_ato_r1'
+            'ACPYCOB ',
+            [C1STAGE: 'X2A', C1SYSTEM: 'r', HLQ: ''],
+            'yn_r_01_ato_r1'
         )
 
         then:
@@ -57,7 +45,9 @@ class DeleteCassaforteLogicSpec extends Specification {
         expect:
         logic.execute(
             '/dbb/DEE/IBM/yn_r_01_ato_r1/src/cobol/batch/pgmcobol.cbl',
-            'ACPYCOB ', 'O1', '', 'yn_r_01_ato_r1'
+            'ACPYCOB ',
+            [C1STAGE: 'X2A', C1SYSTEM: 'r', HLQ: ''],
+            'yn_r_01_ato_r1'
         ) == 0
     }
 
@@ -65,12 +55,11 @@ class DeleteCassaforteLogicSpec extends Specification {
         given:
         def sourcePath = '/dbb/DEE/IBM/yn_r_01_ato_r1/src/mapasm/batch/mapobj.asm'
         def buildGroup = 'yn_r_01_ato_r1'
-        def lib        = 'LTM00.D9PO1.PE000.LING.MAP@@@@@.@@.COPY'
+        def lib        = 'LTM00.D9PX2A.PE000.LING.MAP@@@@@.@@.COPY'
         def member     = tempDir.resolve("${lib}/MAPOBJ")
         Files.createDirectories(member.parent)
         Files.writeString(member, 'content')
 
-        // Inline mock — fixture no longer contains the mapasm entry
         def buildMapMock = [getGeneratedObjects: { sp, bg ->
             sp == sourcePath && bg == buildGroup
                 ? [[library: lib, member: 'MAPOBJ']]
@@ -84,7 +73,11 @@ class DeleteCassaforteLogicSpec extends Specification {
         )
 
         when:
-        def count = localLogic.execute(sourcePath, 'SZFSSWG ', 'O1', '', buildGroup)
+        def count = localLogic.execute(
+            sourcePath, 'SZFSSWG ',
+            [C1STAGE: 'X2A', C1SYSTEM: 'r', HLQ: ''],
+            buildGroup
+        )
 
         then:
         count == 1
