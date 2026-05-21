@@ -7,9 +7,9 @@ TARGET="${1:-/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_
 # Each entry is relative to the project root (where this script is run from).
 # Directories are copied recursively; files are copied as-is.
 ITEMS=(
-    build/libs/pulizia-cassaforte.jar
-    scripts/
-    src/
+    front-end/scripts
+    library/build/libs/pulizia-cassaforte.jar
+    library/src/zos
 )
 # ───────────────────────────────────────────────────────────────────────────────
 

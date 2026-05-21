@@ -22,9 +22,9 @@ Generalize `LibraryNameResolver` to resolve any `${VARNAME}` macro in `rules.csv
 
 ## Path Extraction Algorithm
 
-Source path format: `…/<BUILD_ENV>/<segment>/src/…`
+Source path format: `<root_name>/<repository_name>/src/…`
 
-Example: `/repo/cloned/ATO/yo_y_01_ato_r1/src/COBOL/BATCH/S2NN/AS14000.SCB2B`
+Example: `ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP`
 
 Algorithm in `PathVariableExtractor`:
 1. Split sourcePath by `/`
@@ -141,7 +141,7 @@ Passes `hlq` to `PuliziaCassaforteImpl.run(…, hlq)`.
 
 ### `PathVariableExtractorSpec` (new)
 
-- Path `/repo/cloned/ATO/yo_y_01_ato_r1/src/COBOL/BATCH/S2NN/AS14000.SCB2B`, env `ATO`, no HLQ
+- Path `ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP`, env `ATO`, no HLQ
   → `[C1SYSTEM:'y', C1STAGE:'X2A', HLQ:'']`
 - Same path, `hlq='U0G9700'` → `HLQ:'U0G9700'`
 - Unknown `PATH_LO|BUILD_ENV` key → throws `IllegalArgumentException`
