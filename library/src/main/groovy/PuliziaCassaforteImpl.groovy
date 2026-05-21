@@ -16,63 +16,55 @@ class PuliziaCassaforteImpl {
     /** Path to the stage-map CSV. Override in tests or when running on USS. */
     String stageMapPath = new File('.', 'build-data/stage-map.csv').canonicalPath
 
-    /**
-     * Processes the action list file against the live DBB metadata store (USS).
-     *
-     * @param listFile      Path to the action list file.
-     * @param environment   Environment code (e.g. {@code ATI}, {@code ATO}, {@code ST}, {@code PR}).
-     * @param buildGroup    DBB build group name.
-     * @param userId        DB2 user ID.
-     * @param pwFilePath    Path to the DB2 password file.
-     * @param db2ConfigFile {@code db2Connection.conf} to use for the metadata store connection.
-     * @return Number of errors encountered (0 = success).
-     */
     int run(String listFile, String environment, String buildGroup,
             String userId, String pwFilePath, File db2ConfigFile) {
+        run(listFile, environment, buildGroup, userId, pwFilePath, db2ConfigFile, '')
+    }
+
+    int run(String listFile, String environment, String buildGroup,
+            String userId, String pwFilePath, File db2ConfigFile, String hlq) {
         BuildMapClient buildMap
         try {
             buildMap = BuildMapClientFactory.fromConf(buildGroup, userId, pwFilePath, db2ConfigFile)
         } catch (IllegalStateException e) {
             System.err.println "WARN: ${e.message} — build map lookups will return empty"
-            //return a stub that always answer with empty list: buildMap = [getGeneratedObjects: { sp, g -> [] }] as BuildMapClient
             System.exit(1)
         }
-        return execute(listFile, environment, buildGroup, buildMap, ZosFileOpsFactory.createOnZos())
+        execute(listFile, environment, buildGroup, buildMap, ZosFileOpsFactory.createOnZos(), hlq)
     }
 
-    /**
-     * Processes the action list file using a pre-captured JSON build map (local / fallback).
-     *
-     * @param listFile    Path to the action list file.
-     * @param environment Environment code.
-     * @param buildGroup  DBB build group name.
-     * @param bmFile      JSON build map file in {@link LocalBuildMapClient} format.
-     * @return Number of errors encountered (0 = success).
-     */
     int run(String listFile, String environment, String buildGroup, File bmFile) {
-        return run(listFile, environment, buildGroup, bmFile, ZosFileOpsFactory.mockZos())
+        run(listFile, environment, buildGroup, bmFile, ZosFileOpsFactory.mockZos(), '')
     }
 
-    /** Overload with explicit {@code ops} — used by tests for isolated {@link LocalFileOps}. */
+    int run(String listFile, String environment, String buildGroup, File bmFile, String hlq) {
+        run(listFile, environment, buildGroup, bmFile, ZosFileOpsFactory.mockZos(), hlq)
+    }
+
     int run(String listFile, String environment, String buildGroup, File bmFile, ZosFileOps ops) {
-        return execute(listFile, environment, buildGroup, BuildMapClientFactory.fromJson(bmFile), ops)
+        run(listFile, environment, buildGroup, bmFile, ops, '')
+    }
+
+    int run(String listFile, String environment, String buildGroup, File bmFile, ZosFileOps ops, String hlq) {
+        execute(listFile, environment, buildGroup, BuildMapClientFactory.fromJson(bmFile), ops, hlq)
     }
 
     private int execute(String listFile, String environment, String buildGroup,
-                        BuildMapClient buildMap, ZosFileOps ops) {
-        def rules       = new DeletionRulesLoader().load(rulesPath)
-        def stageMap    = new File(stageMapPath).exists()
-                            ? new StageMapLoader().load(stageMapPath)
-                            : (Map<String,String>) [:]
-        def envChain    = new EnvironmentChain()
+                        BuildMapClient buildMap, ZosFileOps ops, String hlq) {
+        def rules      = new DeletionRulesLoader().load(rulesPath)
+        def stageMap   = new StageMapLoader().load(stageMapPath)
+        def extractor  = new PathVariableExtractor()
+        def envChain   = new EnvironmentChain()
         def deleteLogic = new DeleteCassaforteLogic(ops: ops, rules: rules, buildMap: buildMap)
         def sfilamento  = new SfilamentoLogic(
-            ops: ops, deleteLogic: deleteLogic, rules: rules, envChain: envChain,
-            extractor: new PathVariableExtractor(), stageMap: stageMap, hlq: ''
+            ops:         ops,
+            deleteLogic: deleteLogic,
+            rules:       rules,
+            envChain:    envChain,
+            extractor:   extractor,
+            stageMap:    stageMap,
+            hlq:         hlq
         )
-
-        def stage  = envChain.getStage(environment)
-        def system = extractSystem(buildGroup)
 
         int processed = 0, errors = 0
         new File(listFile).eachLine { raw ->
@@ -91,7 +83,8 @@ class PuliziaCassaforteImpl {
             try {
                 switch (action) {
                     case 'C':
-                        deleteLogic.execute(sourcePath, fileType, [C1STAGE: stage, C1SYSTEM: system, HLQ: ''], buildGroup)
+                        def vars = extractor.extract(sourcePath, environment, stageMap, hlq)
+                        deleteLogic.execute(sourcePath, fileType, vars, buildGroup)
                         processed++
                         break
                     case 'S':
@@ -112,15 +105,7 @@ class PuliziaCassaforteImpl {
         return errors
     }
 
-    private static String extractSystem(String buildGroup) {
-        // TODO: implement ISP-specific system code extraction from build group name.
-        // Build group format example: yn_r_01_ato_r1 → first token as system prefix.
-        buildGroup?.tokenize('_')?.first()?.toUpperCase() ?: ''
-    }
-
     private static String resolveFileType(String sourcePath) {
-        // TODO: implement ISP-specific mapping from file path/extension to 8-char type code.
-        // Currently returns the file extension uppercased and padded to 8 chars.
         def filename = sourcePath.tokenize('/').last()
         def ext = filename.contains('.') ? filename.substring(filename.lastIndexOf('.') + 1) : filename
         ext.toUpperCase().padRight(8).take(8)

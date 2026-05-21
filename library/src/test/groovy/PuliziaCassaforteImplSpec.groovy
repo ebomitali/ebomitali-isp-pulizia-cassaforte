@@ -23,6 +23,12 @@ class PuliziaCassaforteImplSpec extends Specification {
     static final String LIBRARY     = 'LTM00.D9PO1.PE000.@@@@.@@@@@@@@.@@.ZARA'
     static final String MEMBER      = 'TESTMEM'
 
+    static final String HLQ_SOURCE_PATH =
+        '/repo/cloned/ATO/yo_y_01_ato_r1/src/mapasm/batch/TESTMEM.SZFSSWG'
+    static final String HLQ_LIBRARY =
+        'U0G9700.D9PX2A.PE000.@@@@.@@@@@@@@.@@.ZARA'
+    static final String HLQ_MEMBER = 'TESTMEM'
+
     @TempDir
     Path tempDir
 
@@ -33,7 +39,8 @@ class PuliziaCassaforteImplSpec extends Specification {
     def setup() {
         ops    = new LocalFileOps(tempDir.toString())
         impl   = new PuliziaCassaforteImpl()
-        impl.rulesPath = new File(getClass().getResource('/fixtures/rules.csv').toURI()).canonicalPath
+        impl.rulesPath    = new File(getClass().getResource('/fixtures/rules.csv').toURI()).canonicalPath
+        impl.stageMapPath = new File(getClass().getResource('/fixtures/stage-map.csv').toURI()).canonicalPath
         bmFile = new File(getClass().getResource('/fixtures/buildmap.json').toURI())
     }
 
@@ -83,6 +90,26 @@ class PuliziaCassaforteImplSpec extends Specification {
 
         expect:
         impl.run(lista, ENV, BUILD_GROUP, bmFile) == 2
+    }
+
+    def "C action with HLQ resolves template and deletes correct member"() {
+        given:
+        def hlqImpl = new PuliziaCassaforteImpl()
+        hlqImpl.rulesPath    = new File(getClass().getResource('/fixtures/rules-hlq.csv').toURI()).canonicalPath
+        hlqImpl.stageMapPath = new File(getClass().getResource('/fixtures/stage-map.csv').toURI()).canonicalPath
+
+        def member = tempDir.resolve("${HLQ_LIBRARY}/${HLQ_MEMBER}")
+        Files.createDirectories(member.parent)
+        Files.writeString(member, 'content')
+
+        def lista = listFile("C,${HLQ_SOURCE_PATH}")
+
+        when:
+        def errors = hlqImpl.run(lista, 'ATO', 'yo_y_01_ato_r1', bmFile, ops, 'U0G9700')
+
+        then:
+        errors == 0
+        !ops.exists("//${HLQ_LIBRARY}(${HLQ_MEMBER})")
     }
 
     // ─── helpers ─────────────────────────────────────────────────────────────
