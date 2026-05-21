@@ -17,14 +17,18 @@ class LibraryNameResolverSpec extends Specification {
 
     def "resolve substitutes C1STAGE placeholder"() {
         expect:
-        resolver.resolve('LTM00.D9P${C1STAGE}.PE000.LING.COB@@@@@.@@.COPY', 'O1', '') ==
-            'LTM00.D9PO1.PE000.LING.COB@@@@@.@@.COPY'
+        resolver.resolve(
+            'LTM00.D9P${C1STAGE}.PE000.LING.COB@@@@@.@@.COPY',
+            [C1STAGE: 'O1', C1SYSTEM: '', HLQ: '']
+        ) == 'LTM00.D9PO1.PE000.LING.COB@@@@@.@@.COPY'
     }
 
     def "resolve substitutes both C1STAGE and C1SYSTEM"() {
         expect:
-        resolver.resolve('LTM00.D9P${C1STAGE}.PE000.SYST.${C1SYSTEM}@@@@@@@.BT.LOAD', 'S1', 'MYSYS') ==
-            'LTM00.D9PS1.PE000.SYST.MYSYS@@@@@@@.BT.LOAD'
+        resolver.resolve(
+            'LTM00.D9P${C1STAGE}.PE000.SYST.${C1SYSTEM}@@@@@@@.BT.LOAD',
+            [C1STAGE: 'S1', C1SYSTEM: 'MYSYS', HLQ: '']
+        ) == 'LTM00.D9PS1.PE000.SYST.MYSYS@@@@@@@.BT.LOAD'
     }
 
     def "toTocolbLibrary derives TOCOLB library from cassaforte library"() {

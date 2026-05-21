@@ -22,12 +22,6 @@
  * @see SfilamentoLogic
  */
 class LibraryNameResolver {
-    String resolve(String template, String stage, String system) {
-        template
-            .replace('${C1STAGE}', stage  ?: '')
-            .replace('${C1SYSTEM}', system ?: '')
-    }
-
     String resolve(String template, Map<String, String> vars) {
         def result = vars.inject(template) { acc, key, val ->
             acc.replace('${' + key + '}', val ?: '')
