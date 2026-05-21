@@ -1,0 +1,7 @@
+plugins {
+    id 'base'
+}
+
+// Scripts in scripts/ are USS entry points, not compiled.
+// Runtime dependency on :library — run with:
+//   groovyz -cp ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte.jar <script>.groovy
