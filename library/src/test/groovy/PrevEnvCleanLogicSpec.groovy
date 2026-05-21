@@ -2,19 +2,11 @@ import org.junit.jupiter.api.io.TempDir
 import spock.lang.Specification
 import java.nio.file.*
 
-/**
- * Spock specification for {@link PrevEnvCleanLogic}.
- *
- * <p>Verifies that the post-build predecessor cleanup:
- * <ul>
- *   <li>Deletes the matching cassaforte member from the predecessor environment's PDS
- *       when running in ST or PR.</li>
- *   <li>Is a no-op (returns 0) for environments without a predecessor (ATI, ATO, EM).</li>
- * </ul>
- *
- * <p>Uses {@link LocalFileOps} rooted at a JUnit 5 {@code @TempDir} for filesystem isolation.
- */
 class PrevEnvCleanLogicSpec extends Specification {
+
+    static final Map<String, String> STAGE_MAP = [
+        '01|ATO': 'X2A', '01|ST': 'XAD', '01|PR': 'XPE',
+    ]
 
     @TempDir
     Path tempDir
@@ -31,13 +23,18 @@ class PrevEnvCleanLogicSpec extends Specification {
             rules:    new DeletionRulesLoader().load(rulesFile),
             buildMap: new LocalBuildMapClient(bmFile)
         )
-        logic = new PrevEnvCleanLogic(deleteLogic: deleteLogic)
+        logic = new PrevEnvCleanLogic(
+            deleteLogic: deleteLogic,
+            extractor:   new PathVariableExtractor(),
+            stageMap:    STAGE_MAP,
+            hlq:         ''
+        )
     }
 
     def "execute deletes from predecessor env library when current env has a predecessor"() {
         given:
-        // ST's predecessor is ATO (stage O1)
-        def lib    = 'LTM00.D9PO1.PE000.LING.COB@@@@@.@@.COPY'
+        // ST predecessor is ATO → stage X2A
+        def lib    = 'LTM00.D9PX2A.PE000.LING.COB@@@@@.@@.COPY'
         def member = tempDir.resolve("${lib}/PGMCOBOL")
         Files.createDirectories(member.parent)
         Files.writeString(member, 'content')
@@ -45,7 +42,7 @@ class PrevEnvCleanLogicSpec extends Specification {
         when:
         def count = logic.execute(
             '/dbb/DEE/IBM/yn_r_01_ato_r1/src/cobol/batch/pgmcobol.cbl',
-            'ACPYCOB ', 'ST', '', 'yn_r_01_ato_r1'
+            'ACPYCOB ', 'ST', 'yn_r_01_ato_r1'
         )
 
         then:
@@ -57,7 +54,7 @@ class PrevEnvCleanLogicSpec extends Specification {
         expect:
         logic.execute(
             '/dbb/DEE/IBM/yn_r_01_ato_r1/src/cobol/batch/pgmcobol.cbl',
-            'ACPYCOB ', 'ATO', '', 'yn_r_01_ato_r1'
+            'ACPYCOB ', 'ATO', 'yn_r_01_ato_r1'
         ) == 0
     }
 }
