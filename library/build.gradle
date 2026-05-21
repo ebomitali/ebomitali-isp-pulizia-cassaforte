@@ -47,6 +47,10 @@ test {
     outputs.upToDateWhen { false }
 }
 
+jar {
+    archiveBaseName = 'pulizia-cassaforte'
+}
+
 // Packages ZosFileOpsUSS into pulizia-cassaforte-zos.jar for USS deployment.
 // IBM jars must be present in libs/. Activated automatically by -PzosBuild.
 tasks.register('zosJar', Jar) {
