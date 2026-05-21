@@ -22,17 +22,19 @@
  * @see LibraryNameResolver#toTocolbLibrary
  */
 class SfilamentoLogic {
-    ZosFileOps          ops
+    ZosFileOps            ops
     DeleteCassaforteLogic deleteLogic
-    List<DeletionRule>  rules
-    PatternMatcher      matcher  = new PatternMatcher()
-    LibraryNameResolver resolver = new LibraryNameResolver()
-    EnvironmentChain    envChain = new EnvironmentChain()
+    List<DeletionRule>    rules
+    PathVariableExtractor extractor  = new PathVariableExtractor()
+    Map<String, String>   stageMap   = [:]
+    String                hlq        = ''
+    PatternMatcher        matcher    = new PatternMatcher()
+    LibraryNameResolver   resolver   = new LibraryNameResolver()
+    EnvironmentChain      envChain   = new EnvironmentChain()
 
-    // Returns true if a JCL restore to TOCOLB was performed.
-    boolean execute(String sourcePath, String fileType, String environment, String system, String buildGroup) {
-        def stage = envChain.getStage(environment)
-        deleteLogic.execute(sourcePath, fileType, [C1STAGE: stage, C1SYSTEM: system, HLQ: ''], buildGroup)
+    boolean execute(String sourcePath, String fileType, String environment, String buildGroup) {
+        def currentVars = extractor.extract(sourcePath, environment, stageMap, hlq)
+        deleteLogic.execute(sourcePath, fileType, currentVars, buildGroup)
 
         if (!matcher.matches('SJCL*', fileType)) return false
         if (!envChain.supportsSfilamento(environment)) return false
@@ -41,12 +43,12 @@ class SfilamentoLogic {
         def matching = rules.findAll { matcher.matches(it.typePattern, fileType) }
 
         for (String superEnv : envChain.getSuperiors(environment)) {
-            def superStage = envChain.getStage(superEnv)
+            def superVars = extractor.extract(sourcePath, superEnv, stageMap, hlq)
             for (def rule : matching) {
-                def srcLib = resolver.resolve(rule.libraryTemplate, superStage, system)
+                def srcLib = resolver.resolve(rule.libraryTemplate, superVars)
                 def src    = "//${srcLib}(${member})"
                 if (ops.exists(src)) {
-                    def localLib = resolver.resolve(rule.libraryTemplate, stage, system)
+                    def localLib = resolver.resolve(rule.libraryTemplate, currentVars)
                     def tocolb   = resolver.toTocolbLibrary(localLib)
                     ops.copy(src, "//${tocolb}(${member})")
                     return true

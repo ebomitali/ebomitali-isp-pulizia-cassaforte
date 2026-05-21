@@ -11,7 +11,10 @@
 class PuliziaCassaforteImpl {
 
     /** Path to the deletion rules CSV. Override in tests to point at the classpath fixture. */
-    String rulesPath = new File('.', 'build-data/rules.csv').canonicalPath
+    String rulesPath    = new File('.', 'build-data/rules.csv').canonicalPath
+
+    /** Path to the stage-map CSV. Override in tests or when running on USS. */
+    String stageMapPath = new File('.', 'build-data/stage-map.csv').canonicalPath
 
     /**
      * Processes the action list file against the live DBB metadata store (USS).
@@ -58,10 +61,14 @@ class PuliziaCassaforteImpl {
     private int execute(String listFile, String environment, String buildGroup,
                         BuildMapClient buildMap, ZosFileOps ops) {
         def rules       = new DeletionRulesLoader().load(rulesPath)
+        def stageMap    = new File(stageMapPath).exists()
+                            ? new StageMapLoader().load(stageMapPath)
+                            : (Map<String,String>) [:]
         def envChain    = new EnvironmentChain()
         def deleteLogic = new DeleteCassaforteLogic(ops: ops, rules: rules, buildMap: buildMap)
         def sfilamento  = new SfilamentoLogic(
-            ops: ops, deleteLogic: deleteLogic, rules: rules, envChain: envChain
+            ops: ops, deleteLogic: deleteLogic, rules: rules, envChain: envChain,
+            extractor: new PathVariableExtractor(), stageMap: stageMap, hlq: ''
         )
 
         def stage  = envChain.getStage(environment)
@@ -88,7 +95,7 @@ class PuliziaCassaforteImpl {
                         processed++
                         break
                     case 'S':
-                        sfilamento.execute(sourcePath, fileType, environment, system, buildGroup)
+                        sfilamento.execute(sourcePath, fileType, environment, buildGroup)
                         processed++
                         break
                     default:
