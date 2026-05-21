@@ -38,4 +38,37 @@ class LibraryNameResolverSpec extends Specification {
         resolver.toTocolbLibrary('LTM00.D9PS1.PE000.LING.COB@@@@@.@@.COPY') ==
             'LTM00.D9PS1.PE000.LING.COB@@@@@.@@.COPY'
     }
+
+    def "resolve(Map) substitutes C1STAGE and C1SYSTEM"() {
+        expect:
+        resolver.resolve(
+            'LTM00.D9P${C1STAGE}.PE000.SYST.${C1SYSTEM}@@@@@@@.BT.LOAD',
+            [C1STAGE: 'X2A', C1SYSTEM: 'y', HLQ: '']
+        ) == 'LTM00.D9PX2A.PE000.SYST.y@@@@@@@.BT.LOAD'
+    }
+
+    def "resolve(Map) substitutes HLQ"() {
+        expect:
+        resolver.resolve(
+            '${HLQ}.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.ZARA',
+            [C1STAGE: 'X2A', C1SYSTEM: 'y', HLQ: 'U0G9700']
+        ) == 'U0G9700.D9PX2A.PE000.@@@@.@@@@@@@@.@@.ZARA'
+    }
+
+    def "resolve(Map) HLQ empty string substitutes to empty string without error"() {
+        expect:
+        resolver.resolve(
+            '${HLQ}.D9P${C1STAGE}',
+            [C1STAGE: 'X2A', C1SYSTEM: '', HLQ: '']
+        ) == '.D9PX2A'
+    }
+
+    def "resolve(Map) throws IllegalStateException on unresolved macro"() {
+        when:
+        resolver.resolve('LTM00.D9P${UNKNOWN}.PE000', [C1STAGE: 'X2A'])
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains('${UNKNOWN}')
+    }
 }

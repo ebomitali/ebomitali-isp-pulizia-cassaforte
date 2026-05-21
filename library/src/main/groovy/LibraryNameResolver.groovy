@@ -28,6 +28,19 @@ class LibraryNameResolver {
             .replace('${C1SYSTEM}', system ?: '')
     }
 
+    String resolve(String template, Map<String, String> vars) {
+        def result = vars.inject(template) { acc, key, val ->
+            acc.replace('${' + key + '}', val ?: '')
+        }
+        def unresolved = (result =~ /\$\{[^}]+\}/)
+        if (unresolved) {
+            throw new IllegalStateException(
+                "Unresolved macro: ${unresolved[0]} in template: '${template}'"
+            )
+        }
+        result
+    }
+
     // Derives TOCOLB library from resolved cassaforte library.
     // 4th qualifier '@@@@' → 'TO@@', 5th qualifier '@@@@@@@@' → 'COLB@@@@'.
     String toTocolbLibrary(String resolvedLibrary) {
