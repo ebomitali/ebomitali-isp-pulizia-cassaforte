@@ -18,6 +18,7 @@ import java.nio.file.*
  * @see ZosFileOpsUSS
  */
 class LocalFileOps implements ZosFileOps {
+
     final String baseDir
 
     LocalFileOps(String baseDir = '/tmp/zos-sim') {
@@ -54,4 +55,5 @@ class LocalFileOps implements ZosFileOps {
         if (!Files.isDirectory(dir)) return []
         dir.toFile().list()?.toList() ?: []
     }
+
 }

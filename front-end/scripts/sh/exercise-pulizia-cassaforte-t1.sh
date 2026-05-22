@@ -8,7 +8,7 @@ set -eu
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-PC_HOME=/dist/DBB/work/u0g9700/pulizia-cassaforte
+PC_HOME=/dist/DBB/work/dbb_build-develop/cassaforte
 DBB_BUILD=/dist/DBB/work/u0g9700/pulizia-cassaforte/build
 DBB_CONF=/prodotti/DEE/test/conf
 HLQ=U0G9700
@@ -17,8 +17,8 @@ GROOVY_SCRIPT="${PC_HOME}/front-end/scripts/groovy/PuliziaCassaforte.groovy"
 CLASSPATH="${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte.jar:${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte-zos.jar"
 
 ATO_SRC="${PC_HOME}/ATO/yu_y_01_ato_r1/src/JCL/BATCH"
-DS_SJCLCA7="${HLQ}.TW000.TEST.CASSAFORTE.SJCLCA7"
-DS_SJCLINP="${HLQ}.TW000.TEST.CASSAFORTE.SJCLINP"
+DS_SJCLCA7="${HLQ}.TW000.TEST.CSSAFORT.SJCLCA7"
+DS_SJCLINP="${HLQ}.TW000.TEST.CSSAFORT.SJCLINP"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -59,15 +59,16 @@ setup_pds() {
         done
     else
         log "Creating PDS ${dataset}"
-        tsocmd "ALLOCATE DATASET('${dataset}') NEW CATALOG UNIT(SYSDA) TRACKS SPACE(10,10) DSORG(PO) RECFM(FB) LRECL(80) BLKSIZE(3200) DIR(10)"
+        tsocmd "ALLOCATE DATASET('${dataset}') NEW CATALOG UNIT(SYSDA) TRACKS SPACE(1,1) DSORG(PO) RECFM(F B) LRECL(80) BLKSIZE(3200) DIR(5)"
     fi
 
     for file in "${src_dir}"/*; do
         [ -f "$file" ] || continue
         fname=$(basename "$file")
         member=$(printf '%s' "$fname" | cut -d. -f1)
+        log "  copying ${fname} -> ${dataset}(${member})"
         cp -T "$file" "//'${dataset}(${member})'"
-        log "  copied ${fname} -> ${dataset}(${member})"
+        log "  copied ${fname}"
     done
 }
 
