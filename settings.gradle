@@ -1,2 +1,2 @@
 rootProject.name = 'pulizia-cassaforte'
-include 'library', 'front-end', 'fat-source'
+include 'library', 'front-end', 'fat-source', 'full-fat-source'

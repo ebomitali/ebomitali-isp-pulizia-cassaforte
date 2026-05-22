@@ -9,11 +9,24 @@ plugins {
 }
 
 // Task 1: Generate the single fat source file
-task generateFatSource {
-    description = 'Generate the single fat source file using helper/sh/create-source-blob.sh'
+task generateFullFatSource {
+    description = 'Generate the single fat source file from library:/src/main/groovy and library:/src/zos/groovy'
     doLast {
+        def tempDir = file("${buildDir}/temp-sources")
+        tempDir.mkdirs()
+        
+        copy {
+            from project(':library').fileTree('src/main/groovy')
+            into "${tempDir}"
+        }
+        
+        copy {
+            from project(':library').fileTree('src/zos/groovy')
+            into "${tempDir}"
+        }
+        
         exec {
-            commandLine 'sh', "${rootProject.projectDir}/helper/sh/create-source-blob.sh", "${rootProject.projectDir}/library/src/main/groovy", "${projectDir}/src/main/groovy/pulizia_cassaforte_fat.groovy"
+            commandLine 'sh', "${rootProject.projectDir}/helper/sh/create-source-blob.sh", "${tempDir}", "${projectDir}/src/main/groovy/pulizia_cassaforte_full.groovy"
         }
     }
 }
@@ -58,7 +71,7 @@ dependencies {
 //compileMainGroovy.dependsOn generateFatSource
 compileTestGroovy.dependsOn copyTests, compileGroovy
 processTestResources.dependsOn copyTests
-compileGroovy.dependsOn generateFatSource
+compileGroovy.dependsOn generateFullFatSource
 
 
 test {
