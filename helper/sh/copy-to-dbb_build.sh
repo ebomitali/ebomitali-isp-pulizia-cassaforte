@@ -10,7 +10,7 @@ ITEMS=(
     front-end/scripts
     library/build/libs/pulizia-cassaforte.jar
     library/src/zos
-    fat-source/src/main
+    full-fat-source/src/main
 )
 # ───────────────────────────────────────────────────────────────────────────────
 
