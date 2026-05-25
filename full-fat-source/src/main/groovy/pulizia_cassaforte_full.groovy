@@ -196,8 +196,8 @@ class DeletionRule {
  */
 class DeletionRulesLoader {
 
-    List<DeletionRule> load(String filePath) {
-        new File(filePath).readLines()
+    List<DeletionRule> load(File file) {
+        file.readLines()
             .findAll { it.trim() && !it.startsWith('#') }
             .collect { line ->
                 def parts = line.split(';', -1)
@@ -600,85 +600,96 @@ class PrevEnvCleanLogic {
  */
 class PuliziaCassaforteImpl {
 
-    /** Path to the deletion rules CSV. Override in tests to point at the classpath fixture. */
-    String rulesPath    = new File('.', 'build-data/rules.csv').canonicalPath
+    String fileOpsType   = 'zos' // set value to 'local' to use LocalFileOps for file operations, which is useful for testing
+    String buildMapClientType = 'db2' // set value to 'json' to read build map from JSON file instead of DB2, which is useful for testing
+    
+    // Used by db2 build map client
+    String userId        = null
+    String pwFilePath    = null
+    String db2ConfigPath = null
 
-    /** Path to the stage-map CSV. Override in tests or when running on USS. */
-    String stageMapPath = new File('.', 'build-data/stage-map.csv').canonicalPath
+    // Used by JSON build map client
+    String buildMapPath  = null
 
-    int run(String listFile, String environment, String buildGroup,
-            String userId, String pwFilePath, File db2ConfigFile) {
-        run(listFile, environment, buildGroup, userId, pwFilePath, db2ConfigFile, '')
-    }
+    // Used by LocalFileOps if fileOpsType is set to 'local'
+    String uxBasedir     = null
 
-    int run(String listFile, String environment, String buildGroup,
-            String userId, String pwFilePath, File db2ConfigFile, String hlq) {
-        BuildMapClient buildMap
-        try {
-            buildMap = BuildMapClientFactory.fromConf(buildGroup, userId, pwFilePath, db2ConfigFile)
-        } catch (IllegalStateException e) {
-            System.err.println "WARN: ${e.message} — build map lookups will return empty"
-            System.exit(1)
-        }
-        execute(listFile, environment, buildGroup, buildMap, ZosFileOpsFactory.createOnZos(), hlq)
-    }
+    // Used by ZosFileOps if fileOpsType is set to 'zos'
+    String hlq           = null
 
-    int run(String listFile, String environment, String buildGroup, File bmFile) {
-        run(listFile, environment, buildGroup, bmFile, ZosFileOpsFactory.mockZos(), '')
-    }
+    // Default paths to rules and stage map CSVs. Override in tests or when running on USS.
+    String rulesPath    = 'build-data/rules.csv'
+    File   rulesFile    = null
+    String stageMapPath = 'build-data/stage-map.csv'
+    File   stageMapFile = null
 
-    int run(String listFile, String environment, String buildGroup, File bmFile, String hlq) {
-        run(listFile, environment, buildGroup, bmFile, ZosFileOpsFactory.mockZos(), hlq)
-    }
+    BuildMapClient buildMapClient = null
+    ZosFileOps fileOps = null
 
-    int run(String listFile, String environment, String buildGroup, File bmFile, ZosFileOps ops) {
-        run(listFile, environment, buildGroup, bmFile, ops, '')
-    }
-
-    int run(String listFile, String environment, String buildGroup, File bmFile, ZosFileOps ops, String hlq) {
-        execute(listFile, environment, buildGroup, BuildMapClientFactory.fromJson(bmFile), ops, hlq)
-    }
+    List rules                    = null
+    Map stageMap                  = null
+    PathVariableExtractor extractor = null
+    EnvironmentChain envChain     = null
+    DeleteCassaforteLogic deleteLogic = null
+    SfilamentoLogic sfilamento    = null
 
     int run(String listFile, String environment, String buildGroup, String configFile) {
         def props = new Properties()
         new File(configFile).withInputStream { props.load(it) }
+        return run(listFile, environment, buildGroup, props)
+    }
 
-        def userId        = props.getProperty('userId')
-        def pwFilePath    = props.getProperty('pwFilePath')
-        def db2ConfigPath = props.getProperty('db2ConfigPath')
-        def buildMapPath  = props.getProperty('buildMapPath')
-        def uxBasedir     = props.getProperty('uxBasedir')
-        def hlq           = props.getProperty('hlq') ?: ''
+    int run(String listFile, String environment, String buildGroup, Properties props) {
+        if (props.getProperty('fileOpsType'))        this.fileOpsType        = props.getProperty('fileOpsType')
+        if (props.getProperty('buildMapClientType')) this.buildMapClientType = props.getProperty('buildMapClientType')
+        if (props.getProperty('rulesPath'))     this.rulesPath     = props.getProperty('rulesPath')
+        if (props.getProperty('stageMapPath'))  this.stageMapPath  = props.getProperty('stageMapPath')
+        if (props.getProperty('uxBasedir'))     this.uxBasedir     = props.getProperty('uxBasedir')
+        if (props.getProperty('hlq'))           this.hlq           = props.getProperty('hlq')
+        if (props.getProperty('userId'))        this.userId        = props.getProperty('userId')
+        if (props.getProperty('pwFilePath'))    this.pwFilePath    = props.getProperty('pwFilePath')
+        if (props.getProperty('db2ConfigPath')) this.db2ConfigPath = props.getProperty('db2ConfigPath')
+        if (props.getProperty('buildMapPath'))  this.buildMapPath  = props.getProperty('buildMapPath')
 
-        if (props.getProperty('rulesPath'))    this.rulesPath    = props.getProperty('rulesPath')
-        if (props.getProperty('stageMapPath')) this.stageMapPath = props.getProperty('stageMapPath')
+        if (!rulesPath || !stageMapPath)
+            throw new IllegalArgumentException('rulesPath and stageMapPath must be defined in config')
+        rulesFile    = new File(rulesPath)
+        stageMapFile = new File(stageMapPath)
+        if (!rulesFile.exists())
+            throw new IllegalArgumentException("rulesPath file not found: '$rulesPath'")
+        if (!stageMapFile.exists())
+            throw new IllegalArgumentException("stageMapPath file not found: '$stageMapPath'")
 
-        def credCount = [userId, pwFilePath, db2ConfigPath].count { it != null }
-        if (credCount > 0 && credCount < 3)
-            throw new IllegalArgumentException('userId, pwFilePath and db2ConfigPath must all be defined or none')
-
-        BuildMapClient buildMap
-        if (userId != null) {
-            buildMap = BuildMapClientFactory.fromConf(buildGroup, userId, pwFilePath, new File(db2ConfigPath))
-        } else if (buildMapPath != null) {
-            buildMap = BuildMapClientFactory.fromJson(new File(buildMapPath))
+        if (buildMapClientType == 'db2') {
+            int credCount = [userId, pwFilePath, db2ConfigPath].count { it != null }
+            if (credCount == 0)
+                throw new IllegalArgumentException('config must define userId (db2) or buildMapPath (json)')
+            if (credCount < 3)
+                throw new IllegalArgumentException('userId, pwFilePath and db2ConfigPath must all be defined or none')
+            this.buildMapClient = BuildMapClientFactory.fromConf(buildGroup, userId, pwFilePath, new File(db2ConfigPath))
+        } else if (buildMapClientType == 'json') {
+            this.buildMapClient = BuildMapClientFactory.fromJson(new File(buildMapPath))
         } else {
             throw new IllegalArgumentException('config must define userId or buildMapPath')
         }
 
-        ZosFileOps ops = (uxBasedir != null) ? new LocalFileOps(uxBasedir) : ZosFileOpsFactory.createOnZos()
-        execute(listFile, environment, buildGroup, buildMap, ops, hlq)
-    }
+        if (fileOpsType == 'zos') {
+            this.fileOps = ZosFileOpsFactory.createOnZos()
+        } else if (fileOpsType == 'local') {
+            if (uxBasedir == null)
+                throw new IllegalArgumentException('uxBasedir must be defined when fileOpsType is set to local')
+            this.fileOps = new LocalFileOps(uxBasedir)
+        } else {
+            throw new IllegalArgumentException("Unknown fileOpsType '$fileOpsType'")
+        }
 
-    private int execute(String listFile, String environment, String buildGroup,
-                        BuildMapClient buildMap, ZosFileOps ops, String hlq) {
-        def rules      = new DeletionRulesLoader().load(rulesPath)
-        def stageMap   = new StageMapLoader().load(stageMapPath)
-        def extractor  = new PathVariableExtractor()
-        def envChain   = new EnvironmentChain()
-        def deleteLogic = new DeleteCassaforteLogic(ops: ops, rules: rules, buildMap: buildMap)
-        def sfilamento  = new SfilamentoLogic(
-            ops:         ops,
+        rules       = new DeletionRulesLoader().load(rulesFile)
+        stageMap    = new StageMapLoader().load(stageMapFile)
+        extractor   = new PathVariableExtractor()
+        envChain    = new EnvironmentChain()
+        deleteLogic = new DeleteCassaforteLogic(ops: fileOps, rules: rules, buildMap: buildMapClient)
+        sfilamento  = new SfilamentoLogic(
+            ops:         fileOps,
             deleteLogic: deleteLogic,
             rules:       rules,
             envChain:    envChain,
@@ -885,8 +896,8 @@ class SfilamentoLogic {
  */
 class StageMapLoader {
 
-    Map<String, String> load(String csvPath) {
-        new File(csvPath).readLines()
+    Map<String, String> load(File file) {
+        file.readLines()
             .findAll { it.trim() }
             .collectEntries { line ->
                 def parts = line.trim().split(';', -1)

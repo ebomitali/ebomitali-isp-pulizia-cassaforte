@@ -20,7 +20,9 @@ class PuliziaCassaforteConfigFileSpec extends Specification {
     def "run with config file processes C action without error"() {
         given:
         def configFile = writeConfig([
+            buildMapClientType: 'json',
             buildMapPath: fixtureFile('buildmap.json'),
+            fileOpsType : 'local',
             uxBasedir   : tempDir.toString(),
             rulesPath   : fixtureFile('rules.csv'),
             stageMapPath: fixtureFile('stage-map.csv'),
@@ -38,7 +40,9 @@ class PuliziaCassaforteConfigFileSpec extends Specification {
     def "run with config file counts malformed line as error"() {
         given:
         def configFile = writeConfig([
+            buildMapClientType: 'json',
             buildMapPath: fixtureFile('buildmap.json'),
+            fileOpsType : 'local',
             uxBasedir   : tempDir.toString(),
             rulesPath   : fixtureFile('rules.csv'),
             stageMapPath: fixtureFile('stage-map.csv'),

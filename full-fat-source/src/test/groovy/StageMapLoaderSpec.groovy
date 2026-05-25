@@ -6,7 +6,7 @@ class StageMapLoaderSpec extends Specification {
 
     def "load returns map from valid stage-map.csv"() {
         given:
-        def path = new File(getClass().getResource('/fixtures/stage-map.csv').toURI()).canonicalPath
+        def path = new File(getClass().getResource('/fixtures/stage-map.csv').toURI())
 
         when:
         def map = loader.load(path)
@@ -20,7 +20,7 @@ class StageMapLoaderSpec extends Specification {
 
     def "load strips surrounding quotes and whitespace from keys and values"() {
         given:
-        def path = new File(getClass().getResource('/fixtures/stage-map.csv').toURI()).canonicalPath
+        def path = new File(getClass().getResource('/fixtures/stage-map.csv').toURI())
 
         when:
         def map = loader.load(path)
@@ -32,7 +32,7 @@ class StageMapLoaderSpec extends Specification {
 
     def "load skips blank lines"() {
         given:
-        def path = new File(getClass().getResource('/fixtures/stage-map.csv').toURI()).canonicalPath
+        def path = new File(getClass().getResource('/fixtures/stage-map.csv').toURI())
 
         expect:
         loader.load(path).size() == 17
@@ -44,7 +44,7 @@ class StageMapLoaderSpec extends Specification {
         tmp.text = '"01|ATO" "X2A"\n'
 
         when:
-        loader.load(tmp.canonicalPath)
+        loader.load(tmp)
 
         then:
         thrown(IllegalArgumentException)
