@@ -11,8 +11,8 @@
  */
 class StageMapLoader {
 
-    Map<String, String> load(String csvPath) {
-        new File(csvPath).readLines()
+    Map<String, String> load(File file) {
+        file.readLines()
             .findAll { it.trim() }
             .collectEntries { line ->
                 def parts = line.trim().split(';', -1)

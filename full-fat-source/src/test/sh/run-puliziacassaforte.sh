@@ -1,5 +1,5 @@
 #!/bin/sh
-# This is a posix compliant script
+# Posix and USS compatible shell script to test PuliziaCassaforte.groovy with a specific configuration and input file.
 
 set -e
 

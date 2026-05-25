@@ -95,7 +95,7 @@ task distribute(type: Copy, dependsOn: build) {
         }
         copy {
             from 'src/test/sh'
-            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/src/sh'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source/test/sh'
         }
         copy {
             from 'src/main/groovy'

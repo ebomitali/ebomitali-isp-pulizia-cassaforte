@@ -20,8 +20,8 @@
  */
 class DeletionRulesLoader {
 
-    List<DeletionRule> load(String filePath) {
-        new File(filePath).readLines()
+    List<DeletionRule> load(File file) {
+        file.readLines()
             .findAll { it.trim() && !it.startsWith('#') }
             .collect { line ->
                 def parts = line.split(';', -1)
