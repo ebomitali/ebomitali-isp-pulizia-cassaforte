@@ -1,0 +1,264 @@
+MULTI-LANGUAGE CONFIGURATION ARCHITECTURE FOR DBB 3.0.3
+========================================================
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                     CANONICAL CONFIGURATION SOURCE                           │
+│                   config/application-config.yaml                             │
+│                                                                              │
+│  ┌─ Version: 1.0                                                            │
+│  ├─ Application: CassaforteManager                                          │
+│  ├─ Build: { hlq: USER.BUILD, workspace: /u/workspace }                   │
+│  ├─ Cassaforte: { deleteMode: physical, retentionDays: 30 }              │
+│  ├─ Stages: [...list of stage definitions...]                             │
+│  └─ Features: { enableListingUpload: true, ... }                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+                              │
+                ┌─────────────┼─────────────┬──────────────┬──────────────┐
+                │             │             │              │              │
+                ▼             ▼             ▼              ▼              ▼
+        ┌─────────────┐ ┌──────────┐ ┌──────────────┐ ┌──────────┐ ┌──────────┐
+        │   Groovy    │ │  Shell   │ │  Jenkins     │ │ Groovy   │ │Standalone│
+        │   Tasks     │ │ Scripts  │ │  Pipeline    │ │(Groovyz) │ │ Groovy   │
+        │   (DBB)     │ │          │ │              │ │          │ │  Scripts │
+        └──────┬──────┘ └────┬─────┘ └──────┬───────┘ └────┬─────┘ └────┬─────┘
+               │             │              │              │            │
+        ┌──────▼─────────┐   │         ┌────▼────────┐  ┌──▼─────────┐ │
+        │Configuration  │   │         │ readYaml    │  │ConfigLoader│ │
+        │Loader.groovy  │   │         │ (built-in)  │  │            │ │
+        └────────────────┘   │         └─────────────┘  └────────────┘ │
+                             │                                         │
+                      ┌──────▼──────┐                          ┌───────▼────────┐
+                      │load-config.sh│                          │ConfigurationLoader
+                      │(yq/grep/awk) │                          │   (same class)
+                      └───────────────┘                          └────────────────┘
+                             │
+                      (export env vars)
+
+
+CONFIGURATION HIERARCHY & OVERRIDE PATTERN
+═══════════════════════════════════════════
+
+config/application-config.yaml    ← Base configuration (git committed)
+│
+├─ version: 1.0
+├─ application: { name: CassaforteManager, ... }
+├─ build: { hlq: USER.BUILD, logLevel: INFO }
+├─ cassaforte:
+│  └─ deleteMode: physical
+│  └─ retentionDays: 30
+├─ stages:
+│  ├─ { id: ATI1, name: Development, ... }
+│  ├─ { id: ATI2, name: Pre-Integration, ... }
+│  ├─ { id: ATO, name: Test, ... }
+│  ├─ { id: ST, name: Stage, ... }
+│  └─ { id: PR, name: Production, ... }
+└─ features: { enableListingUpload: true, ... }
+
+         ↓ (at runtime, load stage overrides)
+
+config/stages/ATI1.yaml           ← Stage-specific overrides (git committed)
+│
+├─ cassaforte:
+│  └─ deleteMode: logical         ← Override: use logical delete in dev
+│  └─ retentionDays: 15           ← Override: shorter retention in dev
+
+         ↓ (deep merge)
+
+Final config for ATI1 stage
+│
+├─ cassaforte:
+│  └─ deleteMode: logical         ← From override (replaces base)
+│  └─ retentionDays: 15           ← From override (replaces base)
+│  └─ archiveDestination: /u/...  ← From base (not overridden)
+└─ (all other fields from base)
+
+
+DATA FLOW: From File to Context
+════════════════════════════════
+
+Groovy Task Context:
+  1. ConfigurationLoader.load(path, stageId)
+  2. YamlSlurper.parse(baseFile)  ← Read base YAML
+  3. YamlSlurper.parse(stageFile) ← Read stage YAML
+  4. mergeConfigs(base, stage)    ← Deep merge
+  5. interpolateEnvVars(config)   ← Replace ${ENV_VAR}
+  6. validateConfig(schema)       ← Validate structure
+  7. cache(config)                ← Cache result
+  8. Return Map<String, Object>   ← Access via dot notation
+
+
+Shell Script Context:
+  1. source load-config.sh /path/to/config.yaml ATI1
+  2. load_configuration(baseFile)  ← Parse base YAML
+  3. load_stage_overrides(stage)   ← Parse stage YAML (if exists)
+  4. set -a; source props; set +a  ← Export env vars
+  5. Variables now available as $BUILD_HLQ, $CASSAFORTE_DELETEMODE, etc.
+
+
+Jenkins Pipeline Context:
+  1. readYaml file: "config/application-config.yaml"
+  2. Jenkins built-in handles YAML parsing
+  3. Assign to env: env.BUILD_HLQ = cfg.build.hlq
+  4. Variables now available as ${BUILD_HLQ}
+
+
+ACCESSING CONFIGURATION
+══════════════════════
+
+Groovy (dot notation):
+  config.build.hlq                ✓ Works
+  config.cassaforte.deleteMode    ✓ Works
+  ConfigurationLoader.getNestedValue(config, "cassaforte.deleteMode")  ✓ Works
+
+Shell (env vars with underscores):
+  $BUILD_HLQ                      ✓ Works
+  $CASSAFORTE_DELETEMODE          ✓ Works (yq converts to env vars)
+  $FEATURE_ENABLELISTINGUPLOAD    ✓ Works
+
+Jenkins (Groovy map):
+  cfg.build.hlq                   ✓ Works
+  cfg['cassaforte']['deleteMode'] ✓ Works
+
+
+VALIDATION FLOW
+═══════════════
+
+Configuration Schema (config/configuration-schema.json)
+  │
+  ├─ version (required)
+  ├─ application.name (required)
+  ├─ build.hlq (required)
+  ├─ cassaforte.deleteMode (enum: physical|logical)
+  └─ cassaforte.retentionDays (integer, min: 1)
+  
+         ↓ (validation step)
+  
+ConfigurationLoader.validateConfiguration(config, schema)
+  │
+  ├─ Check required fields exist
+  ├─ Check types match
+  ├─ Check enum values valid
+  └─ Throw Exception if validation fails
+  
+         ↓ (on success)
+  
+Valid configuration returned to caller
+
+
+SECRETS MANAGEMENT PATTERN
+══════════════════════════
+
+config/application-config.yaml (committed to git):
+  database:
+    host: db.internal.example.com
+    port: 5432
+    userVar: DB_USER              ← Reference to env var
+    passwordVar: DB_PASSWORD      ← Reference to env var
+
+Environment Setup (not in git):
+  export DB_USER="dbadmin"
+  export DB_PASSWORD="secret123"  ← Never commit this!
+
+Groovy Code:
+  String dbUser = System.getenv(config.database.userVar)
+  String dbPassword = System.getenv(config.database.passwordVar)
+  
+         ↓
+  
+Credentials kept separate from config file
+
+
+CACHING STRATEGY
+════════════════
+
+Static cache in ConfigurationLoader class:
+  
+  configCache = ["path:base" → config, "path:ATI1" → config, ...]
+  
+First load (cache miss):
+  load("/u/config/application-config.yaml", "ATI1")
+  ├─ Parse YAML file (50ms)
+  ├─ Merge stages (5ms)
+  ├─ Validate (10ms)
+  ├─ Cache result (1ms)
+  └─ Return (< 100ms total)
+
+Subsequent load (cache hit):
+  load("/u/config/application-config.yaml", "ATI1")
+  ├─ Check cache
+  └─ Return cached copy (1ms)
+
+Clear cache (for testing):
+  ConfigurationLoader.clearCache()
+
+
+FILE STRUCTURE IN YOUR REPOSITORY
+════════════════════════════════
+
+your-dbb-repo/
+│
+├── config/                           # Configuration files
+│   ├── application-config.yaml       # Base configuration (canonical)
+│   ├── configuration-schema.json     # Validation schema
+│   └── stages/                       # Stage-specific overrides
+│       ├── ATI1.yaml               # Development overrides
+│       ├── ATI2.yaml               # Pre-integration overrides
+│       ├── ATO.yaml                # Test overrides
+│       ├── ST.yaml                 # Stage overrides
+│       └── PR.yaml                 # Production overrides
+│
+├── groovy/                           # Groovy source files
+│   ├── ConfigurationLoader.groovy   # Reusable configuration class
+│   ├── ConfigurationExample.groovy  # Example usage in DBB task
+│   └── ...
+│
+├── scripts/                          # Shell scripts
+│   ├── load-config.sh              # Shell configuration loader
+│   ├── cassaforte-standalone.groovy # Standalone Groovy app
+│   └── ...
+│
+├── tasks/                            # DBB task definitions
+│   ├── LoadConfiguration.groovy     # First task: load config
+│   ├── CassaforteDelete.groovy      # Uses loaded config
+│   └── ...
+│
+├── dbb-build.yaml                   # Build configuration (add LoadConfiguration task)
+├── dbb-app.yaml                     # Application configuration
+├── Jenkinsfile                      # Jenkins pipeline (uses config)
+└── README.md                        # Documentation
+
+
+INTEGRATION CHECKLIST
+═════════════════════
+
+Configuration Files:
+  ☐ config/application-config.yaml created
+  ☐ config/configuration-schema.json created
+  ☐ config/stages/{ATI1,ATI2,ATO,ST,PR}.yaml created
+
+Groovy Integration:
+  ☐ ConfigurationLoader.groovy copied to groovy/
+  ☐ First task uses ConfigurationLoader.load()
+  ☐ Configuration cached in context for other tasks
+  ☐ dbb-build.yaml updated with LoadConfiguration task
+
+Shell Integration:
+  ☐ load-config.sh copied to scripts/
+  ☐ Shell scripts source load-config.sh
+  ☐ Environment variables verified
+
+Jenkins Integration:
+  ☐ Jenkinsfile uses readYaml
+  ☐ Configuration passed to dbb build step
+  ☐ Stage-specific values handled
+
+Testing:
+  ☐ Test ConfigurationLoader in Groovy
+  ☐ Test load-config.sh in shell
+  ☐ Test readYaml in Jenkins
+  ☐ Verify stage overrides applied correctly
+
+Documentation:
+  ☐ README.md documents configuration usage
+  ☐ Team trained on configuration approach
+  ☐ Secrets management documented

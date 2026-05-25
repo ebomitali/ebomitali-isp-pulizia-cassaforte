@@ -639,6 +639,37 @@ class PuliziaCassaforteImpl {
         execute(listFile, environment, buildGroup, BuildMapClientFactory.fromJson(bmFile), ops, hlq)
     }
 
+    int run(String listFile, String environment, String buildGroup, String configFile) {
+        def props = new Properties()
+        new File(configFile).withInputStream { props.load(it) }
+
+        def userId        = props.getProperty('userId')
+        def pwFilePath    = props.getProperty('pwFilePath')
+        def db2ConfigPath = props.getProperty('db2ConfigPath')
+        def buildMapPath  = props.getProperty('buildMapPath')
+        def uxBasedir     = props.getProperty('uxBasedir')
+        def hlq           = props.getProperty('hlq') ?: ''
+
+        if (props.getProperty('rulesPath'))    this.rulesPath    = props.getProperty('rulesPath')
+        if (props.getProperty('stageMapPath')) this.stageMapPath = props.getProperty('stageMapPath')
+
+        def credCount = [userId, pwFilePath, db2ConfigPath].count { it != null }
+        if (credCount > 0 && credCount < 3)
+            throw new IllegalArgumentException('userId, pwFilePath and db2ConfigPath must all be defined or none')
+
+        BuildMapClient buildMap
+        if (userId != null) {
+            buildMap = BuildMapClientFactory.fromConf(buildGroup, userId, pwFilePath, new File(db2ConfigPath))
+        } else if (buildMapPath != null) {
+            buildMap = BuildMapClientFactory.fromJson(new File(buildMapPath))
+        } else {
+            throw new IllegalArgumentException('config must define userId or buildMapPath')
+        }
+
+        ZosFileOps ops = (uxBasedir != null) ? new LocalFileOps(uxBasedir) : ZosFileOpsFactory.createOnZos()
+        execute(listFile, environment, buildGroup, buildMap, ops, hlq)
+    }
+
     private int execute(String listFile, String environment, String buildGroup,
                         BuildMapClient buildMap, ZosFileOps ops, String hlq) {
         def rules      = new DeletionRulesLoader().load(rulesPath)

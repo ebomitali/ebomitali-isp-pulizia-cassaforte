@@ -78,3 +78,16 @@ test {
     useJUnitPlatform()
     outputs.upToDateWhen { false }
 }
+
+// Task 4: Distribute generated fat source to target repositories
+task distribute(type: Copy, dependsOn: build) {
+    description = 'Copy generated fat source to dbb-scripts and build repo'
+    from 'src/main/groovy'
+    into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte'
+    doLast {
+        copy {
+            from 'src/main/groovy'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/build/groovy/pulizia-cassaforte'
+        }
+    }
+}
