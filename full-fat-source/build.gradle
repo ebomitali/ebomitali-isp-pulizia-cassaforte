@@ -83,15 +83,15 @@ test {
 task distribute(type: Copy, dependsOn: build) {
     description = 'Copy generated fat source to dbb-scripts and build repo'
     from 'src/main/groovy'
-    into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte'
+    into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/full-fat-source'
     doLast {
         copy {
             from 'src/main/groovy'
-            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/full-fat-source'
         }
         copy {
             from 'src/test/resources'
-            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/src/resources'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/full-fat-source/test/resources'
         }
         copy {
             from 'src/test/sh'
@@ -99,7 +99,7 @@ task distribute(type: Copy, dependsOn: build) {
         }
         copy {
             from 'src/main/groovy'
-            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source'
         }
         copy {
             from 'src/test/resources'
