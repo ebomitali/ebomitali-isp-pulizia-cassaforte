@@ -87,7 +87,27 @@ task distribute(type: Copy, dependsOn: build) {
     doLast {
         copy {
             from 'src/main/groovy'
-            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/build/groovy/pulizia-cassaforte'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte'
+        }
+        copy {
+            from 'src/test/resources'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/src/resources'
+        }
+        copy {
+            from 'src/test/sh'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/src/sh'
+        }
+        copy {
+            from 'src/main/groovy'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte'
+        }
+        copy {
+            from 'src/test/resources'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source/test/resources'
+        }
+        copy {
+            from 'src/test/sh'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source/test/sh'
         }
     }
 }
