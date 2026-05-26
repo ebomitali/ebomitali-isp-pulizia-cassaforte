@@ -43,7 +43,7 @@ class PuliziaCassaforteImpl {
     DeleteCassaforteLogic deleteLogic = null
     SfilamentoLogic sfilamento    = null
 
-    int run(String listFile, String environment, String buildGroup, String configFile) {
+    int run(String listFile, String environment, String buildGroup, String configFile = 'PuliziaCassaforte.properties') {
         def props = new Properties()
         new File(configFile).withInputStream { props.load(it) }
         return run(listFile, environment, buildGroup, props)
