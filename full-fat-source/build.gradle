@@ -87,9 +87,11 @@ task distribute(dependsOn: build) {
             from 'src/main/groovy'
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/full-fat-source'
         }
+        // exclude src/test/resources/META-INF/ from copying
         copy {
             from 'src/test/resources'
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/full-fat-source/test/resources'
+            exclude 'META-INF/**'
         }
         copy {
             from 'src/test/sh'
@@ -102,6 +104,7 @@ task distribute(dependsOn: build) {
         copy {
             from 'src/test/resources'
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source/test/resources'
+            exclude 'META-INF/**'
         }
         copy {
             from 'src/test/sh'
