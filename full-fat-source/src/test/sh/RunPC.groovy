@@ -19,15 +19,15 @@ if (dbbConf == null) {
 // Overwritable variables with default values
 String fileOpsType = 'local'
 String buildMapClientType = 'json'
-String rulesPath = '../resources/rules.csv'
-String stageMapPath = '../resources/stage-map.csv'
+String rulesPath = 'resources/rules.csv'
+String stageMapPath = 'resources/stagemap.csv'
 // 
 String uxBasedir = '/u/u0g9700/ux'
 String hlq = null
 String userId = null
 String pwFilePath = null
 String db2ConfigPath = null
-String buildMapPath = '../resources/build-map.json'
+String buildMapPath = 'resources/buildmap.json'
 
 // write the valued variables as properties file in file PuliziaCassaforte.properties
 Properties properties = new Properties()
@@ -43,5 +43,5 @@ def gcl = new GroovyClassLoader()
 gcl.parseClass(new File("pulizia_cassaforte_full.groovy"))
 
 def impl = gcl.loadClass('PuliziaCassaforteImpl').newInstance()
-int errors = impl.run(fileListFile, environment, buildGroup, "RunPuliziaCassaforteJsonLocal.properties")
+int errors = impl.run(processFileList, environment, buildGroup, "RunPuliziaCassaforteJsonLocal.properties")
 println "Success: ${impl.class.name}"
