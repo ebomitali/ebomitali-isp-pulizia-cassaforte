@@ -47,12 +47,13 @@ class PuliziaCassaforteImpl {
     SfilamentoLogic sfilamento    = null
 
     int run(String listFileToProcess, String environment, String buildGroup, String configFile = 'PuliziaCassaforte.properties') {
-        def props = new Properties()
+        Properties props = new Properties()
         new File(configFile).withInputStream { props.load(it) }
         return run(listFileToProcess, environment, buildGroup, props)
     }
 
     int run(String listFileToProcess, String environment, String buildGroup, Properties props) {
+        log.info("Starting PuliziaCassaforte")
         if (props.getProperty('fileOpsType'))        this.fileOpsType        = props.getProperty('fileOpsType')
         if (props.getProperty('buildMapClientType')) this.buildMapClientType = props.getProperty('buildMapClientType')
         if (props.getProperty('rulesPath'))     this.rulesPath     = props.getProperty('rulesPath')
@@ -117,7 +118,7 @@ class PuliziaCassaforteImpl {
             hlq:         hlq
         )
 
-        log.info("PuliziaCassaforte: processing list='{}' env='{}' buildGroup='{}'",
+        log.info("Processing list='{}' env='{}' buildGroup='{}'",
                  listFileToProcess, environment, buildGroup)
         int processed = 0, errors = 0
         lftp.eachLine { raw ->

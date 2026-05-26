@@ -39,6 +39,18 @@ properties.setProperty("uxBasedir", uxBasedir)
 properties.setProperty("buildMapPath", buildMapPath)
 properties.store(new FileOutputStream("RunPuliziaCassaforteJsonLocal.properties"), null)
 
+println "Running PuliziaCassaforte with the following parameters:"
+println "  fileOpsType: ${fileOpsType}"
+println "  buildMapClientType: ${buildMapClientType}"
+println "  rulesPath: ${rulesPath}"
+println "  stageMapPath: ${stageMapPath}"
+println "  uxBasedir: ${uxBasedir}"
+println "  buildMapPath: ${buildMapPath}"
+println "  processFileList: ${processFileList}"
+println "  environment: ${environment}"
+println "  buildGroup: ${buildGroup}"
+println "  properties file: RunPuliziaCassaforteJsonLocal.properties"
+
 def gcl = new GroovyClassLoader()
 gcl.parseClass(new File("pulizia_cassaforte_full.groovy"))
 
