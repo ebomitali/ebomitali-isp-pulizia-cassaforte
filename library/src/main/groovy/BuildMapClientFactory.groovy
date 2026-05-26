@@ -1,3 +1,5 @@
+import groovy.util.logging.Slf4j
+
 /**
  * Factory for creating {@link BuildMapClient} instances without IBM/DBB compile-time dependencies.
  *
@@ -12,6 +14,7 @@
  * @see BuildMapClient
  * @see LocalBuildMapClient
  */
+@Slf4j
 class BuildMapClientFactory {
 
     /**
@@ -20,6 +23,7 @@ class BuildMapClientFactory {
      * @param bmFile JSON file in the {@link LocalBuildMapClient} array format.
      */
     static BuildMapClient fromJson(File bmFile) {
+        log.debug("Creating local BuildMapClient from JSON: {}", bmFile)
         return new LocalBuildMapClient(bmFile.canonicalPath)
     }
 
@@ -39,6 +43,7 @@ class BuildMapClientFactory {
      */
     static BuildMapClient fromConf(String buildGroupName, String userId, String pwFilePath,
                                    File configFile = defaultConfigFile()) {
+        log.info("Creating ZosBuildMapClient for group '{}' user '{}'", buildGroupName, userId)
         return Class.forName('ZosBuildMapClient')
                     .fromConf(configFile.parent, buildGroupName, userId, pwFilePath) as BuildMapClient
     }

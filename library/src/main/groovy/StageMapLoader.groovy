@@ -1,3 +1,5 @@
+import groovy.util.logging.Slf4j
+
 /**
  * Loads the ISP stage-map CSV into a lookup map.
  *
@@ -9,10 +11,12 @@
  * Key format: {@code PATH_LO|BUILD_ENV} (e.g. {@code "01|ATO"}).
  * Value: C1STAGE code (e.g. {@code "X2A"}).
  */
+@Slf4j
 class StageMapLoader {
 
     Map<String, String> load(File file) {
-        file.readLines()
+        log.debug("Loading stage map from: {}", file)
+        def result = file.readLines()
             .findAll { it.trim() }
             .collectEntries { line ->
                 def parts = line.trim().split(';', -1)
@@ -22,5 +26,7 @@ class StageMapLoader {
                 def value = parts[1].trim().replace('"', '')
                 [key, value]
             }
+        log.info("Loaded {} stage-map entries from: {}", result.size(), file)
+        result
     }
 }

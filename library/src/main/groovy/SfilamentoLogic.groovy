@@ -1,3 +1,5 @@
+import groovy.util.logging.Slf4j
+
 /**
  * Implements the sfilamento (S-action) scenario: delete the current environment's cassaforte
  * member and, if applicable, restore it from the nearest superior environment.
@@ -21,6 +23,7 @@
  * @see EnvironmentChain
  * @see LibraryNameResolver#toTocolbLibrary
  */
+@Slf4j
 class SfilamentoLogic {
     ZosFileOps            ops
     DeleteCassaforteLogic deleteLogic
@@ -36,11 +39,19 @@ class SfilamentoLogic {
         def currentVars = extractor.extract(sourcePath, environment, stageMap, hlq)
         deleteLogic.execute(sourcePath, fileType, currentVars, buildGroup)
 
-        if (!matcher.matches('SJCL*', fileType)) return false
-        if (!envChain.supportsSfilamento(environment)) return false
+        if (!matcher.matches('SJCL*', fileType)) {
+            log.debug("Sfilamento skipped: fileType '{}' does not match SJCL*", fileType)
+            return false
+        }
+        if (!envChain.supportsSfilamento(environment)) {
+            log.debug("Sfilamento skipped: environment '{}' does not support it", environment)
+            return false
+        }
 
         def member   = DeleteCassaforteLogic.memberName(sourcePath)
         def matching = rules.findAll { matcher.matches(it.typePattern, fileType) }
+        log.info("Sfilamento: searching restore for member '{}' fileType '{}' in environment '{}'",
+                 member, fileType, environment)
 
         for (String superEnv : envChain.getSuperiors(environment)) {
             def superVars = extractor.extract(sourcePath, superEnv, stageMap, hlq)
@@ -50,11 +61,15 @@ class SfilamentoLogic {
                 if (ops.exists(src)) {
                     def localLib = resolver.resolve(rule.libraryTemplate, currentVars)
                     def tocolb   = resolver.toTocolbLibrary(localLib)
-                    ops.copy(src, "//${tocolb}(${member})")
+                    def dst      = "//${tocolb}(${member})"
+                    log.info("Sfilamento: restoring {} -> {}", src, dst)
+                    ops.copy(src, dst)
                     return true
                 }
             }
         }
+        log.info("Sfilamento: no restore source found for member '{}' in superiors of '{}'",
+                 member, environment)
         return false
     }
 }

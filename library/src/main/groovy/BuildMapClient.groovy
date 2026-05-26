@@ -1,3 +1,5 @@
+import groovy.util.logging.Slf4j
+
 /**
  * Trait (interface) for querying the DBB build map to resolve generated output objects.
  *
@@ -14,6 +16,7 @@
  * @see DeletionRule#useBuildMap
  * @see DeleteCassaforteLogic
  */
+@Slf4j
 trait BuildMapClient {
     abstract List<Map<String, String>> getGeneratedObjects(String sourcePath, String buildGroup)
 }

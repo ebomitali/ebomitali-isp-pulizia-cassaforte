@@ -3,6 +3,7 @@
 import com.ibm.dbb.build.BuildException
 import com.ibm.dbb.metadata.BuildGroup
 import com.ibm.dbb.metadata.BuildMap
+import groovy.util.logging.Slf4j
 
 /**
  * USS implementation of {@link BuildMapClient} that queries the live DBB metadata store
@@ -28,6 +29,7 @@ import com.ibm.dbb.metadata.BuildMap
  * @see LocalBuildMapClient
  * @see ZosFileOpsUSS
  */
+@Slf4j
 class ZosBuildMapClient implements BuildMapClient {
 
     private final BuildGroup buildGroup
@@ -40,6 +42,7 @@ class ZosBuildMapClient implements BuildMapClient {
      */
     ZosBuildMapClient(BuildGroup buildGroup) {
         this.buildGroup = buildGroup
+        log.debug("ZosBuildMapClient initialized for group '{}'", buildGroup?.getName())
     }
 
     /**
@@ -60,10 +63,13 @@ class ZosBuildMapClient implements BuildMapClient {
      */
     static ZosBuildMapClient fromConf(String confDir, String buildGroupName,
                                       String userId, String pwFilePath) {
+        log.info("Connecting to metadata store: user='{}' group='{}' confDir='{}'",
+                 userId, buildGroupName, confDir)
         def store = MetadatastoreFactory.connect(userId, pwFilePath,
                                                  new File(confDir, 'db2Connection.conf'))
         BuildGroup group = store.getBuildGroup(buildGroupName)
         if (!group) {
+            log.error("Build group '{}' not found in metadata store", buildGroupName)
             throw new IllegalStateException("Build group '${buildGroupName}' not found in metadata store")
         }
         return new ZosBuildMapClient(group)
@@ -84,13 +90,19 @@ class ZosBuildMapClient implements BuildMapClient {
     List<Map<String, String>> getGeneratedObjects(String sourcePath, String buildGroup) {
         try {
             BuildMap bm = this.buildGroup.getBuildMap(sourcePath)
-            if (!bm) return []
+            if (!bm) {
+                log.debug("getGeneratedObjects: no build map entry for '{}'", sourcePath)
+                return []
+            }
 
-            return bm.getOutputs()
+            def result = bm.getOutputs()
                 .findAll { it.getDataset() && it.getMember() }
                 .collect { [library: it.getDataset(), member: it.getMember()] }
+            log.debug("getGeneratedObjects: '{}' -> {} object(s)", sourcePath, result.size())
+            return result
 
         } catch (BuildException e) {
+            log.warn("getGeneratedObjects: BuildException for '{}': {}", sourcePath, e.message)
             return []
         }
     }

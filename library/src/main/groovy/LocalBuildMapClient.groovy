@@ -1,4 +1,5 @@
 import groovy.json.JsonSlurper
+import groovy.util.logging.Slf4j
 
 /**
  * Local-filesystem implementation of {@link BuildMapClient} used during unit testing.
@@ -15,19 +16,26 @@ import groovy.json.JsonSlurper
  * @see BuildMapClient
  * @see LocalFileOps
  */
+@Slf4j
 class LocalBuildMapClient implements BuildMapClient {
     private final List data
 
     LocalBuildMapClient(String jsonFilePath) {
         def parsed = new JsonSlurper().parse(new File(jsonFilePath))
         data = (parsed instanceof List) ? parsed : [parsed]
+        log.debug("Loaded {} build map entries from: {}", data.size(), jsonFilePath)
     }
 
     List<Map<String, String>> getGeneratedObjects(String sourcePath, String buildGroup) {
         def entry = data.find { it.buildFile == sourcePath && it.group == buildGroup }
-        if (!entry) return []
-        ((entry.outputs ?: []) as List)
+        if (!entry) {
+            log.debug("getGeneratedObjects: no entry for '{}' in group '{}'", sourcePath, buildGroup)
+            return []
+        }
+        def result = ((entry.outputs ?: []) as List)
             .findAll { it.dataset && it.member }
             .collect { [library: it.dataset as String, member: it.member as String] }
+        log.debug("getGeneratedObjects: '{}' group '{}' -> {} object(s)", sourcePath, buildGroup, result.size())
+        result
     }
 }

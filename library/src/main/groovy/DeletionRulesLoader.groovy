@@ -1,3 +1,5 @@
+import groovy.util.logging.Slf4j
+
 /**
  * Reads the deletion-rules CSV file and converts each non-blank, non-comment line
  * into a {@link DeletionRule} instance consumed by the cassaforte cleanup logic.
@@ -18,10 +20,12 @@
  * @see DeletionRule
  * @see scripts/build-data/rules.csv
  */
+@Slf4j
 class DeletionRulesLoader {
 
     List<DeletionRule> load(File file) {
-        file.readLines()
+        log.debug("Loading deletion rules from: {}", file)
+        def result = file.readLines()
             .findAll { it.trim() && !it.startsWith('#') }
             .collect { line ->
                 def parts = line.split(';', -1)
@@ -33,5 +37,7 @@ class DeletionRulesLoader {
                     useBuildMap:     parts[2].trim() == 'BUILD MAP'
                 )
             }
+        log.info("Loaded {} deletion rules from: {}", result.size(), file)
+        result
     }
 }

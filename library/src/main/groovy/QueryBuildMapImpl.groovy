@@ -1,6 +1,9 @@
+import groovy.util.logging.Slf4j
+
 /**
  * Query build map using jar
  */
+@Slf4j
 class QueryBuildMapImpl {
 
     /**
@@ -19,7 +22,7 @@ class QueryBuildMapImpl {
         try {
             buildMap = BuildMapClientFactory.fromConf(buildGroup, userId, pwFilePath, db2ConfigFile)
         } catch (IllegalStateException e) {
-            System.err.println "WARN: ${e.message} — build map lookups will return empty"
+            log.warn("build map unavailable: {} — build map lookups will return empty", e.message)
             System.exit(1)
         }
         return execute(listFile, buildGroup, buildMap)
@@ -49,26 +52,26 @@ class QueryBuildMapImpl {
             if (!line || line.startsWith('#')) return
             def comma = line.indexOf(',')
             if (comma < 0) {
-                System.err.println "Skipping malformed line: '$line'"
+                log.warn("Skipping malformed line: '{}'", line)
                 errors++
                 return
             }
 
             def sourcePath = line.substring(comma + 1).trim()
-            println "Querying build map on '${buildGroup}' '${sourcePath}'..."
+            log.info("Querying build map on '{}' for '{}'", buildGroup, sourcePath)
 
             try {
                 buildMap.getGeneratedObjects(sourcePath, buildGroup).each { genObj ->
-                    println "${sourcePath} -> ${genObj}"
+                    log.info("{} -> {}", sourcePath, genObj)
                 }
                 processed++
             } catch (Exception e) {
-                System.err.println "ERROR processing '$sourcePath': ${e.message}"
+                log.error("ERROR processing '{}': {}", sourcePath, e.message, e)
                 errors++
             }
         }
 
-        println "QueryBuildMapOnZosImpl: processed=${processed} errors=${errors}"
+        log.info("QueryBuildMapImpl: processed={} errors={}", processed, errors)
         return errors
     }
 }

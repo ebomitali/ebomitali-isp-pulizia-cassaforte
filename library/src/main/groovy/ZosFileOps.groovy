@@ -1,3 +1,5 @@
+import groovy.util.logging.Slf4j
+
 /**
  * Trait (interface) that abstracts z/OS file operations consumed by the cassaforte cleanup logic.
  *
@@ -14,6 +16,7 @@
  *   /path/to/file           — USS HFS/zFS path (passed through unchanged)
  * </pre>
  */
+@Slf4j
 trait ZosFileOps {
 
     abstract boolean exists(String path)

@@ -1,3 +1,5 @@
+import groovy.util.logging.Slf4j
+
 /**
  * Resolves parametric PDS library names by substituting ISP stage and system tokens,
  * and derives TOCOLB library names from cassaforte library names.
@@ -21,6 +23,7 @@
  * @see DeletionRule#libraryTemplate
  * @see SfilamentoLogic
  */
+@Slf4j
 class LibraryNameResolver {
     String resolve(String template, Map<String, String> vars) {
         def result = vars.inject(template) { acc, key, val ->
@@ -28,10 +31,12 @@ class LibraryNameResolver {
         }
         def unresolved = (result =~ /\$\{[^}]+\}/)
         if (unresolved) {
+            log.error("Unresolved macro: {} in template: '{}'", unresolved[0], template)
             throw new IllegalStateException(
                 "Unresolved macro: ${unresolved[0]} in template: '${template}'"
             )
         }
+        log.debug("resolve: '{}' -> '{}'", template, result)
         result
     }
 
@@ -43,6 +48,8 @@ class LibraryNameResolver {
             parts[3] = parts[3].replace('@@@@', 'TO@@')
             parts[4] = parts[4].replace('@@@@@@@@', 'COLB@@@@')
         }
-        parts.join('.')
+        def result = parts.join('.')
+        log.debug("toTocolbLibrary: '{}' -> '{}'", resolvedLibrary, result)
+        result
     }
 }

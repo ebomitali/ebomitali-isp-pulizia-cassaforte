@@ -1,3 +1,5 @@
+import groovy.util.logging.Slf4j
+
 /**
  * DBB post-build task logic: deletes the corresponding cassaforte member from the
  * <em>predecessor</em> environment after a successful compile step.
@@ -17,6 +19,7 @@
  * @see EnvironmentChain#requiresPrevEnvClean
  * @see EnvironmentChain#getPredecessor
  */
+@Slf4j
 class PrevEnvCleanLogic {
     DeleteCassaforteLogic deleteLogic
     PathVariableExtractor extractor  = new PathVariableExtractor()
@@ -25,8 +28,12 @@ class PrevEnvCleanLogic {
     EnvironmentChain      envChain   = new EnvironmentChain()
 
     int execute(String sourcePath, String fileType, String environment, String buildGroup) {
-        if (!envChain.requiresPrevEnvClean(environment)) return 0
+        if (!envChain.requiresPrevEnvClean(environment)) {
+            log.debug("Skipping prevEnvClean for environment '{}' (no predecessor)", environment)
+            return 0
+        }
         def prevEnv  = envChain.getPredecessor(environment)
+        log.info("Cleaning predecessor '{}' cassaforte for sourcePath='{}'", prevEnv, sourcePath)
         def prevVars = extractor.extract(sourcePath, prevEnv, stageMap, hlq)
         deleteLogic.execute(sourcePath, fileType, prevVars, buildGroup)
     }

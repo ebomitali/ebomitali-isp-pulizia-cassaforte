@@ -1,3 +1,5 @@
+import groovy.util.logging.Slf4j
+
 /**
  * Models the ISP build pipeline's ordered environment chain and the relationships
  * between environments used by the cassaforte cleanup scripts.
@@ -28,6 +30,7 @@
  *   <li>{@link #supportsSfilamento}   — true only for ST (the SAD restore step).</li>
  * </ul>
  */
+@Slf4j
 class EnvironmentChain {
 
     static final Map<String, String> PREDECESSORS = [
@@ -60,7 +63,10 @@ class EnvironmentChain {
 
     String getStage(String env) {
         def stage = STAGE_BY_ENV[env?.toUpperCase()]
-        if (!stage) throw new IllegalArgumentException("Unknown environment: '${env ?: 'null'}'")
+        if (!stage) {
+            log.error("Unknown environment: '{}'", env)
+            throw new IllegalArgumentException("Unknown environment: '${env ?: 'null'}'")
+        }
         stage
     }
 

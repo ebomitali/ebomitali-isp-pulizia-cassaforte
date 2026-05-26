@@ -1,3 +1,5 @@
+import groovy.util.logging.Slf4j
+
 /**
  * Extracts per-file template variables from a source path.
  *
@@ -10,6 +12,7 @@
  * @see StageMapLoader
  * @see LibraryNameResolver
  */
+@Slf4j
 class PathVariableExtractor {
 
     Map<String, String> extract(String sourcePath, String buildEnv,
@@ -33,6 +36,9 @@ class PathVariableExtractor {
                 "No stage-map entry for '${key}' (path: '${sourcePath}')"
             )
 
-        [C1STAGE: c1stage, C1SYSTEM: c1system, HLQ: hlq ?: '']
+        def result = [C1STAGE: c1stage, C1SYSTEM: c1system, HLQ: hlq ?: '']
+        log.debug("extract: path='{}' env='{}' -> C1STAGE='{}' C1SYSTEM='{}' HLQ='{}'",
+                  sourcePath, buildEnv, c1stage, c1system, hlq)
+        result
     }
 }

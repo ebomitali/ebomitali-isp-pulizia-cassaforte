@@ -3,6 +3,7 @@
 // ZFile javadoc https://www.ibm.com/docs/en/sdk-java-technology/8?topic=jzos-zfile
 import com.ibm.jzos.ZFile
 import com.ibm.jzos.ZFileException
+import groovy.util.logging.Slf4j
 
 /**
  * z/OS USS implementation of the {@link ZosFileOps} trait.
@@ -21,6 +22,7 @@ import com.ibm.jzos.ZFileException
  * Packaged separately into pulizia-cassaforte-zos.jar (requires IBM jars in libs/).
  * Never loaded by a local JVM — instantiated only inside the groovyz USS entry point.
  */
+@Slf4j
 class ZosFileOpsUSS implements ZosFileOps {
 
     /**
@@ -35,9 +37,13 @@ class ZosFileOpsUSS implements ZosFileOps {
     boolean exists(String path) {
         if (path.startsWith('//')) {
             // dsExists checks the catalog — does not require the dataset to be allocated
-            return ZFile.dsExists(mvsName(path))
+            def result = ZFile.dsExists(mvsName(path))
+            log.debug("exists({}): {}", path, result)
+            return result
         }
-        new File(path).exists()
+        def result = new File(path).exists()
+        log.debug("exists({}): {}", path, result)
+        result
     }
 
     /**
@@ -51,6 +57,7 @@ class ZosFileOpsUSS implements ZosFileOps {
      * @throws ZFileException if the MVS remove fails (e.g. dataset in use, not found).
      */
     void delete(String path) {
+        log.debug("delete({})", path)
         if (path.startsWith('//')) {
             def (dsn, member) = parseDsn(path)
             // Build the ZFile-style spec: DSN(MEMBER) for PDS members, plain DSN otherwise
@@ -80,6 +87,7 @@ class ZosFileOpsUSS implements ZosFileOps {
      * @throws ZFileException if the MVS open, read, or write fails.
      */
     void copy(String src, String dst) {
+        log.debug("copy({} -> {})", src, dst)
         if (src.startsWith('//') && dst.startsWith('//')) {
             def (srcDsn, srcMember) = parseDsn(src)
             def (dstDsn, dstMember) = parseDsn(dst)
@@ -122,9 +130,13 @@ class ZosFileOpsUSS implements ZosFileOps {
     List<String> list(String container) {
         if (container.startsWith('//')) {
             // listMembers returns null if the PDS has no members — coerce to empty list
-            return ZFile.listMembers(mvsName(container))?.toList() ?: []
+            def result = ZFile.listMembers(mvsName(container))?.toList() ?: []
+            log.debug("list({}): {} member(s)", container, result.size())
+            return result
         }
-        new File(container).list()?.toList() ?: []
+        def result = new File(container).list()?.toList() ?: []
+        log.debug("list({}): {} entry(s)", container, result.size())
+        result
     }
 
     // ─── private helpers ──────────────────────────────────────────────────────

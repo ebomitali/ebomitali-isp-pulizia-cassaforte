@@ -1,3 +1,5 @@
+import groovy.util.logging.Slf4j
+
 /**
  * Business logic for the {@code PuliziaCassaforte.groovy} entry point.
  *
@@ -8,11 +10,12 @@
  * @see DeleteCassaforteLogic
  * @see SfilamentoLogic
  */
+@Slf4j
 class PuliziaCassaforteImpl {
 
     String fileOpsType   = 'zos' // set value to 'local' to use LocalFileOps for file operations, which is useful for testing
     String buildMapClientType = 'db2' // set value to 'json' to read build map from JSON file instead of DB2, which is useful for testing
-    
+
     // Used by db2 build map client
     String userId        = null
     String pwFilePath    = null
@@ -114,13 +117,15 @@ class PuliziaCassaforteImpl {
             hlq:         hlq
         )
 
+        log.info("PuliziaCassaforte: processing list='{}' env='{}' buildGroup='{}'",
+                 listFileToProcess, environment, buildGroup)
         int processed = 0, errors = 0
         lftp.eachLine { raw ->
             def line = raw.trim()
             if (!line || line.startsWith('#')) return
             def comma = line.indexOf(',')
             if (comma < 0) {
-                System.err.println "Skipping malformed line: '$line'"
+                log.warn("Skipping malformed line: '{}'", line)
                 errors++
                 return
             }
@@ -140,16 +145,16 @@ class PuliziaCassaforteImpl {
                         processed++
                         break
                     default:
-                        System.err.println "Unknown action '$action' in line: '$line'"
+                        log.warn("Unknown action '{}' in line: '{}'", action, line)
                         errors++
                 }
             } catch (Exception e) {
-                System.err.println "ERROR processing '$sourcePath': ${e.message}"
+                log.error("ERROR processing '{}': {}", sourcePath, e.message, e)
                 errors++
             }
         }
 
-        println "PuliziaCassaforte: processed=${processed} errors=${errors}"
+        log.info("PuliziaCassaforte: processed={} errors={}", processed, errors)
         return errors
     }
 

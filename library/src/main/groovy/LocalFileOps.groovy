@@ -1,3 +1,4 @@
+import groovy.util.logging.Slf4j
 import java.nio.file.*
 
 /**
@@ -17,12 +18,14 @@ import java.nio.file.*
  * @see ZosFileOps
  * @see ZosFileOpsUSS
  */
+@Slf4j
 class LocalFileOps implements ZosFileOps {
 
     final String baseDir
 
     LocalFileOps(String baseDir = '/tmp/zos-sim') {
         this.baseDir = baseDir
+        log.debug("LocalFileOps initialized with baseDir: {}", baseDir)
     }
 
     private Path resolve(String zosPath) {
@@ -35,11 +38,19 @@ class LocalFileOps implements ZosFileOps {
         Paths.get(zosPath)
     }
 
-    boolean exists(String path) { Files.exists(resolve(path)) }
+    boolean exists(String path) {
+        def result = Files.exists(resolve(path))
+        log.debug("exists({}): {}", path, result)
+        result
+    }
 
-    void delete(String path) { Files.deleteIfExists(resolve(path)) }
+    void delete(String path) {
+        log.debug("delete({})", path)
+        Files.deleteIfExists(resolve(path))
+    }
 
     void copy(String src, String dst) {
+        log.debug("copy({} -> {})", src, dst)
         def dstPath = resolve(dst)
         Files.createDirectories(dstPath.parent)
         def srcPath = resolve(src)
@@ -52,8 +63,13 @@ class LocalFileOps implements ZosFileOps {
 
     List<String> list(String container) {
         def dir = resolve(container)
-        if (!Files.isDirectory(dir)) return []
-        dir.toFile().list()?.toList() ?: []
+        if (!Files.isDirectory(dir)) {
+            log.debug("list({}): not a directory", container)
+            return []
+        }
+        def result = dir.toFile().list()?.toList() ?: []
+        log.debug("list({}): {} member(s)", container, result.size())
+        result
     }
 
 }

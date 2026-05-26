@@ -1,3 +1,5 @@
+import groovy.util.logging.Slf4j
+
 /**
  * Core business logic for deleting members from cassaforte (staging) PDS libraries.
  *
@@ -20,6 +22,7 @@
  * @see SfilamentoLogic
  * @see PrevEnvCleanLogic
  */
+@Slf4j
 class DeleteCassaforteLogic {
     ZosFileOps          ops
     List<DeletionRule>  rules
@@ -32,6 +35,8 @@ class DeleteCassaforteLogic {
     int execute(String sourcePath, String fileType, Map<String,String> vars, String buildGroup) {
         def member   = memberName(sourcePath)
         def matching = rules.findAll { matcher.matches(it.typePattern, fileType) }
+        log.debug("execute: sourcePath='{}' fileType='{}' buildGroup='{}' matchingRules={}",
+                  sourcePath, fileType, buildGroup, matching.size())
         int count    = 0
 
         matching.each { rule ->
@@ -40,14 +45,23 @@ class DeleteCassaforteLogic {
                 buildMap.getGeneratedObjects(sourcePath, buildGroup).each { obj ->
                     if (obj.library == lib) {
                         def zp = "//${lib}(${obj.member})"
-                        if (ops.exists(zp)) { ops.delete(zp); count++ }
+                        if (ops.exists(zp)) {
+                            log.info("Deleting (build-map): {}", zp)
+                            ops.delete(zp)
+                            count++
+                        }
                     }
                 }
             } else {
                 def zp = "//${lib}(${member})"
-                if (ops.exists(zp)) { ops.delete(zp); count++ }
+                if (ops.exists(zp)) {
+                    log.info("Deleting: {}", zp)
+                    ops.delete(zp)
+                    count++
+                }
             }
         }
+        log.debug("execute: {} deletion(s) performed for '{}'", count, sourcePath)
         count
     }
 
