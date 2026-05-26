@@ -1,12 +1,12 @@
 @groovy.transform.BaseScript com.ibm.dbb.groovy.ScriptLoader baseScript
 
-String fileListPath = 'lista.txt'
+String processFileList = 'lista.txt'
 String environment = 'ATO'
 String buildGroup = 'ATO'
 
-File fileListFile = new File(fileListPath)
+File fileListFile = new File(processFileList)
 if (!fileListFile.exists()) {
-    println "List does not exist: ${fileListPath}"
+    println "List does not exist: ${processFileList}"
     System.exit(1)
 }
 
@@ -19,15 +19,15 @@ if (dbbConf == null) {
 // Overwritable variables with default values
 String fileOpsType = 'local'
 String buildMapClientType = 'json'
-String rulesPath = '../resource/fixture/rules.csv'
-String stageMapPath = '../resource/fixture/stage-map.csv'
+String rulesPath = '../resources/rules.csv'
+String stageMapPath = '../resources/stage-map.csv'
 // 
 String uxBasedir = '/u/u0g9700/ux'
 String hlq = null
 String userId = null
 String pwFilePath = null
 String db2ConfigPath = null
-String buildMapPath = '../resource/fixture/build-map.json'
+String buildMapPath = '../resources/build-map.json'
 
 // write the valued variables as properties file in file PuliziaCassaforte.properties
 Properties properties = new Properties()
