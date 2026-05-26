@@ -89,26 +89,26 @@ task distribute(dependsOn: build) {
         }
         // exclude src/test/resources/META-INF/ from copying
         copy {
-            from 'src/test/resources'
+            from 'src/test/resources/fixtures'
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/full-fat-source/test/resources'
             exclude 'META-INF/**'
         }
         copy {
             from 'src/test/sh'
-            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/full-fat-source/test/sh'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/full-fat-source'
         }
         copy {
-            from 'src/main/groovy'
+            from('src/main/groovy') { include 'pulizia_cassaforte_full.groovy' }
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source'
         }
         copy {
-            from 'src/test/resources'
-            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source/test/resources'
+            from 'src/test/resources/fixtures'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source/resources'
             exclude 'META-INF/**'
         }
         copy {
             from 'src/test/sh'
-            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source/test/sh'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source'
         }
     }
 }
