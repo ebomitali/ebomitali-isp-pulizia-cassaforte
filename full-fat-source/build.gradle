@@ -80,10 +80,8 @@ test {
 }
 
 // Task 4: Distribute generated fat source to target repositories
-task distribute(type: Copy, dependsOn: build) {
+task distribute(dependsOn: build) {
     description = 'Copy generated fat source to dbb-scripts and build repo'
-    from 'src/main/groovy'
-    into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/full-fat-source'
     doLast {
         copy {
             from 'src/main/groovy'
@@ -95,7 +93,7 @@ task distribute(type: Copy, dependsOn: build) {
         }
         copy {
             from 'src/test/sh'
-            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source/test/sh'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/full-fat-source/test/sh'
         }
         copy {
             from 'src/main/groovy'
