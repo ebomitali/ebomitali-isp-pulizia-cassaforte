@@ -11,6 +11,7 @@ import com.ibm.dbb.metadata.MetadataStoreFactory
 import com.ibm.jzos.ZFile
 import com.ibm.jzos.ZFileException
 import groovy.json.JsonSlurper
+import groovy.util.logging.Slf4j
 import java.nio.file.*
 import java.util.regex.Pattern
 
@@ -31,6 +32,7 @@ import java.util.regex.Pattern
  * @see DeletionRule#useBuildMap
  * @see DeleteCassaforteLogic
  */
+@Slf4j
 trait BuildMapClient {
     abstract List<Map<String, String>> getGeneratedObjects(String sourcePath, String buildGroup)
 }
@@ -50,6 +52,7 @@ trait BuildMapClient {
  * @see BuildMapClient
  * @see LocalBuildMapClient
  */
+@Slf4j
 class BuildMapClientFactory {
 
     /**
@@ -58,6 +61,7 @@ class BuildMapClientFactory {
      * @param bmFile JSON file in the {@link LocalBuildMapClient} array format.
      */
     static BuildMapClient fromJson(File bmFile) {
+        log.debug("Creating local BuildMapClient from JSON: {}", bmFile)
         return new LocalBuildMapClient(bmFile.canonicalPath)
     }
 
@@ -77,6 +81,7 @@ class BuildMapClientFactory {
      */
     static BuildMapClient fromConf(String buildGroupName, String userId, String pwFilePath,
                                    File configFile = defaultConfigFile()) {
+        log.info("Creating ZosBuildMapClient for group '{}' user '{}'", buildGroupName, userId)
         return Class.forName('ZosBuildMapClient')
                     .fromConf(configFile.parent, buildGroupName, userId, pwFilePath) as BuildMapClient
     }
@@ -110,6 +115,7 @@ class BuildMapClientFactory {
  * @see SfilamentoLogic
  * @see PrevEnvCleanLogic
  */
+@Slf4j
 class DeleteCassaforteLogic {
     ZosFileOps          ops
     List<DeletionRule>  rules
@@ -122,6 +128,8 @@ class DeleteCassaforteLogic {
     int execute(String sourcePath, String fileType, Map<String,String> vars, String buildGroup) {
         def member   = memberName(sourcePath)
         def matching = rules.findAll { matcher.matches(it.typePattern, fileType) }
+        log.debug("execute: sourcePath='{}' fileType='{}' buildGroup='{}' matchingRules={}",
+                  sourcePath, fileType, buildGroup, matching.size())
         int count    = 0
 
         matching.each { rule ->
@@ -130,14 +138,23 @@ class DeleteCassaforteLogic {
                 buildMap.getGeneratedObjects(sourcePath, buildGroup).each { obj ->
                     if (obj.library == lib) {
                         def zp = "//${lib}(${obj.member})"
-                        if (ops.exists(zp)) { ops.delete(zp); count++ }
+                        if (ops.exists(zp)) {
+                            log.info("Deleting (build-map): {}", zp)
+                            ops.delete(zp)
+                            count++
+                        }
                     }
                 }
             } else {
                 def zp = "//${lib}(${member})"
-                if (ops.exists(zp)) { ops.delete(zp); count++ }
+                if (ops.exists(zp)) {
+                    log.info("Deleting: {}", zp)
+                    ops.delete(zp)
+                    count++
+                }
             }
         }
+        log.debug("execute: {} deletion(s) performed for '{}'", count, sourcePath)
         count
     }
 
@@ -166,6 +183,7 @@ class DeleteCassaforteLogic {
  * @see PatternMatcher
  * @see LibraryNameResolver
  */
+@groovy.util.logging.Slf4j
 @groovy.transform.Immutable
 class DeletionRule {
     String typePattern
@@ -194,10 +212,12 @@ class DeletionRule {
  * @see DeletionRule
  * @see scripts/build-data/rules.csv
  */
+@Slf4j
 class DeletionRulesLoader {
 
     List<DeletionRule> load(File file) {
-        file.readLines()
+        log.debug("Loading deletion rules from: {}", file)
+        def result = file.readLines()
             .findAll { it.trim() && !it.startsWith('#') }
             .collect { line ->
                 def parts = line.split(';', -1)
@@ -209,6 +229,8 @@ class DeletionRulesLoader {
                     useBuildMap:     parts[2].trim() == 'BUILD MAP'
                 )
             }
+        log.info("Loaded {} deletion rules from: {}", result.size(), file)
+        result
     }
 }
 
@@ -243,6 +265,7 @@ class DeletionRulesLoader {
  *   <li>{@link #supportsSfilamento}   — true only for ST (the SAD restore step).</li>
  * </ul>
  */
+@Slf4j
 class EnvironmentChain {
 
     static final Map<String, String> PREDECESSORS = [
@@ -275,7 +298,10 @@ class EnvironmentChain {
 
     String getStage(String env) {
         def stage = STAGE_BY_ENV[env?.toUpperCase()]
-        if (!stage) throw new IllegalArgumentException("Unknown environment: '${env ?: 'null'}'")
+        if (!stage) {
+            log.error("Unknown environment: '{}'", env)
+            throw new IllegalArgumentException("Unknown environment: '${env ?: 'null'}'")
+        }
         stage
     }
 
@@ -312,6 +338,7 @@ class EnvironmentChain {
  * @see DeletionRule#libraryTemplate
  * @see SfilamentoLogic
  */
+@Slf4j
 class LibraryNameResolver {
     String resolve(String template, Map<String, String> vars) {
         def result = vars.inject(template) { acc, key, val ->
@@ -319,10 +346,12 @@ class LibraryNameResolver {
         }
         def unresolved = (result =~ /\$\{[^}]+\}/)
         if (unresolved) {
+            log.error("Unresolved macro: {} in template: '{}'", unresolved[0], template)
             throw new IllegalStateException(
                 "Unresolved macro: ${unresolved[0]} in template: '${template}'"
             )
         }
+        log.debug("resolve: '{}' -> '{}'", template, result)
         result
     }
 
@@ -334,7 +363,9 @@ class LibraryNameResolver {
             parts[3] = parts[3].replace('@@@@', 'TO@@')
             parts[4] = parts[4].replace('@@@@@@@@', 'COLB@@@@')
         }
-        parts.join('.')
+        def result = parts.join('.')
+        log.debug("toTocolbLibrary: '{}' -> '{}'", resolvedLibrary, result)
+        result
     }
 }
 
@@ -354,20 +385,27 @@ class LibraryNameResolver {
  * @see BuildMapClient
  * @see LocalFileOps
  */
+@Slf4j
 class LocalBuildMapClient implements BuildMapClient {
     private final List data
 
     LocalBuildMapClient(String jsonFilePath) {
         def parsed = new JsonSlurper().parse(new File(jsonFilePath))
         data = (parsed instanceof List) ? parsed : [parsed]
+        log.debug("Loaded {} build map entries from: {}", data.size(), jsonFilePath)
     }
 
     List<Map<String, String>> getGeneratedObjects(String sourcePath, String buildGroup) {
         def entry = data.find { it.buildFile == sourcePath && it.group == buildGroup }
-        if (!entry) return []
-        ((entry.outputs ?: []) as List)
+        if (!entry) {
+            log.debug("getGeneratedObjects: no entry for '{}' in group '{}'", sourcePath, buildGroup)
+            return []
+        }
+        def result = ((entry.outputs ?: []) as List)
             .findAll { it.dataset && it.member }
             .collect { [library: it.dataset as String, member: it.member as String] }
+        log.debug("getGeneratedObjects: '{}' group '{}' -> {} object(s)", sourcePath, buildGroup, result.size())
+        result
     }
 }
 
@@ -389,12 +427,14 @@ class LocalBuildMapClient implements BuildMapClient {
  * @see ZosFileOps
  * @see ZosFileOpsUSS
  */
+@Slf4j
 class LocalFileOps implements ZosFileOps {
 
     final String baseDir
 
     LocalFileOps(String baseDir = '/tmp/zos-sim') {
         this.baseDir = baseDir
+        log.debug("LocalFileOps initialized with baseDir: {}", baseDir)
     }
 
     private Path resolve(String zosPath) {
@@ -407,11 +447,19 @@ class LocalFileOps implements ZosFileOps {
         Paths.get(zosPath)
     }
 
-    boolean exists(String path) { Files.exists(resolve(path)) }
+    boolean exists(String path) {
+        def result = Files.exists(resolve(path))
+        log.debug("exists({}): {}", path, result)
+        result
+    }
 
-    void delete(String path) { Files.deleteIfExists(resolve(path)) }
+    void delete(String path) {
+        log.debug("delete({})", path)
+        Files.deleteIfExists(resolve(path))
+    }
 
     void copy(String src, String dst) {
+        log.debug("copy({} -> {})", src, dst)
         def dstPath = resolve(dst)
         Files.createDirectories(dstPath.parent)
         def srcPath = resolve(src)
@@ -424,8 +472,13 @@ class LocalFileOps implements ZosFileOps {
 
     List<String> list(String container) {
         def dir = resolve(container)
-        if (!Files.isDirectory(dir)) return []
-        dir.toFile().list()?.toList() ?: []
+        if (!Files.isDirectory(dir)) {
+            log.debug("list({}): not a directory", container)
+            return []
+        }
+        def result = dir.toFile().list()?.toList() ?: []
+        log.debug("list({}): {} member(s)", container, result.size())
+        result
     }
 
 }
@@ -443,6 +496,7 @@ class LocalFileOps implements ZosFileOps {
  *
  * @see ZosBuildMapClient#fromConf
  */
+@Slf4j
 class MetadatastoreFactory {
 
     /**
@@ -455,6 +509,7 @@ class MetadatastoreFactory {
      */
     static MetadataStore connect(String userId, File pwFile,
                                  File configFile = defaultConfigFile()) {
+        log.info("Connecting to metadata store: user='{}' configFile='{}'", userId, configFile)
         Properties properties = new Properties()
         configFile.withInputStream { stream -> properties.load(stream) }
         return MetadataStoreFactory.createDb2MetadataStore(userId, pwFile, properties)
@@ -466,6 +521,7 @@ class MetadatastoreFactory {
         // verify that pwFile exists before proceeding
         File pwFile = new File(pwFilePath)
         if (!pwFile.exists()) {
+            log.error("DB2 password file not found at '{}'", pwFile.canonicalPath)
             throw new IllegalStateException("DB2 password file not found at ${pwFile.canonicalPath}")
         }
         return connect(userId, pwFile, configFile)
@@ -476,8 +532,10 @@ class MetadatastoreFactory {
         // check that the file exists before returning it, to avoid confusion with a missing env var or typo in DBB_HOME
         File confFile = new File(confDir, 'db2Connection.conf')
         if (!confFile.exists()) {
+            log.error("DB2 config file not found at '{}' — check DBB_CONF or DBB_HOME", confFile.canonicalPath)
             throw new IllegalStateException("DB2 config file not found at ${confFile.canonicalPath} — check DBB_CONF or DBB_HOME environment variables")
         }
+        log.debug("Using DB2 config: {}", confFile)
         return confFile
     }
 }
@@ -495,6 +553,7 @@ class MetadatastoreFactory {
  * @see StageMapLoader
  * @see LibraryNameResolver
  */
+@Slf4j
 class PathVariableExtractor {
 
     Map<String, String> extract(String sourcePath, String buildEnv,
@@ -518,7 +577,10 @@ class PathVariableExtractor {
                 "No stage-map entry for '${key}' (path: '${sourcePath}')"
             )
 
-        [C1STAGE: c1stage, C1SYSTEM: c1system, HLQ: hlq ?: '']
+        def result = [C1STAGE: c1stage, C1SYSTEM: c1system, HLQ: hlq ?: '']
+        log.debug("extract: path='{}' env='{}' -> C1STAGE='{}' C1SYSTEM='{}' HLQ='{}'",
+                  sourcePath, buildEnv, c1stage, c1system, hlq)
+        result
     }
 }
 
@@ -539,6 +601,7 @@ class PathVariableExtractor {
  *
  * @see DeletionRule#typePattern
  */
+@Slf4j
 class PatternMatcher {
     boolean matches(String pattern, String value) {
         def regex = pattern.collect { c ->
@@ -548,7 +611,9 @@ class PatternMatcher {
                 default:  return Pattern.quote(String.valueOf(c))
             }
         }.join('')
-        value ==~ regex
+        def result = value ==~ regex
+        log.trace("matches('{}', '{}') = {}", pattern, value, result)
+        result
     }
 }
 
@@ -572,6 +637,7 @@ class PatternMatcher {
  * @see EnvironmentChain#requiresPrevEnvClean
  * @see EnvironmentChain#getPredecessor
  */
+@Slf4j
 class PrevEnvCleanLogic {
     DeleteCassaforteLogic deleteLogic
     PathVariableExtractor extractor  = new PathVariableExtractor()
@@ -580,8 +646,12 @@ class PrevEnvCleanLogic {
     EnvironmentChain      envChain   = new EnvironmentChain()
 
     int execute(String sourcePath, String fileType, String environment, String buildGroup) {
-        if (!envChain.requiresPrevEnvClean(environment)) return 0
+        if (!envChain.requiresPrevEnvClean(environment)) {
+            log.debug("Skipping prevEnvClean for environment '{}' (no predecessor)", environment)
+            return 0
+        }
         def prevEnv  = envChain.getPredecessor(environment)
+        log.info("Cleaning predecessor '{}' cassaforte for sourcePath='{}'", prevEnv, sourcePath)
         def prevVars = extractor.extract(sourcePath, prevEnv, stageMap, hlq)
         deleteLogic.execute(sourcePath, fileType, prevVars, buildGroup)
     }
@@ -598,11 +668,12 @@ class PrevEnvCleanLogic {
  * @see DeleteCassaforteLogic
  * @see SfilamentoLogic
  */
+@Slf4j
 class PuliziaCassaforteImpl {
 
     String fileOpsType   = 'zos' // set value to 'local' to use LocalFileOps for file operations, which is useful for testing
     String buildMapClientType = 'db2' // set value to 'json' to read build map from JSON file instead of DB2, which is useful for testing
-    
+
     // Used by db2 build map client
     String userId        = null
     String pwFilePath    = null
@@ -704,13 +775,15 @@ class PuliziaCassaforteImpl {
             hlq:         hlq
         )
 
+        log.info("PuliziaCassaforte: processing list='{}' env='{}' buildGroup='{}'",
+                 listFileToProcess, environment, buildGroup)
         int processed = 0, errors = 0
         lftp.eachLine { raw ->
             def line = raw.trim()
             if (!line || line.startsWith('#')) return
             def comma = line.indexOf(',')
             if (comma < 0) {
-                System.err.println "Skipping malformed line: '$line'"
+                log.warn("Skipping malformed line: '{}'", line)
                 errors++
                 return
             }
@@ -730,16 +803,16 @@ class PuliziaCassaforteImpl {
                         processed++
                         break
                     default:
-                        System.err.println "Unknown action '$action' in line: '$line'"
+                        log.warn("Unknown action '{}' in line: '{}'", action, line)
                         errors++
                 }
             } catch (Exception e) {
-                System.err.println "ERROR processing '$sourcePath': ${e.message}"
+                log.error("ERROR processing '{}': {}", sourcePath, e.message, e)
                 errors++
             }
         }
 
-        println "PuliziaCassaforte: processed=${processed} errors=${errors}"
+        log.info("PuliziaCassaforte: processed={} errors={}", processed, errors)
         return errors
     }
 
@@ -754,6 +827,7 @@ class PuliziaCassaforteImpl {
 /**
  * Query build map using jar
  */
+@Slf4j
 class QueryBuildMapImpl {
 
     /**
@@ -772,7 +846,7 @@ class QueryBuildMapImpl {
         try {
             buildMap = BuildMapClientFactory.fromConf(buildGroup, userId, pwFilePath, db2ConfigFile)
         } catch (IllegalStateException e) {
-            System.err.println "WARN: ${e.message} — build map lookups will return empty"
+            log.warn("build map unavailable: {} — build map lookups will return empty", e.message)
             System.exit(1)
         }
         return execute(listFile, buildGroup, buildMap)
@@ -802,26 +876,26 @@ class QueryBuildMapImpl {
             if (!line || line.startsWith('#')) return
             def comma = line.indexOf(',')
             if (comma < 0) {
-                System.err.println "Skipping malformed line: '$line'"
+                log.warn("Skipping malformed line: '{}'", line)
                 errors++
                 return
             }
 
             def sourcePath = line.substring(comma + 1).trim()
-            println "Querying build map on '${buildGroup}' '${sourcePath}'..."
+            log.info("Querying build map on '{}' for '{}'", buildGroup, sourcePath)
 
             try {
                 buildMap.getGeneratedObjects(sourcePath, buildGroup).each { genObj ->
-                    println "${sourcePath} -> ${genObj}"
+                    log.info("{} -> {}", sourcePath, genObj)
                 }
                 processed++
             } catch (Exception e) {
-                System.err.println "ERROR processing '$sourcePath': ${e.message}"
+                log.error("ERROR processing '{}': {}", sourcePath, e.message, e)
                 errors++
             }
         }
 
-        println "QueryBuildMapOnZosImpl: processed=${processed} errors=${errors}"
+        log.info("QueryBuildMapImpl: processed={} errors={}", processed, errors)
         return errors
     }
 }
@@ -850,6 +924,7 @@ class QueryBuildMapImpl {
  * @see EnvironmentChain
  * @see LibraryNameResolver#toTocolbLibrary
  */
+@Slf4j
 class SfilamentoLogic {
     ZosFileOps            ops
     DeleteCassaforteLogic deleteLogic
@@ -865,11 +940,19 @@ class SfilamentoLogic {
         def currentVars = extractor.extract(sourcePath, environment, stageMap, hlq)
         deleteLogic.execute(sourcePath, fileType, currentVars, buildGroup)
 
-        if (!matcher.matches('SJCL*', fileType)) return false
-        if (!envChain.supportsSfilamento(environment)) return false
+        if (!matcher.matches('SJCL*', fileType)) {
+            log.debug("Sfilamento skipped: fileType '{}' does not match SJCL*", fileType)
+            return false
+        }
+        if (!envChain.supportsSfilamento(environment)) {
+            log.debug("Sfilamento skipped: environment '{}' does not support it", environment)
+            return false
+        }
 
         def member   = DeleteCassaforteLogic.memberName(sourcePath)
         def matching = rules.findAll { matcher.matches(it.typePattern, fileType) }
+        log.info("Sfilamento: searching restore for member '{}' fileType '{}' in environment '{}'",
+                 member, fileType, environment)
 
         for (String superEnv : envChain.getSuperiors(environment)) {
             def superVars = extractor.extract(sourcePath, superEnv, stageMap, hlq)
@@ -879,11 +962,15 @@ class SfilamentoLogic {
                 if (ops.exists(src)) {
                     def localLib = resolver.resolve(rule.libraryTemplate, currentVars)
                     def tocolb   = resolver.toTocolbLibrary(localLib)
-                    ops.copy(src, "//${tocolb}(${member})")
+                    def dst      = "//${tocolb}(${member})"
+                    log.info("Sfilamento: restoring {} -> {}", src, dst)
+                    ops.copy(src, dst)
                     return true
                 }
             }
         }
+        log.info("Sfilamento: no restore source found for member '{}' in superiors of '{}'",
+                 member, environment)
         return false
     }
 }
@@ -900,10 +987,12 @@ class SfilamentoLogic {
  * Key format: {@code PATH_LO|BUILD_ENV} (e.g. {@code "01|ATO"}).
  * Value: C1STAGE code (e.g. {@code "X2A"}).
  */
+@Slf4j
 class StageMapLoader {
 
     Map<String, String> load(File file) {
-        file.readLines()
+        log.debug("Loading stage map from: {}", file)
+        def result = file.readLines()
             .findAll { it.trim() }
             .collectEntries { line ->
                 def parts = line.trim().split(';', -1)
@@ -913,6 +1002,8 @@ class StageMapLoader {
                 def value = parts[1].trim().replace('"', '')
                 [key, value]
             }
+        log.info("Loaded {} stage-map entries from: {}", result.size(), file)
+        result
     }
 }
 
@@ -944,6 +1035,7 @@ class StageMapLoader {
  * @see LocalBuildMapClient
  * @see ZosFileOpsUSS
  */
+@Slf4j
 class ZosBuildMapClient implements BuildMapClient {
 
     private final BuildGroup buildGroup
@@ -956,6 +1048,7 @@ class ZosBuildMapClient implements BuildMapClient {
      */
     ZosBuildMapClient(BuildGroup buildGroup) {
         this.buildGroup = buildGroup
+        log.debug("ZosBuildMapClient initialized for group '{}'", buildGroup?.getName())
     }
 
     /**
@@ -976,10 +1069,13 @@ class ZosBuildMapClient implements BuildMapClient {
      */
     static ZosBuildMapClient fromConf(String confDir, String buildGroupName,
                                       String userId, String pwFilePath) {
+        log.info("Connecting to metadata store: user='{}' group='{}' confDir='{}'",
+                 userId, buildGroupName, confDir)
         def store = MetadatastoreFactory.connect(userId, pwFilePath,
                                                  new File(confDir, 'db2Connection.conf'))
         BuildGroup group = store.getBuildGroup(buildGroupName)
         if (!group) {
+            log.error("Build group '{}' not found in metadata store", buildGroupName)
             throw new IllegalStateException("Build group '${buildGroupName}' not found in metadata store")
         }
         return new ZosBuildMapClient(group)
@@ -1000,13 +1096,19 @@ class ZosBuildMapClient implements BuildMapClient {
     List<Map<String, String>> getGeneratedObjects(String sourcePath, String buildGroup) {
         try {
             BuildMap bm = this.buildGroup.getBuildMap(sourcePath)
-            if (!bm) return []
+            if (!bm) {
+                log.debug("getGeneratedObjects: no build map entry for '{}'", sourcePath)
+                return []
+            }
 
-            return bm.getOutputs()
+            def result = bm.getOutputs()
                 .findAll { it.getDataset() && it.getMember() }
                 .collect { [library: it.getDataset(), member: it.getMember()] }
+            log.debug("getGeneratedObjects: '{}' -> {} object(s)", sourcePath, result.size())
+            return result
 
         } catch (BuildException e) {
+            log.warn("getGeneratedObjects: BuildException for '{}': {}", sourcePath, e.message)
             return []
         }
     }
@@ -1029,6 +1131,7 @@ class ZosBuildMapClient implements BuildMapClient {
  *   /path/to/file           — USS HFS/zFS path (passed through unchanged)
  * </pre>
  */
+@Slf4j
 trait ZosFileOps {
 
     abstract boolean exists(String path)
@@ -1048,13 +1151,17 @@ trait ZosFileOps {
  * @see ZosFileOps
  * @see LocalFileOps
  */
+@Slf4j
 class ZosFileOpsFactory {
 
     /** Returns {@code ZosFileOpsUSS} on USS, {@link LocalFileOps} otherwise. */
     static ZosFileOps create() {
         try {
-            return createOnZos()
+            def impl = createOnZos()
+            log.info("Using ZosFileOpsUSS")
+            return impl
         } catch (ClassNotFoundException ignored) {
+            log.info("ZosFileOpsUSS not found on classpath — using LocalFileOps")
             return mockZos()
         }
     }
@@ -1065,11 +1172,13 @@ class ZosFileOpsFactory {
      * @throws ClassNotFoundException if {@code ZosFileOpsUSS} is not on the classpath.
      */
     static ZosFileOps createOnZos() {
+        log.debug("Loading ZosFileOpsUSS via reflection")
         return Class.forName('ZosFileOpsUSS').newInstance() as ZosFileOps
     }
 
     /** Returns a {@link LocalFileOps} instance for local testing without z/OS dependencies. */
     static ZosFileOps mockZos() {
+        log.debug("Creating LocalFileOps for local testing")
         return new LocalFileOps()
     }
 }
@@ -1096,6 +1205,7 @@ class ZosFileOpsFactory {
  * Packaged separately into pulizia-cassaforte-zos.jar (requires IBM jars in libs/).
  * Never loaded by a local JVM — instantiated only inside the groovyz USS entry point.
  */
+@Slf4j
 class ZosFileOpsUSS implements ZosFileOps {
 
     /**
@@ -1110,9 +1220,13 @@ class ZosFileOpsUSS implements ZosFileOps {
     boolean exists(String path) {
         if (path.startsWith('//')) {
             // dsExists checks the catalog — does not require the dataset to be allocated
-            return ZFile.dsExists(mvsName(path))
+            def result = ZFile.dsExists(mvsName(path))
+            log.debug("exists({}): {}", path, result)
+            return result
         }
-        new File(path).exists()
+        def result = new File(path).exists()
+        log.debug("exists({}): {}", path, result)
+        result
     }
 
     /**
@@ -1126,6 +1240,7 @@ class ZosFileOpsUSS implements ZosFileOps {
      * @throws ZFileException if the MVS remove fails (e.g. dataset in use, not found).
      */
     void delete(String path) {
+        log.debug("delete({})", path)
         if (path.startsWith('//')) {
             def (dsn, member) = parseDsn(path)
             // Build the ZFile-style spec: DSN(MEMBER) for PDS members, plain DSN otherwise
@@ -1155,6 +1270,7 @@ class ZosFileOpsUSS implements ZosFileOps {
      * @throws ZFileException if the MVS open, read, or write fails.
      */
     void copy(String src, String dst) {
+        log.debug("copy({} -> {})", src, dst)
         if (src.startsWith('//') && dst.startsWith('//')) {
             def (srcDsn, srcMember) = parseDsn(src)
             def (dstDsn, dstMember) = parseDsn(dst)
@@ -1197,9 +1313,13 @@ class ZosFileOpsUSS implements ZosFileOps {
     List<String> list(String container) {
         if (container.startsWith('//')) {
             // listMembers returns null if the PDS has no members — coerce to empty list
-            return ZFile.listMembers(mvsName(container))?.toList() ?: []
+            def result = ZFile.listMembers(mvsName(container))?.toList() ?: []
+            log.debug("list({}): {} member(s)", container, result.size())
+            return result
         }
-        new File(container).list()?.toList() ?: []
+        def result = new File(container).list()?.toList() ?: []
+        log.debug("list({}): {} entry(s)", container, result.size())
+        result
     }
 
     // ─── private helpers ──────────────────────────────────────────────────────

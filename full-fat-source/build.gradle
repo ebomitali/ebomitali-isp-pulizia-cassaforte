@@ -62,9 +62,11 @@ java {
 
 dependencies {
     implementation 'org.apache.groovy:groovy-all:4.0.25'
+    implementation 'org.slf4j:slf4j-api:2.0.16'
     testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+    testRuntimeOnly 'ch.qos.logback:logback-classic:1.5.15'
 }
 
 // Ensure tests are copied before compilation
