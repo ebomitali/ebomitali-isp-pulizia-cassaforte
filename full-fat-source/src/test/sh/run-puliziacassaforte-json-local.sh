@@ -46,7 +46,7 @@ config_file=$(write_config)
 lista=$(list_file "C,$SOURCE_FILE")
 
 result=0
-groovyz PuliziaCassaforte.groovy "$lista" "$ENV" "$BUILD_GROUP" "$config_file" || result=$?
+groovyz RunPuliziaCassaforteJsonLocal.groovy "$lista" "$ENV" "$BUILD_GROUP" "$config_file" || result=$?
 
 if [ "$result" -eq 0 ]; then
     echo "Test passed: no errors"

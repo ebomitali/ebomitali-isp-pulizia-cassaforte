@@ -13,7 +13,7 @@ class DeletionRulesLoaderSpec extends Specification {
 
     def "load parses all rules from fixture CSV skipping comment line"() {
         given:
-        def rulesFile = new File(getClass().getResource('/fixtures/rules.csv').toURI()).canonicalPath
+        def rulesFile = new File(getClass().getResource('/fixtures/rules.csv').toURI())
 
         when:
         def rules = new DeletionRulesLoader().load(rulesFile)
@@ -35,7 +35,7 @@ class DeletionRulesLoaderSpec extends Specification {
         tmp.deleteOnExit()
 
         when:
-        new DeletionRulesLoader().load(tmp.canonicalPath)
+        new DeletionRulesLoader().load(tmp)
 
         then:
         thrown(IllegalArgumentException)

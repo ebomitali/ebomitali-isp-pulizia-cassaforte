@@ -16,7 +16,7 @@ class SfilamentoLogicSpec extends Specification {
     LocalFileOps ops
 
     def setup() {
-        def rulesFile = new File(getClass().getResource('/fixtures/rules.csv').toURI()).canonicalPath
+        def rulesFile = new File(getClass().getResource('/fixtures/rules.csv').toURI())
         def bmFile    = new File(getClass().getResource('/fixtures/buildmap.json').toURI()).canonicalPath
         ops = new LocalFileOps(tempDir.toString())
         def rules       = new DeletionRulesLoader().load(rulesFile)

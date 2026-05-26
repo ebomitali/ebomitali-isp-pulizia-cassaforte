@@ -633,13 +633,13 @@ class PuliziaCassaforteImpl {
     DeleteCassaforteLogic deleteLogic = null
     SfilamentoLogic sfilamento    = null
 
-    int run(String listFile, String environment, String buildGroup, String configFile = 'PuliziaCassaforte.properties') {
+    int run(String listFileToProcess, String environment, String buildGroup, String configFile = 'PuliziaCassaforte.properties') {
         def props = new Properties()
         new File(configFile).withInputStream { props.load(it) }
-        return run(listFile, environment, buildGroup, props)
+        return run(listFileToProcess, environment, buildGroup, props)
     }
 
-    int run(String listFile, String environment, String buildGroup, Properties props) {
+    int run(String listFileToProcess, String environment, String buildGroup, Properties props) {
         if (props.getProperty('fileOpsType'))        this.fileOpsType        = props.getProperty('fileOpsType')
         if (props.getProperty('buildMapClientType')) this.buildMapClientType = props.getProperty('buildMapClientType')
         if (props.getProperty('rulesPath'))     this.rulesPath     = props.getProperty('rulesPath')
@@ -651,6 +651,12 @@ class PuliziaCassaforteImpl {
         if (props.getProperty('db2ConfigPath')) this.db2ConfigPath = props.getProperty('db2ConfigPath')
         if (props.getProperty('buildMapPath'))  this.buildMapPath  = props.getProperty('buildMapPath')
 
+        if (!listFileToProcess)
+            throw new IllegalArgumentException('listFileToProcess argument is required')
+        File lftp = new File(listFileToProcess)
+        if (!lftp.exists()) {
+            throw new IllegalArgumentException("listFileToProcess file not found: '$listFileToProcess'")
+        }
         if (!rulesPath || !stageMapPath)
             throw new IllegalArgumentException('rulesPath and stageMapPath must be defined in config')
         rulesFile    = new File(rulesPath)
@@ -699,7 +705,7 @@ class PuliziaCassaforteImpl {
         )
 
         int processed = 0, errors = 0
-        new File(listFile).eachLine { raw ->
+        lftp.eachLine { raw ->
             def line = raw.trim()
             if (!line || line.startsWith('#')) return
             def comma = line.indexOf(',')

@@ -11,7 +11,7 @@ class DeleteCassaforteLogicSpec extends Specification {
     DeleteCassaforteLogic logic
 
     def setup() {
-        def rulesFile = new File(getClass().getResource('/fixtures/rules.csv').toURI()).canonicalPath
+        def rulesFile = new File(getClass().getResource('/fixtures/rules.csv').toURI())
         def bmFile    = new File(getClass().getResource('/fixtures/buildmap.json').toURI()).canonicalPath
         ops   = new LocalFileOps(tempDir.toString())
         logic = new DeleteCassaforteLogic(

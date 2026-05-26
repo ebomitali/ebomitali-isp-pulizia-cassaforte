@@ -48,6 +48,11 @@ groovyz PuliziaCassaforte.groovy \<lista oggetti da cancellare\> \<environment\>
 	*	 EM  Build eseguita in Emergenza
     *    SDD Build eseguita in SD
 
+**Esempio**
+file-lista
+
+C,ATO/yu_y_01_ato_r1/src/COBOL/BATCH/S2NN/YU70200.SCB2B
+
 **Funzioni**
 Usa le seguenti funzioni
 * DELETE_CASSAFORTE
@@ -107,9 +112,9 @@ La cancellazione avviene con il seguente algoritmo:
 Esempio di regole:
 ```
 %CPYCOB*;LTM00.D9P${C1STAGE}.PE000.LING.COB@@@@@.@@.COPY;NO
-%CPYD2  ;LTM00.D9P${C1STAGE.PE000.LING.COB@@@@@.@@.COPY;NO
-SZFSSWG ;LTM00.D9P${C1STAGE.PE000.LING.MAP@@@@@.@@.COPY;BUILD MAP
-SZFSSWG ;LTM00.D9P${C1STAGE.PE000.@@@@.@@@@@@@@.@@.ZARA;NO
+%CPYD2  ;LTM00.D9P${C1STAGE}.PE000.LING.COB@@@@@.@@.COPY;NO
+SZFSSWG ;LTM00.D9P${C1STAGE}.PE000.LING.MAP@@@@@.@@.COPY;BUILD MAP
+SZFSSWG ;LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.ZARA;NO
 %CB2%R  ;LTM00.D9P${C1STAGE.PE000.@@@@.@@@@@@@@.@@.NCAL;NO
 %CB2%R  ;LTM00.D9P${C1STAGE.PE000.MAIN.@@@@@@@@.@@.NCAL;NO
 %CB2%   ;LTM00.D9P${C1STAGE.PE000.SYST.${C1SYSTEM}@@@@@@@.BT.LOAD;NO

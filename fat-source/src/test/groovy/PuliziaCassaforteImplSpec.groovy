@@ -49,7 +49,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def lista = listFile("C,${SOURCE_PATH}")
 
         expect:
-        impl.run(lista, ENV, BUILD_GROUP, bmFile) == 0
+        runImpl(lista) == 0
     }
 
     def "C action is idempotent when member already absent"() {
@@ -57,7 +57,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def lista = listFile("C,${SOURCE_PATH}")
 
         expect:
-        impl.run(lista, ENV, BUILD_GROUP, bmFile) == 0
+        runImpl(lista) == 0
     }
 
     def "blank lines and comments are skipped"() {
@@ -65,7 +65,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def lista = listFile("# comment\n\nC,${SOURCE_PATH}\n")
 
         expect:
-        impl.run(lista, ENV, BUILD_GROUP, bmFile) == 0
+        runImpl(lista) == 0
     }
 
     def "malformed line (no comma) increments error count"() {
@@ -73,7 +73,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def lista = listFile("MALFORMED_LINE")
 
         expect:
-        impl.run(lista, ENV, BUILD_GROUP, bmFile) == 1
+        runImpl(lista) == 1
     }
 
     def "unknown action increments error count"() {
@@ -81,7 +81,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def lista = listFile("X,${SOURCE_PATH}")
 
         expect:
-        impl.run(lista, ENV, BUILD_GROUP, bmFile) == 1
+        runImpl(lista) == 1
     }
 
     def "multiple lines: good and bad counted separately"() {
@@ -89,7 +89,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def lista = listFile("C,${SOURCE_PATH}\nMALFORMED\nX,${SOURCE_PATH}")
 
         expect:
-        impl.run(lista, ENV, BUILD_GROUP, bmFile) == 2
+        runImpl(lista) == 2
     }
 
     def "C action with HLQ resolves template and deletes correct member"() {
@@ -105,14 +105,116 @@ class PuliziaCassaforteImplSpec extends Specification {
         def lista = listFile("C,${HLQ_SOURCE_PATH}")
 
         when:
-        def errors = hlqImpl.run(lista, 'ATO', 'yo_y_01_ato_r1', bmFile, ops, 'U0G9700')
+        def props = new Properties()
+        props.setProperty('buildMapClientType', 'json')
+        props.setProperty('buildMapPath', bmFile.canonicalPath)
+        props.setProperty('fileOpsType', 'local')
+        props.setProperty('uxBasedir', tempDir.toString())
+        props.setProperty('hlq', 'U0G9700')
+        def errors = hlqImpl.run(lista, 'ATO', 'yo_y_01_ato_r1', props)
 
         then:
         errors == 0
         !ops.exists("//${HLQ_LIBRARY}(${HLQ_MEMBER})")
     }
 
+    // ─── config-file run ──────────────────────────────────────────────────────
+
+    def "config-file: C action processed without error (buildMapPath + uxBasedir)"() {
+        given:
+        def configFile = writeConfig([
+            buildMapClientType: 'json',
+            buildMapPath: bmFile.canonicalPath,
+            fileOpsType : 'local',
+            uxBasedir   : tempDir.toString()
+        ])
+        def lista = listFile("C,${SOURCE_PATH}")
+
+        expect:
+        impl.run(lista, ENV, BUILD_GROUP, configFile) == 0
+    }
+
+    def "config-file: rulesPath and stageMapPath overrides are honoured"() {
+        given:
+        def configFile = writeConfig([
+            buildMapClientType: 'json',
+            buildMapPath: bmFile.canonicalPath,
+            fileOpsType : 'local',
+            uxBasedir   : tempDir.toString(),
+            rulesPath   : new File(getClass().getResource('/fixtures/rules.csv').toURI()).canonicalPath,
+            stageMapPath: new File(getClass().getResource('/fixtures/stage-map.csv').toURI()).canonicalPath
+        ])
+        def lista = listFile("C,${SOURCE_PATH}")
+
+        expect:
+        impl.run(lista, ENV, BUILD_GROUP, configFile) == 0
+    }
+
+    def "config-file: hlq is passed through"() {
+        given:
+        def hlqImpl = new PuliziaCassaforteImpl()
+        hlqImpl.rulesPath    = new File(getClass().getResource('/fixtures/rules-hlq.csv').toURI()).canonicalPath
+        hlqImpl.stageMapPath = new File(getClass().getResource('/fixtures/stage-map.csv').toURI()).canonicalPath
+
+        def member = tempDir.resolve("${HLQ_LIBRARY}/${HLQ_MEMBER}")
+        Files.createDirectories(member.parent)
+        Files.writeString(member, 'content')
+
+        def configFile = writeConfig([
+            buildMapClientType: 'json',
+            buildMapPath: bmFile.canonicalPath,
+            fileOpsType : 'local',
+            uxBasedir   : tempDir.toString(),
+            hlq         : 'U0G9700'
+        ])
+        def lista = listFile("C,${HLQ_SOURCE_PATH}")
+
+        when:
+        def errors = hlqImpl.run(lista, 'ATO', 'yo_y_01_ato_r1', configFile)
+
+        then:
+        errors == 0
+        !ops.exists("//${HLQ_LIBRARY}(${HLQ_MEMBER})")
+    }
+
+    def "config-file: missing both userId and buildMapPath throws"() {
+        given:
+        def configFile = writeConfig([uxBasedir: tempDir.toString()])
+        def lista = listFile("C,${SOURCE_PATH}")
+
+        when:
+        impl.run(lista, ENV, BUILD_GROUP, configFile)
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def "config-file: partial credentials (userId without pwFilePath) throws"() {
+        given:
+        def configFile = writeConfig([
+            buildMapClientType: 'db2',
+            userId: 'bob',
+            uxBasedir: tempDir.toString()
+        ])
+        def lista = listFile("C,${SOURCE_PATH}")
+
+        when:
+        impl.run(lista, ENV, BUILD_GROUP, configFile)
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
     // ─── helpers ─────────────────────────────────────────────────────────────
+
+    private int runImpl(String lista) {
+        def props = new Properties()
+        props.setProperty('buildMapClientType', 'json')
+        props.setProperty('buildMapPath', bmFile.canonicalPath)
+        props.setProperty('fileOpsType', 'local')
+        props.setProperty('uxBasedir', tempDir.toString())
+        impl.run(lista, ENV, BUILD_GROUP, props)
+    }
 
     private void createMember(String library, String member) {
         def path = tempDir.resolve("${library}/${member}")
@@ -123,6 +225,14 @@ class PuliziaCassaforteImplSpec extends Specification {
     private String listFile(String content) {
         def f = tempDir.resolve('lista.csv').toFile()
         f.text = content
+        return f.canonicalPath
+    }
+
+    private String writeConfig(Map<String, String> entries) {
+        def f = tempDir.resolve('config.properties').toFile()
+        def props = new Properties()
+        entries.each { k, v -> if (v != null) props.setProperty(k, v) }
+        f.withOutputStream { props.store(it, null) }
         return f.canonicalPath
     }
 }
