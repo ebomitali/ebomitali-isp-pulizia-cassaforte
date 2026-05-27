@@ -162,6 +162,6 @@ class PuliziaCassaforteImpl {
     private static String resolveFileType(String sourcePath) {
         def filename = sourcePath.tokenize('/').last()
         def ext = filename.contains('.') ? filename.substring(filename.lastIndexOf('.') + 1) : filename
-        ext.toUpperCase().padRight(8).take(8)
+        ext.toUpperCase().trim()
     }
 }

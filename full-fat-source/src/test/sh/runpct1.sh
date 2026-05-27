@@ -34,7 +34,7 @@ write_config() {
     printf 'buildMapPath=%s\n' "$(resource_file 'buildmap.json')" >> "$_cfg"
     printf 'uxBasedir=%s\n'    "$TEMP_DIR"                        >> "$_cfg"
     printf 'rulesPath=%s\n'    "$(resource_file 'rules.csv')"     >> "$_cfg"
-    printf 'stageMapPath=%s\n' "$(resource_file 'stage-map.csv')" >> "$_cfg"
+    printf 'stageMapPath=%s\n' "$(resource_file 'stagemap.csv')" >> "$_cfg"
     # Note hlq, userId, pwFilePath, db2ConfigPath required when using db2 client
     echo "$_cfg"
 }

@@ -24,13 +24,14 @@ SF3="ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLITT/YO84XS1.SJCLITT"
 ZOSDS="//'U0G9700.D9PX1A.PE000.@@@@.JCL'"
 ZODDSSIM="$TEMP_DIR/U0G9700.D9PX1A.PE000.@@@@.JCL"
 mkdir -p "$ZODDSSIM"
+echo "Simulated z/OS dataset directory created at: $ZODDSSIM"
 
 # loop on [SF1, SF2, SF3] to create directory and file for each
 for SF in "$SF1" "$SF2" "$SF3"; do
     # extract basename without extension, e.g. YO810BDD from YO810BDD.SJCLCA7
-    BASENAME=$(basename "$SF" | cut -d. -f1)
+    BASENAMENOEXT=$(basename "$SF" | cut -d. -f1)
     # create file with name $BASENAME in $ZODDSSIM, e.g. $ZODDSSIM/YO810BDD
-    touch "$ZODDSSIM/$SF"
+    touch "$ZODDSSIM/$BASENAMENOEXT"
 done
 
 # Helper: absolute path to a resource
@@ -56,20 +57,24 @@ write_config() {
 list_file() {
     _lista="$TEMP_DIR/lista.csv"
     for SF in "$SF1" "$SF2" "$SF3"; do
-        BASENAMENOEXT=$(basename "$SF" | cut -d. -f1)
-        printf '%s\n' "$BASENAMENOEXT" > "$_lista"
+        printf 'C,%s\n' "$SF" >> "$_lista"
     done
     echo "$_lista"
 }
 
 config_file=$(write_config)
-lista=$(list_file "C,$SF1
-C,$SF2")
-
+lista=$(list_file)
+echo "File to be processed:"
+cat "$lista"
 
 result=0
 # Groovy script reads also PuliziaCassaforte.properties from current directory
 groovyz -Dorg.slf4j.simpleLogger -Dorg.slf4j.simpleLogger.defaultLogLevel=debug RunPuliziaCassaforte.groovy "$lista" "$ENV" "$BUILD_GROUP" || result=$?
+result=$?
+
+# Show dir content
+echo "Directory content after script execution:"
+ls -l "$ZODDSSIM"
 
 if [ "$result" -eq 0 ]; then
     echo "Test passed: no errors"

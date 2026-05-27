@@ -38,7 +38,7 @@ list_file() {
     echo "$_lista"
 }
 
-# ─── test: run with config file processes C action without error ───────────────
+# - test: run with config file processes C action without error -
 
 echo "Running test: run with config file processes C action without error"
 
@@ -46,7 +46,7 @@ config_file=$(write_config)
 lista=$(list_file "C,$SOURCE_FILE")
 
 result=0
-groovyz -Dorg.slf4j.simpleLogger -Dorg.slf4j.simpleLogger.defaultLogLevel=debug RunPuliziaCassaforteJsonLocal.groovy "$lista" "$ENV" "$BUILD_GROUP" "$config_file" || result=$?
+groovyz -Dorg.slf4j.simpleLogger -Dorg.slf4j.simpleLogger.defaultLogLevel=trace RunPuliziaCassaforteJsonLocal.groovy "$lista" "$ENV" "$BUILD_GROUP" "$config_file" || result=$?
 
 if [ "$result" -eq 0 ]; then
     echo "Test passed: no errors"

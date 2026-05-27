@@ -32,7 +32,7 @@ class DeletionRulesLoader {
                 if (parts.size() < 3)
                     throw new IllegalArgumentException("Invalid rule (need 3 semicolon-separated fields): '$line'")
                 new DeletionRule(
-                    typePattern:     parts[0],
+                    typePattern:     parts[0].trim(),
                     libraryTemplate: parts[1].trim(),
                     useBuildMap:     parts[2].trim() == 'BUILD MAP'
                 )

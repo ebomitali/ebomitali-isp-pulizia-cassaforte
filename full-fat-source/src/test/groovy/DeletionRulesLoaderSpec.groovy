@@ -19,13 +19,18 @@ class DeletionRulesLoaderSpec extends Specification {
         def rules = new DeletionRulesLoader().load(rulesFile)
 
         then:
-        rules.size() == 5
+        rules.size() == 6
         rules[0].typePattern     == '%CPYCOB*'
         rules[0].libraryTemplate == 'LTM00.D9P${C1STAGE}.PE000.LING.COB@@@@@.@@.COPY'
         rules[0].useBuildMap     == false
-        rules[1].typePattern     == 'SZFSSWG '
+        rules[1].typePattern     == 'SZFSSWG'
         rules[1].useBuildMap     == true
-        rules[3].typePattern     == 'SJCL*   '
+        rules[2].typePattern     == 'SZFSSWG'
+        rules[2].useBuildMap     == false
+        rules[3].typePattern     == 'SJCL*'
+        rules[4].typePattern     == '%JCLINP'
+        rules[5].typePattern     == '%CB2%'
+
     }
 
     def "load throws IllegalArgumentException on malformed line"() {

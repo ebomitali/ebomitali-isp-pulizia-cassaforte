@@ -224,7 +224,7 @@ class DeletionRulesLoader {
                 if (parts.size() < 3)
                     throw new IllegalArgumentException("Invalid rule (need 3 semicolon-separated fields): '$line'")
                 new DeletionRule(
-                    typePattern:     parts[0],
+                    typePattern:     parts[0].trim(),
                     libraryTemplate: parts[1].trim(),
                     useBuildMap:     parts[2].trim() == 'BUILD MAP'
                 )
@@ -437,10 +437,12 @@ class LocalFileOps implements ZosFileOps {
         log.debug("LocalFileOps initialized with baseDir: {}", baseDir)
     }
 
+    // Translates a z/OS-style path to a local filesystem path under baseDir.
+    // PDS member //HLQ.DS(MEMBER) → <baseDir>/HLQ.DS/MEMBER; plain //HLQ.DS → <baseDir>/HLQ.DS; USS path passed through.
     private Path resolve(String zosPath) {
         if (zosPath.startsWith('//')) {
             def inner = zosPath.substring(2)
-            def m = (inner =~ /^(.+?)\((.+?)\)$/)
+            def m = (inner =~ /^(.+?)\((.+?)\)$/) // matches DATASET(MEMBER) pattern
             if (m.matches()) return Paths.get(baseDir, m.group(1), m.group(2))
             return Paths.get(baseDir, inner)
         }
@@ -466,7 +468,7 @@ class LocalFileOps implements ZosFileOps {
         if (Files.exists(srcPath)) {
             Files.copy(srcPath, dstPath, StandardCopyOption.REPLACE_EXISTING)
         } else {
-            Files.createFile(dstPath)
+            Files.createFile(dstPath) // src absent → create empty dst, simulating a z/OS member with no content
         }
     }
 
@@ -604,14 +606,14 @@ class PathVariableExtractor {
 @Slf4j
 class PatternMatcher {
     boolean matches(String pattern, String value) {
-        def regex = pattern.collect { c ->
+        def regex = pattern.trim().collect { c ->
             switch (c) {
                 case '%': return '.'
                 case '*': return '.*'
                 default:  return Pattern.quote(String.valueOf(c))
             }
         }.join('')
-        def result = value ==~ regex
+        def result = value.trim() ==~ regex
         log.trace("matches('{}', '{}') = {}", pattern, value, result)
         result
     }
@@ -820,7 +822,7 @@ class PuliziaCassaforteImpl {
     private static String resolveFileType(String sourcePath) {
         def filename = sourcePath.tokenize('/').last()
         def ext = filename.contains('.') ? filename.substring(filename.lastIndexOf('.') + 1) : filename
-        ext.toUpperCase().padRight(8).take(8)
+        ext.toUpperCase().trim()
     }
 }
 
