@@ -66,6 +66,8 @@ config_file=$(write_config)
 lista=$(list_file)
 echo "File to be processed:"
 cat "$lista"
+echo "Directory content before script execution:"
+ls -l "$ZODDSSIM"
 
 result=0
 # Groovy script reads also PuliziaCassaforte.properties from current directory
