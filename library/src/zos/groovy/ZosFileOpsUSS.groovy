@@ -26,18 +26,31 @@ import groovy.util.logging.Slf4j
 class ZosFileOpsUSS implements ZosFileOps {
 
     /**
-     * Checks whether a dataset or USS path exists.
+     * Checks whether a dataset, PDS member, or USS path exists.
      *
-     * For MVS paths: queries the system catalog via {@link ZFile#dsExists(String)}.
+     * For MVS PDS members (//DSN(MBR)): lists PDS directory and checks membership.
+     * For MVS datasets (//DSN): queries the system catalog via {@link ZFile#dsExists(String)}.
      * For USS paths: delegates to {@link java.io.File#exists()}.
      *
      * @param path  MVS dataset reference (// prefix) or USS absolute path.
-     * @return true if the dataset or file is found.
+     * @return true if the dataset, member, or file is found.
      */
     boolean exists(String path) {
         if (path.startsWith('//')) {
-            // dsExists checks the catalog — does not require the dataset to be allocated
-            def result = ZFile.dsExists(mvsName(path))
+            def (dsn, member) = parseDsn(path)
+            boolean result
+            if (member) {
+                // dsExists is catalog-level only; open the member to confirm it exists
+                try {
+                    def zf = new ZFile("//'${dsn}(${member})'", 'rb,type=record')
+                    zf.close()
+                    result = true
+                } catch (ZFileException ignored) {
+                    result = false
+                }
+            } else {
+                result = ZFile.dsExists(dsn)
+            }
             log.debug("exists({}): {}", path, result)
             return result
         }
