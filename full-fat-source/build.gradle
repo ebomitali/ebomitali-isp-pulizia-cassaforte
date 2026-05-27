@@ -26,7 +26,7 @@ task generateFullFatSource {
         }
         
         exec {
-            commandLine 'sh', "${rootProject.projectDir}/helper/sh/create-source-blob.sh", "${tempDir}", "${projectDir}/src/main/groovy/pulizia_cassaforte_full.groovy"
+            commandLine 'sh', "${rootProject.projectDir}/helper/sh/create-source-blob.sh", "${tempDir}", "${projectDir}/src/main/groovy/FullPuliziaCassaforte.groovy"
         }
     }
 }
@@ -100,7 +100,7 @@ task distribute(dependsOn: build) {
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/full-fat-source'
         }
         copy {
-            from('src/main/groovy') { include 'pulizia_cassaforte_full.groovy' }
+            from('src/main/groovy') { include 'FullPuliziaCassaforte.groovy' }
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source'
         }
         copy {
