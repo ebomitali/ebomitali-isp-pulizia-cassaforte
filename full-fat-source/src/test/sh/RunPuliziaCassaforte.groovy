@@ -6,17 +6,17 @@
 // This groovy script instantiate PuliziaCassaforte class and call the method run passing the three arguments.
 
 if (args.length != 3) {
-    println "Usage: groovy PuliziaCassaforte.groovy  <list path> <environment> <build group>"
+    println "Usage: groovyz RunPuliziaCassaforte.groovy  <list path> <environment> <build group>"
     System.exit(1)
 }
 
-String fileListPath = args[0]
+String fileList = args[0]
 String environment = args[1]
 String buildGroup = args[2]
 
-File fileListFile = new File(fileListPath)
+File fileListFile = new File(fileList)
 if (!fileListFile.exists()) {
-    println "List does not exist: ${fileListPath}"
+    println "List does not exist: ${fileList}"
     System.exit(1)
 }
 
@@ -35,7 +35,7 @@ try {
     System.exit(1)
 }
 
-def pcloaded = loadScript("pulizia_cassaforte_full.groovy")
-PuliziaCassaforteImpl puliziaCassaforte = pcloaded.createPuliziaCassaforteImpl()
-int errors = puliziaCassaforte.run(fileListFile, environment, buildGroup, cfgProps)
+def pcloaded = loadScript(new File("FullPuliziaCassaforte.groovy"))
+def puliziaCassaforte = pcloaded.createPuliziaCassaforteImpl()
+int errors = puliziaCassaforte.run(fileList, environment, buildGroup, cfgProps)
 println "PuliziaCassaforte completed with ${errors} errors."

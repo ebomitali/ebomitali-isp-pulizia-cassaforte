@@ -1,0 +1,4 @@
+# HLQ test fixture — single rule with ${HLQ} in library template
+%JCLINP ;U0G9700.D9PX1A.PE000.@@@@.JCL;NO
+SJCLC*  ;U0G9700.D9PX1A.PE000.@@@@.JCL;NO
+

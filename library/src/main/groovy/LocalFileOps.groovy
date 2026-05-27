@@ -28,10 +28,12 @@ class LocalFileOps implements ZosFileOps {
         log.debug("LocalFileOps initialized with baseDir: {}", baseDir)
     }
 
+    // Translates a z/OS-style path to a local filesystem path under baseDir.
+    // PDS member //HLQ.DS(MEMBER) → <baseDir>/HLQ.DS/MEMBER; plain //HLQ.DS → <baseDir>/HLQ.DS; USS path passed through.
     private Path resolve(String zosPath) {
         if (zosPath.startsWith('//')) {
             def inner = zosPath.substring(2)
-            def m = (inner =~ /^(.+?)\((.+?)\)$/)
+            def m = (inner =~ /^(.+?)\((.+?)\)$/) // matches DATASET(MEMBER) pattern
             if (m.matches()) return Paths.get(baseDir, m.group(1), m.group(2))
             return Paths.get(baseDir, inner)
         }
@@ -57,7 +59,7 @@ class LocalFileOps implements ZosFileOps {
         if (Files.exists(srcPath)) {
             Files.copy(srcPath, dstPath, StandardCopyOption.REPLACE_EXISTING)
         } else {
-            Files.createFile(dstPath)
+            Files.createFile(dstPath) // src absent → create empty dst, simulating a z/OS member with no content
         }
     }
 
