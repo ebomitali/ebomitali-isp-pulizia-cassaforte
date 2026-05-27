@@ -17,17 +17,17 @@ touch "$SOURCE_FILE"
 
 # Helper: absolute path to a test fixture
 # script lives under test/sh; fixtures live under test/resources/fixtures
-fixture_file() {
-    echo "$(cd "$(dirname "$0")" && pwd)/../resources/fixtures/$1"
+resource_file() {
+    echo "$(cd "$(dirname "$0")" && pwd)/resources/$1"
 }
 
 # Helper: write config properties file to TEMP_DIR, print its path
 write_config() {
     _cfg="$TEMP_DIR/PuliziaCassaforte.properties"
-    printf 'buildMapPath=%s\n' "$(fixture_file 'buildmap.json')" >  "$_cfg"
+    printf 'buildMapPath=%s\n' "$(resource_file 'buildmap.json')" >  "$_cfg"
     printf 'uxBasedir=%s\n'    "$TEMP_DIR"                       >> "$_cfg"
-    printf 'rulesPath=%s\n'    "$(fixture_file 'rules.csv')"     >> "$_cfg"
-    printf 'stageMapPath=%s\n' "$(fixture_file 'stage-map.csv')" >> "$_cfg"
+    printf 'rulesPath=%s\n'    "$(resource_file 'rules.csv')"     >> "$_cfg"
+    printf 'stageMapPath=%s\n' "$(resource_file 'stage-map.csv')" >> "$_cfg"
     echo "$_cfg"
 }
 
@@ -46,7 +46,7 @@ config_file=$(write_config)
 lista=$(list_file "C,$SOURCE_FILE")
 
 result=0
-groovyz RunPuliziaCassaforteJsonLocal.groovy "$lista" "$ENV" "$BUILD_GROUP" "$config_file" || result=$?
+groovyz -Dorg.slf4j.simpleLogger -Dorg.slf4j.simpleLogger.defaultLogLevel=debug RunPuliziaCassaforteJsonLocal.groovy "$lista" "$ENV" "$BUILD_GROUP" "$config_file" || result=$?
 
 if [ "$result" -eq 0 ]; then
     echo "Test passed: no errors"

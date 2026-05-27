@@ -1,3 +1,4 @@
+@groovy.transform.BaseScript com.ibm.dbb.groovy.ScriptLoader baseScript
 //This groovy script take three argumments from command line:
 // 1. The path a file containing <action>;<file to process> lines
 // 2. The environment (a string that represents the environment, e.g., "ATO")
@@ -48,6 +49,7 @@ properties.setProperty("uxBasedir", uxBasedir)
 properties.setProperty("buildMapPath", buildMapPath)
 properties.store(new FileOutputStream("RunPuliziaCassaforteJsonLocal.properties"), null)
 
-PuliziaCassaforteImpl impl   = new PuliziaCassaforteImpl()
-int errors = impl.run(fileListFile, environment, buildGroup, "RunPuliziaCassaforteJsonLocal.properties")
+def pcloaded = loadScript("pulizia_cassaforte_full.groovy")
+PuliziaCassaforteImpl puliziaCassaforte = pcloaded.createPuliziaCassaforteImpl()
+int errors = puliziaCassaforte.run(fileListFile, environment, buildGroup, "RunPuliziaCassaforteJsonLocal.properties")
 println "PuliziaCassaforte completed with ${errors} errors."
