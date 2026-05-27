@@ -2,7 +2,7 @@
 # Posix and USS compatible shell script to test PuliziaCassaforte.groovy with a specific configuration and input file.
 # Test script
 # - fileOpsType: local
-# - buildMapClientType: json
+# - buildMapClientType: db2
 # - two file match rules with build map matches two files
 
 set -e
@@ -18,12 +18,10 @@ trap "rm -rf $TEMP_DIR" EXIT
 SF1="ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP"
 
 # Create simulated zos env
-echo "Simulated z/OS dataset directory created"
-# for index 1 to 3, create a directory $TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.JINP${index}' and touch a file YO8AMAD${index} in it'
-for i in 1 2 3; do
-    mkdir -p "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.JINP$i"
-    touch "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.JINP$i/YO8AMAD$i"
-done
+mkdir -p "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.JINP"
+mkdir -p "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.PNIJ"
+touch "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.JINP/YO8AMADD"
+touch "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.PNIJ/YO8AMADD"
 echo "Simulated z/OS dataset directory created"
 
 # Helper: absolute path to a resource
