@@ -1,0 +1,63 @@
+{
+  "created": "Wed May 20 15:30:52 GMT+02:00 2026",
+  "createdBy": "PJENK",
+  "lastUpdated": "Wed May 20 15:31:07 GMT+02:00 2026",
+  "lastUpdatedBy": "PJENK",
+  "owner": "PJENK",
+  "permission": "664",
+  "buildFile": "ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP",
+  "group": "ATO",
+  "description": "abffa069352ad245ca60da090a62e413c49bca0768b571abf06eddd3976ad000",
+  "sources": [
+    {
+      "ref": "yo_y_01_ato_r1",
+      "url": "https://vobadm:CebTuv01@sbitbucket.intesasanpaolo.com:443/scm/isp-test/yo_y_01_ato_r1.git",
+      "type": "git",
+      "branch": "feature/U083742/D260505",
+      "location": "/prodotti/DEE/test/jenkins/sjenkins-mainframe/sya0node1/workspace/isp-test/Application/ATO/yo_y_01_ato_r1",
+      "snapshot": "cb43a7128e3a822574326ca874df7cebf6309703",
+      "id": 891
+    }
+  ],
+  "inputs": [
+    {
+      "lName": "YO8AMADD",
+      "category": "SELF                            ",
+      "path": "ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP",
+      "sourceRef": "yo_y_01_ato_r1",
+      "version": "cb43a7128e3a822574326ca874df7cebf6309703",
+      "id": 3531
+    }
+  ],
+  "binaryInputs": [],
+  "outputs": [
+    {
+      "member": "YO8AMAD1",
+      "dataset": "LTM00.D9PX2A.PE000.@@@@.JINP1",
+      "path": null,
+      "deployType": "JCL",
+      "version": null,
+      "fingerprint": null,
+      "id": 6401
+    }
+    {
+      "member": "YO8AMAD2",
+      "dataset": "LTM00.D9PX2A.PE000.@@@@.JINP2",
+      "path": null,
+      "deployType": "JCL",
+      "version": null,
+      "fingerprint": null,
+      "id": 6401
+    }
+    {
+      "member": "YO8AMAD3",
+      "dataset": "LTM00.D9PX2A.PE000.@@@@.JINP3",
+      "path": null,
+      "deployType": "JCL",
+      "version": null,
+      "fingerprint": null,
+      "id": 6401
+    }
+  ],
+  "id": 3591
+}
