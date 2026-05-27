@@ -26,30 +26,16 @@ if (dbbConf == null) {
     println "Environment variable DBB_CONF is not set."
     System.exit(1)
 }
-// Overwritable variables with default values
-String fileOpsType = 'local'
-String buildMapClientType = 'json'
-String rulesPath = '../resource/fixture/rules.csv'
-String stageMapPath = '../resource/fixture/stage-map.csv'
-// 
-String uxBasedir = '/u/u0g9700/ux'
-String hlq = null
-String userId = null
-String pwFilePath = null
-String db2ConfigPath = null
-String buildMapPath = '../resource/fixture/build-map.json'
-
-// write the valued variables as properties file in file PuliziaCassaforte.properties
-Properties properties = new Properties()
-properties.setProperty("fileOpsType", fileOpsType)
-properties.setProperty("buildMapClientType", buildMapClientType)
-properties.setProperty("rulesPath", rulesPath)
-properties.setProperty("stageMapPath", stageMapPath)
-properties.setProperty("uxBasedir", uxBasedir)
-properties.setProperty("buildMapPath", buildMapPath)
-properties.store(new FileOutputStream("RunPuliziaCassaforteJsonLocal.properties"), null)
+// Read PuliziaCassaforte property file from current directory
+Properties cfgProps = new Properties()
+try {
+    cfgProps.load(new FileInputStream("PuliziaCassaforte.properties"))
+} catch (IOException e) {
+    println "Could not read PuliziaCassaforte.properties: ${e.message}"
+    System.exit(1)
+}
 
 def pcloaded = loadScript("pulizia_cassaforte_full.groovy")
 PuliziaCassaforteImpl puliziaCassaforte = pcloaded.createPuliziaCassaforteImpl()
-int errors = puliziaCassaforte.run(fileListFile, environment, buildGroup, "RunPuliziaCassaforteJsonLocal.properties")
+int errors = puliziaCassaforte.run(fileListFile, environment, buildGroup, cfgProps)
 println "PuliziaCassaforte completed with ${errors} errors."
