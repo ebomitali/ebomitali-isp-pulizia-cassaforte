@@ -1,0 +1,9 @@
+slf4j-api-2.0.16
+slf4j-simple-2.0.16
+dbb.core_3.0.3
+dbb.ext_3.0.3
+dbb.groovy_3.0.3
+dbb.scan.classify_3.0.3
+dbb.zbuilder_3.0.3
+snakeyaml-2.3
+jackson-*-2.18.2

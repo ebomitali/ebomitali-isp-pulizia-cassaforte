@@ -1,0 +1,99 @@
+#! /bin/sh
+#
+##############################################################################################
+##
+# *******************************************************************************
+# * Licensed Materials - Property of IBM
+# * (c) Copyright IBM Corporation 2022, 2025. All Rights Reserved.
+# * 
+# * Note to U.S. Government Users Restricted Rights:  
+# * Use, duplication or disclosure restricted by GSA ADP Schedule 
+# * Contract with IBM Corp. 
+# *******************************************************************************
+##
+##  Sample shell script to call the metadata store. All quotation marks and apostrophes must be escaped with a backslash.
+##
+##  Usage:
+##  dbb args
+##   collection : 
+##
+##  Example:
+##    
+###############################################################################################
+
+# -z is true for an empty string, and ${ENV_VAR:+set} returns "set" if ENV_VAR is set and "" otherwise
+if [ -z "${DBB_HOME:+set}" ]; then
+   echo "DBB_HOME must be set"
+   exit 1
+fi
+
+#Set JAVA_HOME to DBB_JAVA_HOME if exists
+JAVA_HOME=${DBB_JAVA_HOME:-$JAVA_HOME}
+
+if [ -z "${JAVA_HOME:+set}" ]; then
+   echo "JAVA_HOME must be set"
+   exit 1
+fi
+
+if [ -z "${DBB_CONF:+set}" ]; then
+   export DBB_CONF="$DBB_HOME/conf"
+fi
+
+# unset local variables
+unset classpath daemon_port daemon_host personal_daemon hasFileEncoding
+
+for arg in "$@"
+do
+   case "$1" in
+      -cp|-classpath)         classpath="$2"; shift; shift;;
+      -DBB_DAEMON_PORT)       daemon_port="$2"; shift; shift;;
+      -DBB_DAEMON_HOST)       daemon_host="$2"; shift; shift;;
+      -DBB_PERSONAL_DAEMON)   personal_daemon="p"; shift; shift;;
+      # Using JAVA_OPTS as a variable that will pass arguments specific to java into the JVM
+      -Dfile.encoding=*)      hasFileEncoding=true; JAVA_OPTS="$JAVA_OPTS $1"; shift;;
+      # JVM arguments may not get properly applied unless passed through $JAVA_OPTS, $JDK_JAVA_OPTIONS may be used when arguments contain whitespace
+      -D*|-X*)                JAVA_OPTS="$JAVA_OPTS $1"; shift;;
+   esac
+done
+
+# daemon execution
+if test "$personal_daemon" ; then
+   $DBB_HOME/lib/pclient dbb "$@"
+   exit $?
+elif test "$daemon_port" ; then
+   if test "$daemon_host" ; then
+      $DBB_HOME/lib/sclient $daemon_host $daemon_port dbb "$@"
+      exit $?
+   else
+      $DBB_HOME/lib/sclient 127.0.0.1 $daemon_port dbb "$@"
+      exit $?
+   fi
+fi
+
+java_version=$($JAVA_HOME/bin/java -version 2>&1 | awk -F '"' '/version/ {print $2}' | cut -d '.' -f 1,2)
+major_java_version=$(echo "$java_version" | cut -d '.' -f 1)
+if [[ "$java_version" == "1.8" ]]; then
+	echo "Detected Java 8, as of DBB 3.0 Java 8 is no longer supported and JAVA_HOME must be set to Java 11 or higher"
+   exit 1
+elif [[ "$major_java_version" == "21" ]] && [ -z "${hasFileEncoding:+set}" ]; then
+   # Automatically pass COMPAT if file.encoding was not already passed in. To default file.encoding
+    # to the system encoding
+   JAVA_OPTS="$JAVA_OPTS -Dfile.encoding=COMPAT"
+fi
+
+# Uncomment to enable DBB audit logging
+#JAVA_OPTS="$JAVA_OPTS -DDBB_AUDIT_ENABLE=true"
+
+# cli execution
+if [ -z "${classpath:+set}" ]; then
+   classpath="$DBB_HOME/lib/*:$DBB_HOME/groovy/lib/*:$CLASSPATH:$DBB_CONF/logging"
+else
+   classpath="$DBB_HOME/lib/*:$DBB_HOME/groovy/lib/*:$classpath:$DBB_CONF/logging"
+fi
+
+# create and export the appropriate LIBPATH                                                                      
+LIBPATH="$DBB_HOME/lib:/usr/lib/java_runtime64:$LIBPATH"                                                                  
+export LIBPATH
+
+# echo "$JAVA_HOME/bin/java -classpath $CLASSPATH com.ibm.dbb.metadata.MetadataCLI \"$@\""
+exec $JAVA_HOME/bin/java $JAVA_OPTS -classpath "$classpath" -Xquickstart com.ibm.dbb.metadata.cli.MetadataCLI "$@"
