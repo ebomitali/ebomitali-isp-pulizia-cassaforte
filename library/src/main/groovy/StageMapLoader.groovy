@@ -21,12 +21,12 @@ class StageMapLoader {
             .collectEntries { line ->
                 def parts = line.trim().split(';', -1)
                 if (parts.size() < 2)
-                    throw new IllegalArgumentException("Malformed stage-map row: '$line'")
+                    throw new IllegalArgumentException("Malformed stagemap row: '$line'")
                 def key   = parts[0].trim().replace('"', '')
                 def value = parts[1].trim().replace('"', '')
                 [key, value]
             }
-        log.info("Loaded {} stage-map entries from: {}", result.size(), file)
+        log.info("Loaded {} stagemap entries from: {}", result.size(), file)
         result
     }
 }
