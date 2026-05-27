@@ -43,13 +43,11 @@ class DeleteCassaforteLogic {
             def lib = resolver.resolve(rule.libraryTemplate, vars)
             if (rule.useBuildMap) {
                 buildMap.getGeneratedObjects(sourcePath, buildGroup).each { obj ->
-                    if (obj.library == lib) {
-                        def zp = "//${lib}(${obj.member})"
-                        if (ops.exists(zp)) {
-                            log.info("Deleting (build-map): {}", zp)
-                            ops.delete(zp)
-                            count++
-                        }
+                    def zp = "//${lib}(${obj.member})"
+                    if (ops.exists(zp)) {
+                        log.info("Deleting (build-map): {}", zp)
+                        ops.delete(zp)
+                        count++
                     }
                 }
             } else {

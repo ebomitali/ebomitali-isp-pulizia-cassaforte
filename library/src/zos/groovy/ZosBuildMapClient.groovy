@@ -99,6 +99,7 @@ class ZosBuildMapClient implements BuildMapClient {
                 .findAll { it.getDataset() && it.getMember() }
                 .collect { [library: it.getDataset(), member: it.getMember()] }
             log.debug("getGeneratedObjects: '{}' -> {} object(s)", sourcePath, result.size())
+            log.debug("Dump build map\n{}", bm.toString())
             return result
 
         } catch (BuildException e) {

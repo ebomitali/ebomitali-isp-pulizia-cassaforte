@@ -136,13 +136,11 @@ class DeleteCassaforteLogic {
             def lib = resolver.resolve(rule.libraryTemplate, vars)
             if (rule.useBuildMap) {
                 buildMap.getGeneratedObjects(sourcePath, buildGroup).each { obj ->
-                    if (obj.library == lib) {
-                        def zp = "//${lib}(${obj.member})"
-                        if (ops.exists(zp)) {
-                            log.info("Deleting (build-map): {}", zp)
-                            ops.delete(zp)
-                            count++
-                        }
+                    def zp = "//${lib}(${obj.member})"
+                    if (ops.exists(zp)) {
+                        log.info("Deleting (build-map): {}", zp)
+                        ops.delete(zp)
+                        count++
                     }
                 }
             } else {
@@ -1000,12 +998,12 @@ class StageMapLoader {
             .collectEntries { line ->
                 def parts = line.trim().split(';', -1)
                 if (parts.size() < 2)
-                    throw new IllegalArgumentException("Malformed stage-map row: '$line'")
+                    throw new IllegalArgumentException("Malformed stagemap row: '$line'")
                 def key   = parts[0].trim().replace('"', '')
                 def value = parts[1].trim().replace('"', '')
                 [key, value]
             }
-        log.info("Loaded {} stage-map entries from: {}", result.size(), file)
+        log.info("Loaded {} stagemap entries from: {}", result.size(), file)
         result
     }
 }
@@ -1108,6 +1106,7 @@ class ZosBuildMapClient implements BuildMapClient {
                 .findAll { it.getDataset() && it.getMember() }
                 .collect { [library: it.getDataset(), member: it.getMember()] }
             log.debug("getGeneratedObjects: '{}' -> {} object(s)", sourcePath, result.size())
+            log.debug("Dump build map\n{}", bm.toString())
             return result
 
         } catch (BuildException e) {

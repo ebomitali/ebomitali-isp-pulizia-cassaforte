@@ -9,6 +9,11 @@ set -e
 
 ENV="ATO"
 BUILD_GROUP="ATO"
+# Check that DBB_CONF environment variable is set, as it's required by the db2 client
+if [ -z "$DBB_CONF" ]; then
+    echo "Error: DBB_CONF environment variable is not set. It is required for db2 client configuration."
+    exit 1
+fi
 
 # Create temporary directory
 TEMP_DIR="${TMPDIR:-/tmp}/run-puliziacassaforte.$$"
@@ -21,7 +26,6 @@ SF1="ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP"
 mkdir -p "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.JINP"
 mkdir -p "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.PNIJ"
 touch "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.JINP/YO8AMADD"
-touch "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.PNIJ/YO8AMADD"
 echo "Simulated z/OS dataset directory created"
 
 # Helper: absolute path to a resource
@@ -34,10 +38,12 @@ resource_file() {
 write_config() {
     _cfg="PuliziaCassaforte.properties"
     printf 'fileOpsType=%s\n' "local"                               >  "$_cfg"
-    printf 'buildMapClientType=%s\n' "json"                         >> "$_cfg"
-    printf 'buildMapPath=%s\n' "$(resource_file 'buildmapt3.json')" >> "$_cfg"
+    printf 'buildMapClientType=%s\n' "db2"                          >> "$_cfg"
+    printf 'userId=%s\n' "GADBB01"                                  >> "$_cfg"
+    printf 'pwFilePath=%s\n' "$DBB_CONF/DB01PSW.txt"                >> "$_cfg"
+    printf 'db2ConfigPath=%s\n' "$DBB_CONF/db2Connection.conf"      >> "$_cfg"
     printf 'uxBasedir=%s\n'    "$TEMP_DIR"                          >> "$_cfg"
-    printf 'rulesPath=%s\n'    "$(resource_file 'rulest3.csv')"     >> "$_cfg"
+    printf 'rulesPath=%s\n'    "$(resource_file 'rulest4.csv')"     >> "$_cfg"
     printf 'stageMapPath=%s\n' "$(resource_file 'stagemap.csv')"    >> "$_cfg"
     # Note hlq, userId, pwFilePath, db2ConfigPath required when using db2 client
     echo "$_cfg"
@@ -57,9 +63,11 @@ lista=$(list_file)
 echo "File to be processed:"
 cat "$lista"
 echo "Directory content before script execution:"
-for i in 1 2 3; do
-    ls -l "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.JINP$i"
-done
+echo "  LTM00.D9PX2A.PE000.@@@@.JINP"
+ls -l "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.JINP"
+echo "  LTM00.D9PX2A.PE000.@@@@.PNIJ"
+ls -l "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.PNIJ"
+
 
 result=0
 # Groovy script reads also PuliziaCassaforte.properties from current directory
@@ -68,9 +76,11 @@ result=$?
 
 # Show dir content
 echo "Directory content after script execution:"
-for i in 1 2 3; do
-    ls -l "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.JINP$i"
-done
+echo "  LTM00.D9PX2A.PE000.@@@@.JINP"
+ls -l "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.JINP"
+echo "  LTM00.D9PX2A.PE000.@@@@.PNIJ"
+ls -l "$TEMP_DIR/LTM00.D9PX2A.PE000.@@@@.PNIJ"
+
 if [ "$result" -eq 0 ]; then
     echo "Test passed: no errors"
 else
