@@ -30,6 +30,9 @@ class PuliziaCassaforteImpl {
     // Used by ZosFileOps if fileOpsType is set to 'zos'
     String hlq           = null
 
+    // When set, a JSON run report is written to this path at the end of run().
+    String reportPath   = null
+
     // Default paths to rules and stage map CSVs. Override in tests or when running on USS.
     String rulesPath    = 'build-data/rules.csv'
     File   rulesFile    = null
@@ -64,6 +67,7 @@ class PuliziaCassaforteImpl {
         if (props.getProperty('pwFilePath'))    this.pwFilePath    = props.getProperty('pwFilePath')
         if (props.getProperty('db2ConfigPath')) this.db2ConfigPath = props.getProperty('db2ConfigPath')
         if (props.getProperty('buildMapPath'))  this.buildMapPath  = props.getProperty('buildMapPath')
+        if (props.getProperty('reportPath'))    this.reportPath    = props.getProperty('reportPath')
 
         if (!listFileToProcess)
             throw new IllegalArgumentException('listFileToProcess argument is required')
@@ -121,6 +125,7 @@ class PuliziaCassaforteImpl {
         log.info("Processing list='{}' env='{}' buildGroup='{}'",
                  listFileToProcess, environment, buildGroup)
         int processed = 0, errors = 0
+        List reportEntries = reportPath != null ? [] : null
         lftp.eachLine { raw ->
             def line = raw.trim()
             if (!line || line.startsWith('#')) return
@@ -137,8 +142,23 @@ class PuliziaCassaforteImpl {
             try {
                 switch (action) {
                     case 'C':
-                        def vars = extractor.extract(sourcePath, environment, stageMap, hlq)
-                        deleteLogic.execute(sourcePath, fileType, vars, buildGroup)
+                        def vars    = extractor.extract(sourcePath, environment, stageMap, hlq)
+                        def matches = deleteLogic.execute(sourcePath, fileType, vars, buildGroup)
+                        if (reportEntries != null) {
+                            reportEntries << [
+                                sourcePath: sourcePath,
+                                fileType  : fileType,
+                                matches   : matches.collect { mr -> [
+                                    rule: [
+                                        typePattern    : mr.rule.typePattern,
+                                        libraryTemplate: mr.rule.libraryTemplate,
+                                        useBuildMap    : mr.rule.useBuildMap
+                                    ],
+                                    library       : mr.library,
+                                    deletedElement: mr.deletedElement
+                                ]}
+                            ]
+                        }
                         processed++
                         break
                     case 'S':
@@ -156,6 +176,19 @@ class PuliziaCassaforteImpl {
         }
 
         log.info("PuliziaCassaforte: processed={} errors={}", processed, errors)
+
+        if (reportPath != null) {
+            def report = [
+                listFile   : listFileToProcess,
+                environment: environment,
+                buildGroup : buildGroup,
+                timestamp  : java.time.Instant.now().toString(),
+                files      : reportEntries
+            ]
+            new File(reportPath).text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(report))
+            log.info("JSON report written to '{}'", reportPath)
+        }
+
         return errors
     }
 

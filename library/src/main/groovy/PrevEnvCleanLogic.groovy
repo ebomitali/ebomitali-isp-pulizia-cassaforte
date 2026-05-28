@@ -35,6 +35,6 @@ class PrevEnvCleanLogic {
         def prevEnv  = envChain.getPredecessor(environment)
         log.info("Cleaning predecessor '{}' cassaforte for sourcePath='{}'", prevEnv, sourcePath)
         def prevVars = extractor.extract(sourcePath, prevEnv, stageMap, hlq)
-        deleteLogic.execute(sourcePath, fileType, prevVars, buildGroup)
+        deleteLogic.execute(sourcePath, fileType, prevVars, buildGroup).count { it.deletedElement != null }
     }
 }

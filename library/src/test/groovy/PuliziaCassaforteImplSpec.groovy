@@ -1,6 +1,7 @@
 import org.junit.jupiter.api.io.TempDir
 import spock.lang.Specification
 import java.nio.file.*
+import groovy.json.JsonSlurper
 
 /**
  * Spock specification for {@link PuliziaCassaforteImpl} — JSON build map path only.
@@ -116,6 +117,78 @@ class PuliziaCassaforteImplSpec extends Specification {
         then:
         errors == 0
         !ops.exists("//${HLQ_LIBRARY}(${HLQ_MEMBER})")
+    }
+
+    // ─── JSON report ──────────────────────────────────────────────────────────
+
+    def "C action produces JSON report with source, matches and deletedElement"() {
+        given:
+        // SOURCE_PATH contains yn_r_01_ato_r1 → pathLo=01, env=ATO → C1STAGE=X2A
+        def resolvedLib = 'LTM00.D9PX2A.PE000.@@@@.@@@@@@@@.@@.ZARA'
+        def member = tempDir.resolve("${resolvedLib}/${MEMBER}")
+        Files.createDirectories(member.parent)
+        Files.writeString(member, 'content')
+
+        def reportFile = tempDir.resolve('report.json').toFile()
+        impl.reportPath = reportFile.canonicalPath
+
+        def lista = listFile("C,${SOURCE_PATH}")
+
+        when:
+        def props = new Properties()
+        props.setProperty('buildMapClientType', 'json')
+        props.setProperty('buildMapPath', bmFile.canonicalPath)
+        props.setProperty('fileOpsType', 'local')
+        props.setProperty('uxBasedir', tempDir.toString())
+        def errors = impl.run(lista, ENV, BUILD_GROUP, props)
+
+        then:
+        errors == 0
+        reportFile.exists()
+
+        when:
+        def report = new JsonSlurper().parse(reportFile)
+
+        then:
+        report.listFile  == lista
+        report.environment == ENV
+        report.buildGroup  == BUILD_GROUP
+        report.timestamp  != null
+        report.files.size() == 1
+        with(report.files[0]) {
+            sourcePath == SOURCE_PATH
+            fileType   == 'SZFSSWG'
+            matches.size() >= 1
+            def deleted = matches.find { it.deletedElement != null }
+            deleted != null
+            deleted.deletedElement.contains(MEMBER)
+            deleted.rule.typePattern    != null
+            deleted.rule.libraryTemplate != null
+        }
+    }
+
+    def "C action produces JSON report with null deletedElement when member absent"() {
+        given:
+        def reportFile = tempDir.resolve('report.json').toFile()
+        impl.reportPath = reportFile.canonicalPath
+
+        def lista = listFile("C,${SOURCE_PATH}")
+
+        when:
+        runImpl(lista)  // uses impl with reportPath already set
+
+        then:
+        // impl.reportPath is set but runImpl creates fresh props — reportPath on impl is honoured
+        // because run(String,String,String,Properties) reads it from this.reportPath only if props has it,
+        // but reportPath field is already set before the call
+        reportFile.exists()
+
+        when:
+        def report = new JsonSlurper().parse(reportFile)
+
+        then:
+        report.files.size() == 1
+        report.files[0].matches.every { it.deletedElement == null }
     }
 
     // ─── config-file run ──────────────────────────────────────────────────────

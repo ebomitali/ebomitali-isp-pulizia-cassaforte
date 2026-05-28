@@ -31,13 +31,13 @@ class DeleteCassaforteLogic {
     LibraryNameResolver resolver = new LibraryNameResolver()
 
     // vars map must contain C1STAGE, C1SYSTEM, HLQ — resolved by caller per source file.
-    // Returns number of delete operations performed.
-    int execute(String sourcePath, String fileType, Map<String,String> vars, String buildGroup) {
+    // Returns one MatchResult per candidate checked (rule × member); deletedElement is null when absent.
+    List<MatchResult> execute(String sourcePath, String fileType, Map<String,String> vars, String buildGroup) {
         def member   = memberName(sourcePath)
         def matching = rules.findAll { matcher.matches(it.typePattern, fileType) }
         log.debug("execute: sourcePath='{}' fileType='{}' buildGroup='{}' matchingRules={}",
                   sourcePath, fileType, buildGroup, matching.size())
-        int count    = 0
+        List<MatchResult> results = []
 
         matching.each { rule ->
             def lib = resolver.resolve(rule.libraryTemplate, vars)
@@ -47,7 +47,9 @@ class DeleteCassaforteLogic {
                     if (ops.exists(zp)) {
                         log.info("Deleting (build-map): {}", zp)
                         ops.delete(zp)
-                        count++
+                        results << new MatchResult(rule: rule, library: lib, deletedElement: zp)
+                    } else {
+                        results << new MatchResult(rule: rule, library: lib, deletedElement: null)
                     }
                 }
             } else {
@@ -55,12 +57,14 @@ class DeleteCassaforteLogic {
                 if (ops.exists(zp)) {
                     log.info("Deleting: {}", zp)
                     ops.delete(zp)
-                    count++
+                    results << new MatchResult(rule: rule, library: lib, deletedElement: zp)
+                } else {
+                    results << new MatchResult(rule: rule, library: lib, deletedElement: null)
                 }
             }
         }
-        log.debug("execute: {} deletion(s) performed for '{}'", count, sourcePath)
-        count
+        log.debug("execute: {} deletion(s) performed for '{}'", results.count { it.deletedElement != null }, sourcePath)
+        results
     }
 
     static String memberName(String sourcePath) {
