@@ -29,7 +29,7 @@ class DeleteCassaforteLogicSpec extends Specification {
         Files.writeString(member, 'content')
 
         when:
-        def count = logic.execute(
+        def results = logic.execute(
             '/dbb/DEE/IBM/yn_r_01_ato_r1/src/cobol/batch/pgmcobol.cbl',
             'ACPYCOB ',
             [C1STAGE: 'X2A', C1SYSTEM: 'r', HLQ: ''],
@@ -37,7 +37,8 @@ class DeleteCassaforteLogicSpec extends Specification {
         )
 
         then:
-        count == 1
+        results.count { it.deletedElement != null } == 1
+        results.find { it.deletedElement != null }.deletedElement == "//${lib}(PGMCOBOL)"
         !ops.exists("//${lib}(PGMCOBOL)")
     }
 
@@ -48,7 +49,7 @@ class DeleteCassaforteLogicSpec extends Specification {
             'ACPYCOB ',
             [C1STAGE: 'X2A', C1SYSTEM: 'r', HLQ: ''],
             'yn_r_01_ato_r1'
-        ) == 0
+        ).count { it.deletedElement != null } == 0
     }
 
     def "execute resolves member name via BUILD MAP and deletes by generated object"() {
@@ -73,14 +74,15 @@ class DeleteCassaforteLogicSpec extends Specification {
         )
 
         when:
-        def count = localLogic.execute(
+        def results = localLogic.execute(
             sourcePath, 'SZFSSWG ',
             [C1STAGE: 'X2A', C1SYSTEM: 'r', HLQ: ''],
             buildGroup
         )
 
         then:
-        count == 1
+        results.count { it.deletedElement != null } == 1
+        results.find { it.deletedElement != null }.deletedElement == "//${lib}(MAPOBJ)"
         !ops.exists("//${lib}(MAPOBJ)")
     }
 
