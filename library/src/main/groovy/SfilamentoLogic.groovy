@@ -28,19 +28,24 @@ class SfilamentoLogic {
     ZosFileOps            ops
     DeleteCassaforteLogic deleteLogic
     List<DeletionRule>    rules
-    PathVariableExtractor extractor  = new PathVariableExtractor()
-    Map<String, String>   stageMap   = [:]
-    String                hlq        = ''
-    PatternMatcher        matcher    = new PatternMatcher()
-    LibraryNameResolver   resolver   = new LibraryNameResolver()
-    EnvironmentChain      envChain   = new EnvironmentChain()
+    PathVariableExtractor extractor      = new PathVariableExtractor()
+    Map<String, String>   stageMap       = [:]
+    String                hlq            = ''
+    PatternMatcher        matcher        = new PatternMatcher()
+    LibraryNameResolver   resolver       = new LibraryNameResolver()
+    EnvironmentChain      envChain       = new EnvironmentChain()
+    Set<String>           jobzExtensions = [] as Set
 
     boolean execute(String sourcePath, String fileType, String environment, String buildGroup) {
-        def currentVars = extractor.extract(sourcePath, environment, stageMap, hlq)
+        boolean isJobz = fileType?.trim() in jobzExtensions
+        def currentVars = isJobz
+            ? extractor.extractJobz(environment, stageMap, hlq)
+            : extractor.extract(sourcePath, environment, stageMap, hlq)
         deleteLogic.execute(sourcePath, fileType, currentVars, buildGroup)
 
-        if (!matcher.matches('SJCL*', fileType)) {
-            log.debug("Sfilamento skipped: fileType '{}' does not match SJCL*", fileType)
+        boolean eligibleForRestore = isJobz || matcher.matches('SJCL*', fileType)
+        if (!eligibleForRestore) {
+            log.debug("Sfilamento skipped: fileType '{}' does not match SJCL* and is not jobz", fileType)
             return false
         }
         if (!envChain.supportsSfilamento(environment)) {
@@ -54,7 +59,9 @@ class SfilamentoLogic {
                  member, fileType, environment)
 
         for (String superEnv : envChain.getSuperiors(environment)) {
-            def superVars = extractor.extract(sourcePath, superEnv, stageMap, hlq)
+            def superVars = isJobz
+                ? extractor.extractJobz(superEnv, stageMap, hlq)
+                : extractor.extract(sourcePath, superEnv, stageMap, hlq)
             for (def rule : matching) {
                 def srcLib = resolver.resolve(rule.libraryTemplate, superVars)
                 def src    = "//${srcLib}(${member})"

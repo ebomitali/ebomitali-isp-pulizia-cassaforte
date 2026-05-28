@@ -57,4 +57,20 @@ class PrevEnvCleanLogicSpec extends Specification {
             'ACPYCOB ', 'ATO', 'yn_r_01_ato_r1'
         ) == 0
     }
+
+    def "execute returns 0 and leaves JNCS member intact when env is ATO (no predecessor)"() {
+        given:
+        // ATO has no predecessor — no library should be touched regardless of file type
+        def lib    = 'LTM00.D9PX2A.PE000.@@@@.@@@@@@@@.@@JNCS'
+        def member = tempDir.resolve("${lib}/\$HXQ001")
+        Files.createDirectories(member.parent)
+        Files.writeString(member, 'content')
+
+        when:
+        def count = logic.execute('edux0-jobz/$HXQ001.STWSNCS', 'STWSNCS', 'ATO', 'build-group')
+
+        then:
+        count == 0
+        ops.exists("//${lib}(\$HXQ001)")
+    }
 }
