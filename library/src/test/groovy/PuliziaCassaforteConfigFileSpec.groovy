@@ -78,6 +78,7 @@ class PuliziaCassaforteConfigFileSpec extends Specification {
     private String writeConfig(Map<String, String> entries) {
         def f     = tempDir.resolve('config.properties').toFile()
         def props = new Properties()
+        props.setProperty('reportOutputPath', tempDir.resolve('report.json').toString())
         entries.each { k, v -> if (v != null) props.setProperty(k, v) }
         f.withOutputStream { props.store(it, null) }
         f.canonicalPath

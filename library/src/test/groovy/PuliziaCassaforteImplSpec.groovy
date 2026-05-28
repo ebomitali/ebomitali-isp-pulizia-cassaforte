@@ -42,6 +42,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         impl   = new PuliziaCassaforteImpl()
         impl.rulesPath    = new File(getClass().getResource('/fixtures/rules.csv').toURI()).canonicalPath
         impl.stageMapPath = new File(getClass().getResource('/fixtures/stagemap.csv').toURI()).canonicalPath
+        impl.reportPath   = tempDir.resolve('report.json').toString()
         bmFile = new File(getClass().getResource('/fixtures/buildmap.json').toURI())
     }
 

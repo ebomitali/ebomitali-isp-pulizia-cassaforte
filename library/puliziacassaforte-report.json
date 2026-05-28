@@ -1,0 +1,23 @@
+{
+    "listFile": "/private/var/folders/06/3mcb33yn2mj974q42s03pyk00000gn/T/spock-junit-tempdir-3883152685021504384/lista.csv",
+    "environment": "ATO",
+    "buildGroup": "yo_y_01_ato_r1",
+    "timestamp": "2026-05-28T14:54:09.662293Z",
+    "files": [
+        {
+            "sourcePath": "/repo/cloned/ATO/yo_y_01_ato_r1/src/mapasm/batch/TESTMEM.SZFSSWG",
+            "fileType": "SZFSSWG",
+            "matches": [
+                {
+                    "rule": {
+                        "typePattern": "SZFSSWG",
+                        "libraryTemplate": "${HLQ}.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.ZARA",
+                        "useBuildMap": false
+                    },
+                    "library": "U0G9700.D9PX2A.PE000.@@@@.@@@@@@@@.@@.ZARA",
+                    "deletedElement": "//U0G9700.D9PX2A.PE000.@@@@.@@@@@@@@.@@.ZARA(TESTMEM)"
+                }
+            ]
+        }
+    ]
+}
