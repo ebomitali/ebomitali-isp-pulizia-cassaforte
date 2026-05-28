@@ -53,6 +53,8 @@ file-lista
 
 C,ATO/yu_y_01_ato_r1/src/COBOL/BATCH/S2NN/YU70200.SCB2B
 
+Caso S in realtà non S, va segnalato nel report finale 
+
 **Funzioni**
 Usa le seguenti funzioni
 * DELETE_CASSAFORTE
@@ -115,12 +117,18 @@ Esempio di regole:
 %CPYD2  ;LTM00.D9P${C1STAGE}.PE000.LING.COB@@@@@.@@.COPY;NO
 SZFSSWG ;LTM00.D9P${C1STAGE}.PE000.LING.MAP@@@@@.@@.COPY;BUILD MAP
 SZFSSWG ;LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.ZARA;NO
-%CB2%R  ;LTM00.D9P${C1STAGE.PE000.@@@@.@@@@@@@@.@@.NCAL;NO
-%CB2%R  ;LTM00.D9P${C1STAGE.PE000.MAIN.@@@@@@@@.@@.NCAL;NO
-%CB2%   ;LTM00.D9P${C1STAGE.PE000.SYST.${C1SYSTEM}@@@@@@@.BT.LOAD;NO
+%CB2%R  ;LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.NCAL;NO
+%CB2%R  ;LTM00.D9P${C1STAGE}.PE000.MAIN.@@@@@@@@.@@.NCAL;NO
+%CB2%   ;LTM00.D9P${C1STAGE}.PE000.SYST.${C1SYSTEM}@@@@@@@.BT.LOAD;NO
 ```
 
 Per `SZFSSWG` sono attuabili due regole, una che include l’utilizzo della BUILD MAP per ricevere il nome degli oggetti da cancellare nella libreria indicata, e una in cui la rimozione è svolta utilizzando il nome stesso del file.
+
+Configurazione per le estensioni dei jcl da sfilare
+SJCL*
+Guardare il documento tobe (jobs/jobs)
+Sfilamento solo ST
+Cancellazione post build ST verso ATO e PR verso ST
 
 ### Algoritmo: Cancellazione con librerie concatenate (`DELETE_PREV_ENV_AFTER_BUILD`)
 
@@ -170,6 +178,12 @@ Allineare le librerie quando un sorgente viene “ritirato” da un ambiente.
 *   Il ripristino solo per i JCL, ovvero estensione “.SJCL*"
 *   Nessun ripristino per gli ambienti generati
 *   La libreria TOCOLB è ottenuta dalla libreria cassaforte utilizzata per la cancellazione tramite la modifica del quarto componente da “@@@@“ a “TO@@“ e del quinto componente da "@@@@@@@@" a “COLB@@@@“.
+
+LTM00.D9PX1A.PE000.@@@@.@@@@@@@@.@@.XXXX/MEMBRO
+LTM00.D9PX1A.PE000.TO@@.COLB@@@@.@@.XXXX/MEMBRO
+//1047 -> 1144 
+LTM00.D9PSAD.PE000.TO§§.COLB§§§§.§§.JNCS
+
 
 ### Algoritmo composto: Cambio Processor Group / Type
 
