@@ -22,16 +22,17 @@ class PatternMatcherSpec extends Specification {
         matcher.matches(pattern, value) == expected
 
         where:
-        pattern    | value         | expected
-        '%CPYCOB*' | 'ACPYCOB '   | true
+        pattern    | value        | expected
+        '%CPYCOB*' | 'ACPYCOB'    | true
         '%CPYCOB*' | 'XCPYCOBABC' | true
-        'SZFSSWG ' | 'SZFSSWG '   | true
+        'SZFSSWG ' | 'SZFSSWG'    | true
         'SZFSSWG ' | 'SZFSSWGX'   | false
-        '%CB2%R  ' | 'ACB2XR  '   | true
-        '%CB2%R  ' | 'ACB2XRY '   | false
-        'SJCL*'    | 'SJCL    '   | true
+        '%CB2%R  ' | 'ACB2XR'     | true
+        '%CB2%R  ' | 'ACB2XRY'    | false
+        'SJCL*'    | 'SJCL'       | true
         'SJCL*'    | 'SJCLPROC'   | true
-        'SJCL*'    | 'XJCL    '   | false
+        'SJCL*'    | 'XJCL'       | false
         '*'        | 'ANYTHING'   | true
+        '%JCLINP'  | 'SJCLINP'    | true
     }
 }

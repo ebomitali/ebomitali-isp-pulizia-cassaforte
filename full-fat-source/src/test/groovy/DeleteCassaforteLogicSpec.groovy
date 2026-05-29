@@ -24,28 +24,28 @@ class DeleteCassaforteLogicSpec extends Specification {
     def "execute deletes member by source name (NO flag)"() {
         given:
         def lib    = 'LTM00.D9PX2A.PE000.LING.COB@@@@@.@@.COPY'
-        def member = tempDir.resolve("${lib}/PGMCOBOL")
+        def member = tempDir.resolve("${lib}/TESTCPY")
         Files.createDirectories(member.parent)
         Files.writeString(member, 'content')
 
         when:
         def count = logic.execute(
-            '/dbb/DEE/IBM/yn_r_01_ato_r1/src/cobol/batch/pgmcobol.cbl',
-            'ACPYCOB ',
+            'ATO/yn_r_01_ato_r1/src/cobol/batch/testcpy.acpycob',
+            'ACPYCOB',
             [C1STAGE: 'X2A', C1SYSTEM: 'r', HLQ: ''],
             'yn_r_01_ato_r1'
         )
 
         then:
         count == 1
-        !ops.exists("//${lib}(PGMCOBOL)")
+        !ops.exists("//${lib}(TESTCPY)")
     }
 
     def "execute is idempotent when member is already absent"() {
         expect:
         logic.execute(
-            '/dbb/DEE/IBM/yn_r_01_ato_r1/src/cobol/batch/pgmcobol.cbl',
-            'ACPYCOB ',
+            'ATO/yn_r_01_ato_r1/src/cobol/batch/testcpy.acpycob',
+            'ACPYCOB',
             [C1STAGE: 'X2A', C1SYSTEM: 'r', HLQ: ''],
             'yn_r_01_ato_r1'
         ) == 0
@@ -53,8 +53,8 @@ class DeleteCassaforteLogicSpec extends Specification {
 
     def "execute resolves member name via BUILD MAP and deletes by generated object"() {
         given:
-        def sourcePath = '/dbb/DEE/IBM/yn_r_01_ato_r1/src/mapasm/batch/mapobj.asm'
-        def buildGroup = 'yn_r_01_ato_r1'
+        def sourcePath = 'ATO/yn_r_01_ato_r1/src/mapasm/batch/mapobj.asm'
+        def buildGroup = 'ATO'
         def lib        = 'LTM00.D9PX2A.PE000.LING.MAP@@@@@.@@.COPY'
         def member     = tempDir.resolve("${lib}/MAPOBJ")
         Files.createDirectories(member.parent)

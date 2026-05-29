@@ -19,7 +19,7 @@ class DeletionRulesLoaderSpec extends Specification {
         def rules = new DeletionRulesLoader().load(rulesFile)
 
         then:
-        rules.size() == 6
+        rules.size() == 8
         rules[0].typePattern     == '%CPYCOB*'
         rules[0].libraryTemplate == 'LTM00.D9P${C1STAGE}.PE000.LING.COB@@@@@.@@.COPY'
         rules[0].useBuildMap     == false
@@ -30,6 +30,12 @@ class DeletionRulesLoaderSpec extends Specification {
         rules[3].typePattern     == 'SJCL*'
         rules[4].typePattern     == '%JCLINP'
         rules[5].typePattern     == '%CB2%'
+        rules[6].typePattern     == 'STWSNCS'
+        rules[6].libraryTemplate == 'LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.JOBZ'
+        rules[6].useBuildMap     == false
+        rules[7].typePattern     == 'STWSNCS'
+        rules[7].libraryTemplate == 'LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.JNCS'
+        rules[7].useBuildMap     == false
 
     }
 

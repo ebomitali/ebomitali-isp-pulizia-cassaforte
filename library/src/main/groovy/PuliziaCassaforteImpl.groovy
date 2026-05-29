@@ -30,6 +30,8 @@ class PuliziaCassaforteImpl {
     // Used by ZosFileOps if fileOpsType is set to 'zos'
     String hlq           = null
 
+    Set<String> jobzExtensions = [] as Set
+
     // Default paths to rules and stage map CSVs. Override in tests or when running on USS.
     String rulesPath    = 'build-data/rules.csv'
     File   rulesFile    = null
@@ -64,6 +66,10 @@ class PuliziaCassaforteImpl {
         if (props.getProperty('pwFilePath'))    this.pwFilePath    = props.getProperty('pwFilePath')
         if (props.getProperty('db2ConfigPath')) this.db2ConfigPath = props.getProperty('db2ConfigPath')
         if (props.getProperty('buildMapPath'))  this.buildMapPath  = props.getProperty('buildMapPath')
+        if (props.getProperty('jobzExtensions')) {
+            this.jobzExtensions = props.getProperty('jobzExtensions')
+                .split(',').collect { it.trim().toUpperCase() }.findAll { it }.toSet()
+        }
 
         if (!listFileToProcess)
             throw new IllegalArgumentException('listFileToProcess argument is required')
@@ -109,13 +115,14 @@ class PuliziaCassaforteImpl {
         envChain    = new EnvironmentChain()
         deleteLogic = new DeleteCassaforteLogic(ops: fileOps, rules: rules, buildMap: buildMapClient)
         sfilamento  = new SfilamentoLogic(
-            ops:         fileOps,
-            deleteLogic: deleteLogic,
-            rules:       rules,
-            envChain:    envChain,
-            extractor:   extractor,
-            stageMap:    stageMap,
-            hlq:         hlq
+            ops:            fileOps,
+            deleteLogic:    deleteLogic,
+            rules:          rules,
+            envChain:       envChain,
+            extractor:      extractor,
+            stageMap:       stageMap,
+            hlq:            hlq,
+            jobzExtensions: jobzExtensions
         )
 
         log.info("Processing list='{}' env='{}' buildGroup='{}'",
@@ -137,7 +144,9 @@ class PuliziaCassaforteImpl {
             try {
                 switch (action) {
                     case 'C':
-                        def vars = extractor.extract(sourcePath, environment, stageMap, hlq)
+                        def vars = isJobzType(fileType)
+                            ? extractor.extractJobz(environment, stageMap, hlq)
+                            : extractor.extract(sourcePath, environment, stageMap, hlq)
                         deleteLogic.execute(sourcePath, fileType, vars, buildGroup)
                         processed++
                         break
@@ -157,6 +166,10 @@ class PuliziaCassaforteImpl {
 
         log.info("PuliziaCassaforte: processed={} errors={}", processed, errors)
         return errors
+    }
+
+    private boolean isJobzType(String fileType) {
+        fileType?.trim() in jobzExtensions
     }
 
     private static String resolveFileType(String sourcePath) {

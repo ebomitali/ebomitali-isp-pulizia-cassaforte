@@ -25,7 +25,7 @@ class PuliziaCassaforteConfigFileSpec extends Specification {
             fileOpsType : 'local',
             uxBasedir   : tempDir.toString(),
             rulesPath   : fixtureFile('rules.csv'),
-            stageMapPath: fixtureFile('stage-map.csv'),
+            stageMapPath: fixtureFile('stagemap.csv'),
         ])
         def lista = listFile("C,${SOURCE_PATH}")
 
@@ -45,7 +45,7 @@ class PuliziaCassaforteConfigFileSpec extends Specification {
             fileOpsType : 'local',
             uxBasedir   : tempDir.toString(),
             rulesPath   : fixtureFile('rules.csv'),
-            stageMapPath: fixtureFile('stage-map.csv'),
+            stageMapPath: fixtureFile('stagemap.csv'),
         ])
         def lista = listFile("C,${SOURCE_PATH}\nBAD_LINE")
 
