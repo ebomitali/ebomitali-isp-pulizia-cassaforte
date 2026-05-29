@@ -49,6 +49,12 @@ class SfilamentoLogic {
             return false
         }
         if (!envChain.supportsSfilamento(environment)) {
+            // S reverts to C when the environment has no superior (terminal env like PR).
+            // Returns true so the caller knows the deletion completed successfully.
+            if (envChain.getSuperiors(environment).isEmpty()) {
+                log.debug("Sfilamento degraded to C: environment '{}' has no superior", environment)
+                return true
+            }
             log.debug("Sfilamento skipped: environment '{}' does not support it", environment)
             return false
         }

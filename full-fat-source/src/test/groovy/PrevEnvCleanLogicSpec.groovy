@@ -42,7 +42,7 @@ class PrevEnvCleanLogicSpec extends Specification {
         when:
         def count = logic.execute(
             '/dbb/DEE/IBM/yn_r_01_ato_r1/src/cobol/batch/pgmcobol.cbl',
-            'ACPYCOB ', 'ST', 'yn_r_01_ato_r1'
+            'ACPYCOB ', 'ST', 'ST'
         )
 
         then:
@@ -54,7 +54,7 @@ class PrevEnvCleanLogicSpec extends Specification {
         expect:
         logic.execute(
             '/dbb/DEE/IBM/yn_r_01_ato_r1/src/cobol/batch/pgmcobol.cbl',
-            'ACPYCOB ', 'ATO', 'yn_r_01_ato_r1'
+            'ACPYCOB ', 'ATO', 'ATO'
         ) == 0
     }
 
@@ -67,7 +67,7 @@ class PrevEnvCleanLogicSpec extends Specification {
         Files.writeString(member, 'content')
 
         when:
-        def count = logic.execute('edux0-jobz/$HXQ001.STWSNCS', 'STWSNCS', 'ATO', 'build-group')
+        def count = logic.execute('edux0-jobz/$HXQ001.STWSNCS', 'STWSNCS', 'ATO', 'ATO')
 
         then:
         count == 0

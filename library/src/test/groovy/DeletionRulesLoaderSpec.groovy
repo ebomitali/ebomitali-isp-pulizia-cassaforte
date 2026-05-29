@@ -34,7 +34,7 @@ class DeletionRulesLoaderSpec extends Specification {
         rules[6].libraryTemplate == 'LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.JOBZ'
         rules[6].useBuildMap     == false
         rules[7].typePattern     == 'STWSNCS'
-        rules[7].libraryTemplate == 'LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@JNCS'
+        rules[7].libraryTemplate == 'LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.JNCS'
         rules[7].useBuildMap     == false
 
     }

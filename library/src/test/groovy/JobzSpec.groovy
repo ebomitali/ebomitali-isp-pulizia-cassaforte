@@ -15,15 +15,14 @@ import java.nio.file.*
 class JobzSpec extends Specification {
 
     static final String ENV_ST       = 'ST'
-    static final String BUILD_GROUP  = 'build-group'
     static final String SOURCE_PATH  = 'edux0-jobz/$HXQ001.STWSNCS'
     static final String MEMBER       = '$HXQ001'
     static final String ST_JOBZ_LIB  = 'LTM00.D9PXAD.PE000.@@@@.@@@@@@@@.@@.JOBZ'
     static final String PR_JOBZ_LIB  = 'LTM00.D9PXPE.PE000.@@@@.@@@@@@@@.@@.JOBZ'
     static final String MEMBER_2     = '$HXQ002'
-    static final String ATO_JNCS_LIB = 'LTM00.D9PX2A.PE000.@@@@.@@@@@@@@.@@JNCS'
-    static final String ST_JNCS_LIB  = 'LTM00.D9PXAD.PE000.@@@@.@@@@@@@@.@@JNCS'
-    static final String PR_JNCS_LIB  = 'LTM00.D9PXPE.PE000.@@@@.@@@@@@@@.@@JNCS'
+    static final String ATO_JNCS_LIB = 'LTM00.D9PX2A.PE000.@@@@.@@@@@@@@.@@.JNCS'
+    static final String ST_JNCS_LIB  = 'LTM00.D9PXAD.PE000.@@@@.@@@@@@@@.@@.JNCS'
+    static final String PR_JNCS_LIB  = 'LTM00.D9PXPE.PE000.@@@@.@@@@@@@@.@@.JNCS'
 
     @TempDir
     Path tempDir
@@ -83,7 +82,7 @@ class JobzSpec extends Specification {
         then:
         errors == 0
         !ops.exists("//${ATO_JNCS_LIB}(${MEMBER})")
-        !ops.exists('//LTM00.D9PX2A.PE000.TO@@.COLB@@@@.@@JNCS(' + MEMBER + ')')
+        !ops.exists('//LTM00.D9PX2A.PE000.TO@@.COLB@@@@.@@.JNCS(' + MEMBER + ')')
     }
 
     def "S action on jobz JNCS path in ST deletes ST cassaforte member and restores from PR into ST TOCOLB"() {
@@ -98,7 +97,7 @@ class JobzSpec extends Specification {
         then:
         errors == 0
         !ops.exists("//${ST_JNCS_LIB}(${MEMBER_2})")
-        ops.exists('//LTM00.D9PXAD.PE000.TO@@.COLB@@@@.@@JNCS(' + MEMBER_2 + ')')
+        ops.exists('//LTM00.D9PXAD.PE000.TO@@.COLB@@@@.@@.JNCS(' + MEMBER_2 + ')')
     }
 
     def "S action on jobz path in non-ST environment only deletes (no restore)"() {
@@ -140,7 +139,7 @@ class JobzSpec extends Specification {
         props.setProperty('fileOpsType', 'local')
         props.setProperty('uxBasedir', tempDir.toString())
         props.setProperty('jobzExtensions', 'STWSNCS')
-        impl.run(lista, env, BUILD_GROUP, props)
+        impl.run(lista, env, env, props)
     }
 
     private void createMember(String lib, String member, String content = 'content') {

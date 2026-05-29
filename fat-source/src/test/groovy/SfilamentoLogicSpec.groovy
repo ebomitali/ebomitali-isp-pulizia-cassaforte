@@ -46,8 +46,8 @@ class SfilamentoLogicSpec extends Specification {
 
         when:
         def result = sfilamento.execute(
-            '/dbb/DEE/IBM/yn_r_01_st_r1/src/jcl/batch/myjcl.jcl',
-            'SJCL    ', 'ST', 'yn_r_01_st_r1'
+            'ST/yn_r_01_st_r1/src/jcl/batch/MYJCL.SJCLINP',
+            'SJCLINP', 'ST', 'ST'
         )
 
         then:
@@ -56,21 +56,39 @@ class SfilamentoLogicSpec extends Specification {
         ops.exists('//LTM00.D9PXAD.PE000.TO@@.COLB@@@@.@@.SJCL(MYJCL)')
     }
 
+    def "execute in ATO deletes cassaforte member but does not restore into TOCOLB"() {
+        given:
+        def atoSjclLib = 'LTM00.D9PX2A.PE000.@@@@.@@@@@@@@.@@.SJCL'
+        def m = tempDir.resolve("${atoSjclLib}/MYJCL")
+        Files.createDirectories(m.parent)
+        Files.writeString(m, "${atoSjclLib}-content")
+
+        when:
+        def result = sfilamento.execute(
+            'ATO/yn_r_01_ato_r1/src/jcl/batch/MYJCL.SJCLINP',
+            'SJCLINP', 'ATO', 'ATO'
+        )
+
+        then:
+        result == false
+        !ops.exists('//LTM00.D9PX2A.PE000.TO@@.COLB@@@@.@@.SJCL(MYJCL)')
+    }
+
     def "execute returns false and only deletes for non-JCL type (ACPYCOB)"() {
         given:
-        def cobLib = 'LTM00.D9PXAD.PE000.LING.COB@@@@@.@@.COPY'
-        def member = tempDir.resolve("${cobLib}/PGMCOBOL")
+        def cobLib = 'LTM00.D9PXAD.PE000.LING.COB@@@@@.@@.COPY' //XAD System Test
+        def member = tempDir.resolve("${cobLib}/TESTCPY.ACPYCOB")
         Files.createDirectories(member.parent)
         Files.writeString(member, 'cobol-content')
 
         when:
         def result = sfilamento.execute(
-            '/dbb/DEE/IBM/yn_r_01_st_r1/src/cobol/batch/pgmcobol.cbl',
-            'ACPYCOB ', 'ST', 'yn_r_01_st_r1'
+            'ST/yn_r_01_st_r1/src/cobol/batch/TESTCPY.ACPYCOB',
+            'ACPYCOB', 'ST', 'ST'
         )
 
         then:
         result == false
-        !ops.exists("//${cobLib}(PGMCOBOL)")
+        !ops.exists("//${cobLib}(TESTCPY)")
     }
 }

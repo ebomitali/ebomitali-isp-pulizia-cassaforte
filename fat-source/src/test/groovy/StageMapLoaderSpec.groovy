@@ -6,7 +6,7 @@ class StageMapLoaderSpec extends Specification {
 
     def "load returns map from valid stage-map.csv"() {
         given:
-        def path = new File(getClass().getResource('/fixtures/stage-map.csv').toURI())
+        def path = new File(getClass().getResource('/fixtures/stagemap.csv').toURI())
 
         when:
         def map = loader.load(path)
@@ -20,7 +20,7 @@ class StageMapLoaderSpec extends Specification {
 
     def "load strips surrounding quotes and whitespace from keys and values"() {
         given:
-        def path = new File(getClass().getResource('/fixtures/stage-map.csv').toURI())
+        def path = new File(getClass().getResource('/fixtures/stagemap.csv').toURI())
 
         when:
         def map = loader.load(path)
@@ -32,7 +32,7 @@ class StageMapLoaderSpec extends Specification {
 
     def "load skips blank lines"() {
         given:
-        def path = new File(getClass().getResource('/fixtures/stage-map.csv').toURI())
+        def path = new File(getClass().getResource('/fixtures/stagemap.csv').toURI())
 
         expect:
         loader.load(path).size() == 17
