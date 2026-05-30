@@ -10,17 +10,25 @@ plugins {
 
 // Task 1: Generate the single fat source file
 task generateFatSource {
-    description = 'Generate the single fat source file using helper/sh/create-source-blob.sh'
+    description = 'Generate the single fat source file from library using non zos sources'
     doLast {
+        def tempDir = file("${buildDir}/temp-sources")
+        tempDir.mkdirs()
+        
+        copy {
+            from project(':library').fileTree('src/main/groovy')
+            into "${tempDir}"
+        }
+
         exec {
-            commandLine 'sh', "${rootProject.projectDir}/helper/sh/create-source-blob.sh", "${rootProject.projectDir}/library/src/main/groovy", "${projectDir}/src/main/groovy/pulizia_cassaforte_fat.groovy"
+            commandLine 'sh', "${rootProject.projectDir}/helper/sh/create-source-blob.sh", "${tempDir}", "${projectDir}/src/main/groovy/PuliziaCassaforte.groovy"
         }
     }
 }
 
 // Task 2: Copy tests and resources from library to fat-source
 task copyTests(type: Copy) {
-    description = 'Copy tests and resources from library/src/test to fat-source/src/test'
+    description = 'Copy tests and resources from library as unit est are only *nix'
     from project(':library').fileTree('src/test') {
         include '**/*.*'
     }
@@ -37,6 +45,9 @@ sourceSets {
     test {
         groovy {
             srcDirs = ['src/test/groovy']
+        }
+        resources {
+            srcDirs = ['src/test/resources', 'src/test/sh/local']
         }
     }
 }

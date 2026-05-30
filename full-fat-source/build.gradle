@@ -51,6 +51,9 @@ sourceSets {
         groovy {
             srcDirs = ['src/test/groovy']
         }
+        resources {
+            srcDirs = ['src/test/resources', 'src/test/sh/uss']
+        }
     }
 }
 
@@ -85,6 +88,7 @@ test {
 task distribute(dependsOn: build) {
     description = 'Copy generated fat source to dbb-scripts and build repo'
     doLast {
+        // dbb-scripts repo
         copy {
             from('src/main/groovy') { include 'FullPuliziaCassaforte.groovy' }
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte'
@@ -98,12 +102,13 @@ task distribute(dependsOn: build) {
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/resources'
         }
         copy {
-            from('src/test/sh'){ 
+            from('src/test/sh/uss'){ 
                 include '*z.sh'
                 include '*.groovy'
             }
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte'
         }
+        // dbb-build repo
         copy {
             from('src/main/groovy') { include 'FullPuliziaCassaforte.groovy' }
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source'
