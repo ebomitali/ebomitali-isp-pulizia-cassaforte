@@ -21,7 +21,7 @@ task generateFullFatSource {
         }
         
         copy {
-            from project(':library').fileTree('src/zos/groovy')
+            from 'src/zos/groovy'
             into "${tempDir}"
         }
         
@@ -49,7 +49,7 @@ sourceSets {
     }
     test {
         groovy {
-            srcDirs = ['src/test/groovy']
+            srcDirs = ['src/test/groovy', 'src/mock/groovy']
         }
         resources {
             srcDirs = ['src/test/resources', 'src/test/sh/uss']
@@ -63,6 +63,10 @@ java {
     }
 }
 
+configurations {
+    shRuntime  // slf4j provider jar(s) for mrunpct2.sh standalone execution
+}
+
 dependencies {
     implementation 'org.apache.groovy:groovy-all:4.0.25'
     implementation 'org.slf4j:slf4j-api:2.0.16'
@@ -70,13 +74,32 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
     testRuntimeOnly 'ch.qos.logback:logback-classic:1.5.15'
+    shRuntime 'org.slf4j:slf4j-simple:2.0.16'
+}
+
+// Copy slf4j-simple for use by mrunpct2.sh (groovy -cp build/sh-lib/*)
+task copyShLibs(type: Copy) {
+    description = 'Copy slf4j-simple provider for standalone shell script execution'
+    from configurations.shRuntime
+    into layout.buildDirectory.dir('sh-lib')
+}
+
+// IBM API stubs: compile from src/test/java independently so FullPuliziaCassaforte.groovy
+// can import them without pulling test-scoped sources into the main sourceSet.
+task compileIbmStubs(type: JavaCompile) {
+    description = 'Compile IBM API stubs needed for main Groovy compilation'
+    source = fileTree(dir: 'src/test/java', include: '**/*.java')
+    classpath = files()
+    destinationDirectory = layout.buildDirectory.dir('classes/java/ibm-stubs')
 }
 
 // Ensure tests are copied before compilation
 //compileMainGroovy.dependsOn generateFatSource
 compileTestGroovy.dependsOn copyTests, compileGroovy
 processTestResources.dependsOn copyTests
-compileGroovy.dependsOn generateFullFatSource
+compileGroovy.dependsOn generateFullFatSource, compileIbmStubs
+compileGroovy.classpath = compileGroovy.classpath + files(layout.buildDirectory.dir('classes/java/ibm-stubs'))
+compileIbmStubs.mustRunAfter copyTests
 
 
 test {
