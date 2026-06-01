@@ -13,38 +13,38 @@ import groovy.util.logging.Slf4j
 @Slf4j
 class PuliziaCassaforteImpl {
 
-    String fileOpsType   = 'zos' // set value to 'local' to use LocalFileOps for file operations, which is useful for testing
-    String buildMapClientType = 'db2' // set value to 'json' to read build map from JSON file instead of DB2, which is useful for testing
+    String fileOpsType        = null
+    String buildMapClientType = null
 
     // Used by db2 build map client
-    String userId        = null
-    String pwFilePath    = null
-    String db2ConfigPath = null
+    String userId             = null
+    String pwFilePath         = null
+    String db2ConfigPath      = null
 
     // Used by JSON build map client
-    String buildMapPath  = null
+    String buildMapPath       = null
 
     // Used by LocalFileOps if fileOpsType is set to 'local'
-    String uxBasedir     = null
+    String uxBasedir          = null
 
     // Used by ZosFileOps if fileOpsType is set to 'zos'
-    String hlq           = null
+    String hlq                = null
 
     Set<String> jobzExtensions = [] as Set
 
     // Default paths to rules and stage map CSVs. Override in tests or when running on USS.
-    String rulesPath    = 'build-data/rules.csv'
-    File   rulesFile    = null
-    String stageMapPath = 'build-data/stage-map.csv'
-    File   stageMapFile = null
+    String rulesPath          = null
+    File   rulesFile          = null
+    String stageMapPath       = null
+    File   stageMapFile       = null
 
     BuildMapClient buildMapClient = null
     ZosFileOps fileOps = null
 
-    List rules                    = null
-    Map stageMap                  = null
+    List rules                      = null
+    Map stageMap                    = null
     PathVariableExtractor extractor = null
-    EnvironmentChain envChain     = null
+    EnvironmentChain envChain       = null
     DeleteCassaforteLogic deleteLogic = null
     SfilamentoLogic sfilamento    = null
 
@@ -56,47 +56,42 @@ class PuliziaCassaforteImpl {
 
     int run(String listFileToProcess, String environment, String buildGroup, Properties props) {
         log.info("Starting PuliziaCassaforte")
-        if (props.getProperty('fileOpsType'))        this.fileOpsType        = props.getProperty('fileOpsType')
-        if (props.getProperty('buildMapClientType')) this.buildMapClientType = props.getProperty('buildMapClientType')
-        if (props.getProperty('rulesPath'))     this.rulesPath     = props.getProperty('rulesPath')
-        if (props.getProperty('stageMapPath'))  this.stageMapPath  = props.getProperty('stageMapPath')
-        if (props.getProperty('uxBasedir'))     this.uxBasedir     = props.getProperty('uxBasedir')
-        if (props.getProperty('hlq'))           this.hlq           = props.getProperty('hlq')
-        if (props.getProperty('userId'))        this.userId        = props.getProperty('userId')
-        if (props.getProperty('pwFilePath'))    this.pwFilePath    = props.getProperty('pwFilePath')
-        if (props.getProperty('db2ConfigPath')) this.db2ConfigPath = props.getProperty('db2ConfigPath')
-        if (props.getProperty('buildMapPath'))  this.buildMapPath  = props.getProperty('buildMapPath')
-        if (props.getProperty('jobzExtensions')) {
-            this.jobzExtensions = props.getProperty('jobzExtensions')
-                .split(',').collect { it.trim().toUpperCase() }.findAll { it }.toSet()
-        }
+        def cfg = PuliziaCassaforteConfig.from(props)
+        if (cfg.fileOpsType)        this.fileOpsType        = cfg.fileOpsType
+        if (cfg.buildMapClientType) this.buildMapClientType = cfg.buildMapClientType
+        if (cfg.rulesPath)          this.rulesPath          = cfg.rulesPath
+        if (cfg.stageMapPath)       this.stageMapPath       = cfg.stageMapPath
+        if (cfg.uxBasedir)          this.uxBasedir          = cfg.uxBasedir
+        if (cfg.hlq)                this.hlq                = cfg.hlq
+        if (cfg.userId)             this.userId             = cfg.userId
+        if (cfg.pwFilePath)         this.pwFilePath         = cfg.pwFilePath
+        if (cfg.db2ConfigPath)      this.db2ConfigPath      = cfg.db2ConfigPath
+        if (cfg.buildMapPath)       this.buildMapPath       = cfg.buildMapPath
+        if (cfg.jobzExtensions != null) this.jobzExtensions = cfg.jobzExtensions
 
         if (!listFileToProcess)
             throw new IllegalArgumentException('listFileToProcess argument is required')
         File lftp = new File(listFileToProcess)
-        if (!lftp.exists()) {
+        if (!lftp.exists())
             throw new IllegalArgumentException("listFileToProcess file not found: '$listFileToProcess'")
-        }
-        if (!rulesPath || !stageMapPath)
-            throw new IllegalArgumentException('rulesPath and stageMapPath must be defined in config')
+
+        new PuliziaCassaforteConfig(
+            buildMapClientType: this.buildMapClientType,
+            rulesPath:          this.rulesPath,
+            stageMapPath:       this.stageMapPath,
+            buildMapPath:       this.buildMapPath,
+            userId:             this.userId,
+            pwFilePath:         this.pwFilePath,
+            db2ConfigPath:      this.db2ConfigPath
+        ).validate()
+
         rulesFile    = new File(rulesPath)
         stageMapFile = new File(stageMapPath)
-        if (!rulesFile.exists())
-            throw new IllegalArgumentException("rulesPath file not found: '$rulesPath'")
-        if (!stageMapFile.exists())
-            throw new IllegalArgumentException("stageMapPath file not found: '$stageMapPath'")
 
         if (buildMapClientType == 'db2') {
-            int credCount = [userId, pwFilePath, db2ConfigPath].count { it != null }
-            if (credCount == 0)
-                throw new IllegalArgumentException('config must define userId (db2) or buildMapPath (json)')
-            if (credCount < 3)
-                throw new IllegalArgumentException('userId, pwFilePath and db2ConfigPath must all be defined or none')
             this.buildMapClient = BuildMapClientFactory.fromConf(buildGroup, userId, pwFilePath, new File(db2ConfigPath))
-        } else if (buildMapClientType == 'json') {
-            this.buildMapClient = BuildMapClientFactory.fromJson(new File(buildMapPath))
         } else {
-            throw new IllegalArgumentException('config must define userId or buildMapPath')
+            this.buildMapClient = BuildMapClientFactory.fromJson(new File(buildMapPath))
         }
 
         if (fileOpsType == 'zos') {
