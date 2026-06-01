@@ -39,8 +39,7 @@ log/
 # IBM jars (not committed; obtain from z/OS or DBB toolkit)
 libs/*.jar
 
-# Exclude subprojects' copied or generated files
-fat-source/src
-full-fat-source/src
+# Exclude generated fat source
+full-fat-source/src/main
 
 
