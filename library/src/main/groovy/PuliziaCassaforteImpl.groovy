@@ -56,6 +56,9 @@ class PuliziaCassaforteImpl {
 
     int run(String listFileToProcess, String environment, String buildGroup, Properties props) {
         log.info("Starting PuliziaCassaforte")
+        Properties resolved = new Properties()
+        props.each { k, v -> resolved.setProperty(k.toString(), expandEnvVars(v?.toString())) }
+        props = resolved
         if (props.getProperty('fileOpsType'))        this.fileOpsType        = props.getProperty('fileOpsType')
         if (props.getProperty('buildMapClientType')) this.buildMapClientType = props.getProperty('buildMapClientType')
         if (props.getProperty('rulesPath'))     this.rulesPath     = props.getProperty('rulesPath')
@@ -170,6 +173,14 @@ class PuliziaCassaforteImpl {
 
     private boolean isJobzType(String fileType) {
         fileType?.trim() in jobzExtensions
+    }
+
+    private static String expandEnvVars(String value) {
+        if (!value) return value
+        value.replaceAll(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)/) { List<String> m ->
+            String varName = m[1] ?: m[2]
+            System.getenv(varName) ?: m[0]
+        }
     }
 
     private static String resolveFileType(String sourcePath) {
