@@ -16,21 +16,7 @@ configurations {
     stubImplementation.extendsFrom(implementation)
 }
 
-sourceSets {
-    main {
-        groovy {
-            srcDirs = ['src/main/groovy']
-        }
-    }
-    test {
-        groovy {
-            srcDirs = ['src/test/groovy']
-        }
-    }
-}
-
 dependencies {
-    compileOnly project(':stubs')
     implementation 'org.apache.groovy:groovy-all:4.0.25'
     implementation 'org.slf4j:slf4j-api:2.0.16'
     testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
@@ -45,6 +31,6 @@ test {
 }
 
 jar {
-    archiveBaseName = 'pulizia-cassaforte'
+    archiveBaseName = 'stubs-pulizia-cassaforte'
 }
 
