@@ -1,8 +1,5 @@
-// Choose Local build or z/OS/CI full build
-// To build for local testing:
+// Build:
 //  ./gradlew :library:clean :library:build
-// To build for z/OS, ensure IBM jars are in libs/ and run with -PzosBuild:
-//   ./gradlew :library:clean :library:build -PzosBuild
 
 plugins {
     id 'groovy'
@@ -14,18 +11,20 @@ java {
     }
 }
 
+configurations {
+    // stub inherits Groovy (and other impl deps) so compileStubGroovy can resolve Groovy jar
+    stubImplementation.extendsFrom(implementation)
+}
+
 sourceSets {
+    // Minimal stub classes for IBM/JZOS deps — compile-time only, never packaged.
+    stub {
+        java { srcDirs = ['src/stub/java'] }
+    }
     main {
         groovy {
             srcDirs = ['src/main/groovy']
-        }
-    }
-    // ZosFileOpsUSS: compiled separately with IBM jars; packaged into pulizia-cassaforte-zos.jar.
-    // Never folded into main — keeps pulizia-cassaforte.jar free of IBM deps.
-    zos {
-        groovy {
-            srcDirs = ['src/zos/groovy']
-            compileClasspath += sourceSets.main.output + configurations.compileClasspath + fileTree('libs') { include '*.jar' }
+            compileClasspath += sourceSets.stub.output
         }
     }
     test {
@@ -53,19 +52,3 @@ jar {
     archiveBaseName = 'pulizia-cassaforte'
 }
 
-// Packages ZosFileOpsUSS into pulizia-cassaforte-zos.jar for USS deployment.
-// IBM jars must be present in libs/. Activated automatically by -PzosBuild.
-tasks.register('zosJar', Jar) {
-    dependsOn compileZosGroovy
-    from sourceSets.zos.output
-    archiveBaseName = 'pulizia-cassaforte-zos'
-}
-
-// -PzosBuild: verify IBM jars exist, then wire zosJar into the standard build lifecycle.
-if (project.hasProperty('zosBuild')) {
-    def ibmJars = fileTree('libs') { include '*.jar' }
-    if (ibmJars.isEmpty()) {
-        throw new GradleException('-PzosBuild requires IBM jars in libs/. See CLAUDE.md.')
-    }
-    tasks.named('build') { dependsOn 'zosJar' }
-}

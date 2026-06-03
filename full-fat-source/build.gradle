@@ -21,7 +21,7 @@ task generateFullFatSource {
         }
         
         copy {
-            from 'src/zos/groovy'
+            from project(':library').fileTree('src/zos/groovy')
             into "${tempDir}"
         }
         
@@ -89,7 +89,7 @@ task copyShLibs(type: Copy) {
 // can import them without pulling test-scoped sources into the main sourceSet.
 task compileIbmStubs(type: JavaCompile) {
     description = 'Compile IBM API stubs needed for main Groovy compilation'
-    source = fileTree(dir: 'src/test/java', include: '**/*.java')
+    source = fileTree(dir: 'src/stub/java', include: '**/*.java')
     classpath = files()
     destinationDirectory = layout.buildDirectory.dir('classes/java/ibm-stubs')
 }
