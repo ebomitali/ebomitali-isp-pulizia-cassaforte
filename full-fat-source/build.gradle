@@ -44,10 +44,10 @@ sourceSets {
     }
     test {
         groovy {
-            srcDirs = ['src/test/groovy', 'src/mock/groovy']
+            srcDirs = ['src/test/groovy']
         }
         resources {
-            srcDirs = ['src/test/resources', 'src/test/sh/uss']
+            srcDirs = ['src/test/resources']
         }
     }
 }
@@ -80,23 +80,11 @@ task copyShLibs(type: Copy) {
     into layout.buildDirectory.dir('sh-lib')
 }
 
-// IBM API stubs: compile from src/test/java independently so FullPuliziaCassaforte.groovy
-// can import them without pulling test-scoped sources into the main sourceSet.
-task compileIbmStubs(type: JavaCompile) {
-    description = 'Compile IBM API stubs needed for main Groovy compilation'
-    source = fileTree(dir: 'src/stub/java', include: '**/*.java')
-    classpath = files()
-    destinationDirectory = layout.buildDirectory.dir('classes/java/ibm-stubs')
-}
-
 // Ensure tests are copied before compilation
 //compileMainGroovy.dependsOn generateFatSource
 compileTestGroovy.dependsOn copyTests, compileGroovy
 processTestResources.dependsOn copyTests
-compileGroovy.dependsOn generateFullFatSource, compileIbmStubs
-compileGroovy.classpath = compileGroovy.classpath + files(layout.buildDirectory.dir('classes/java/ibm-stubs'))
-compileIbmStubs.mustRunAfter copyTests
-
+compileGroovy.dependsOn generateFullFatSource
 
 test {
     useJUnitPlatform()
