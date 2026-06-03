@@ -16,7 +16,7 @@ if [ -z "$DBB_CONF" ]; then
 fi
 
 # Create temporary directory
-TEMP_DIR="${TMPDIR:-/tmp}/run-puliziacassaforte.$$"
+TEMP_DIR="tmp/run-puliziacassaforte.$$"
 mkdir -p "$TEMP_DIR"
 trap "rm -rf $TEMP_DIR" EXIT
 

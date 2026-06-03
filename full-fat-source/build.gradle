@@ -126,24 +126,36 @@ task distribute(dependsOn: build) {
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/resources'
         }
         copy {
-            from('src/test/sh/uss'){ 
-                include '*z.sh'
-                include '*.groovy'
+            from('src/test/resources/fixtures') {
+                include 'PuliziaCassaforte.properties'
+                rename 'PuliziaCassaforte.properties', 'PuliziaCassaforteT.properties'
+            }
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte'
+        }
+        copy {
+            from('full-fat-source/src/test/sh'){ 
+                include 'urunpct4z.sh'
+            }
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte'
+        }
+        copy {
+            from('full-fat-source/doc'){ 
+                include 'README.md'
             }
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte'
         }
         // dbb-build repo
         copy {
             from('src/main/groovy') { include 'FullPuliziaCassaforte.groovy' }
-            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte'
         }
         copy {
             from('src/test/resources/fixtures') { exclude 'META-INF/**' }
-            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source/resources'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/resources'
         }
         copy {
             from('src/test/sh') 
-            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/full-fat-source'
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte'
         }
     }
 }
