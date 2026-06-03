@@ -114,7 +114,10 @@ task distribute(dependsOn: build) {
     doLast {
         // dbb-scripts repo
         copy {
-            from('src/main/groovy') { include 'FullPuliziaCassaforte.groovy' }
+            from('src/main/groovy') { 
+                include 'FullPuliziaCassaforte.groovy'
+                include 'RunPuliziaCassaforte.groovy'  
+            }
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte'
         }
         copy {
