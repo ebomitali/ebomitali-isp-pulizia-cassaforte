@@ -29,7 +29,7 @@ class LocalBuildMapClientSpec extends Specification {
         results[0].member  == 'YO8AMADD'
     }
 
-    def "getGeneratedObjects returns empty list for unknown source path"() {
+    def "getGeneratedObjects returns empty list for unknown source or build group"() {
         expect:
         client.getGeneratedObjects('ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP', 'UNKNOWN') == []
         client.getGeneratedObjects('ATO/no/such/file.cbl', 'ATO') == []

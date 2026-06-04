@@ -67,7 +67,9 @@ dependencies {
     implementation 'org.apache.groovy:groovy-all:4.0.25'
     implementation 'org.slf4j:slf4j-api:2.0.16'
     testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
+    testImplementation 'net.bytebuddy:byte-buddy:1.14.18'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testImplementation project(':stubs')
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
     testRuntimeOnly 'ch.qos.logback:logback-classic:1.5.15'
     shRuntime 'org.slf4j:slf4j-simple:2.0.16'
