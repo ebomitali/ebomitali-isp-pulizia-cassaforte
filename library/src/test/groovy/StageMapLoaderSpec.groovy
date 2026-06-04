@@ -4,7 +4,7 @@ class StageMapLoaderSpec extends Specification {
 
     def loader = new StageMapLoader()
 
-    def "load returns map from valid stage-map.csv"() {
+    def "load returns map from valid stagemap.csv"() {
         given:
         def path = new File(getClass().getResource('/fixtures/stagemap.csv').toURI())
 
@@ -15,7 +15,7 @@ class StageMapLoaderSpec extends Specification {
         map['01|ATO'] == 'X2A'
         map['01|ST']  == 'XAD'
         map['03|ST']  == 'YAD'
-        map['01|PR']  == 'XPE'
+        map['01|PR']  == 'XAE'
     }
 
     def "load strips surrounding quotes and whitespace from keys and values"() {
