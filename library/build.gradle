@@ -29,11 +29,6 @@ sourceSets {
     }
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
-}
 
 configurations {
     shRuntime  // slf4j provider jar(s) for mrunpct2.sh standalone execution
