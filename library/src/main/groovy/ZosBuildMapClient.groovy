@@ -3,6 +3,8 @@
 import com.ibm.dbb.build.BuildException
 import com.ibm.dbb.metadata.BuildGroup
 import com.ibm.dbb.metadata.BuildMap
+import com.ibm.dbb.metadata.MetadataStore
+import com.ibm.dbb.metadata.MetadataStoreFactory
 import groovy.util.logging.Slf4j
 
 /**
@@ -61,19 +63,18 @@ class ZosBuildMapClient implements BuildMapClient {
      * @param pwFilePath     Path to the DB2 password file.
      * @throws IllegalStateException if the build group is not found in the metadata store.
      */
-    static ZosBuildMapClient fromConf(String confDir, String buildGroupName,
-                                      String userId, String pwFilePath) {
-        log.info("Connecting to metadata store: user='{}' group='{}' confDir='{}'",
-                 userId, buildGroupName, confDir)
-        def store = MetadatastoreFactory.connect(userId, pwFilePath,
-                                                 new File(confDir, 'db2Connection.conf'))
-        BuildGroup group = store.getBuildGroup(buildGroupName)
-        if (!group) {
-            log.error("Build group '{}' not found in metadata store", buildGroupName)
-            throw new IllegalStateException("Build group '${buildGroupName}' not found in metadata store")
-        }
-        return new ZosBuildMapClient(group)
-    }
+    // static ZosBuildMapClient fromConf(String buildGroupName,
+    //                                   String userId, File pwFile, Properties db2ConnectionProps) {
+    //     log.info("Connecting to metadata store: group='{}' user='{}' url='{}'",
+    //              buildGroupName, userId, db2ConnectionProps?.getProperty('url'))
+    //     MetadataStore store = MetadataStoreFactory.createDb2MetadataStore(userId, pwFile, db2ConnectionProps)
+    //     BuildGroup group = store.getBuildGroup(buildGroupName)
+    //     if (!group) {
+    //         log.error("Build group '{}' not found in metadata store", buildGroupName)
+    //         throw new IllegalStateException("Build group '${buildGroupName}' not found in metadata store")
+    //     }
+    //     return new ZosBuildMapClient(group)
+    // }
 
     /**
      * Returns the output PDS members produced from {@code sourcePath} in the build map
