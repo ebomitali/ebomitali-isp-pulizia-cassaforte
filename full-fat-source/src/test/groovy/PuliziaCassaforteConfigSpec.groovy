@@ -172,8 +172,6 @@ class PuliziaCassaforteConfigSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
-
-
     def "from: all known properties are mapped to config fields"() {
         given:
         def props = new Properties()

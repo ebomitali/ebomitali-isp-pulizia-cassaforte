@@ -17,17 +17,15 @@ import java.nio.file.*
  */
 class PuliziaCassaforteImplSpec extends Specification {
 
-    static final String ENV         = 'ATO'
-    static final String BUILD_GROUP = 'ATO'
-    static final String SOURCE_PATH = '/repo/cloned/ATO/yn_r_01_ato_r1/src/mapasm/batch/TESTMEM.SZFSSWG'
-    static final String LIBRARY     = 'LTM00.D9PO1.PE000.@@@@.@@@@@@@@.@@.ZARA'
-    static final String MEMBER      = 'TESTMEM'
+    static final private String BUILDENV    = 'ATO'
+    static final private String BUILD_GROUP = 'ATO'
+    static final private String SOURCE_PATH = '/repo/cloned/ATO/yn_r_01_ato_r1/src/mapasm/batch/TESTMEM.SZFSSWG'
+    static final private String LIBRARY     = 'LTM00.D9PO1.PE000.@@@@.@@@@@@@@.@@.ZARA'
+    static final private String MEMBER      = 'TESTMEM'
 
-    static final String HLQ_SOURCE_PATH =
-        '/repo/cloned/ATO/yo_y_01_ato_r1/src/mapasm/batch/TESTMEM.SZFSSWG'
-    static final String HLQ_LIBRARY =
-        'U0G9700.D9PX2A.PE000.@@@@.@@@@@@@@.@@.ZARA'
-    static final String HLQ_MEMBER = 'TESTMEM'
+    static final private String HLQ_SOURCE_PATH = '/repo/cloned/ATO/yo_y_01_ato_r1/src/mapasm/batch/TESTMEM.SZFSSWG'
+    static final private String HLQ_LIBRARY = 'U0G9700.D9PX2A.PE000.@@@@.@@@@@@@@.@@.ZARA'
+    static final private String HLQ_MEMBER = 'TESTMEM'
 
     @TempDir
     Path tempDir
@@ -46,7 +44,7 @@ class PuliziaCassaforteImplSpec extends Specification {
 
     def "C action is processed without error"() {
         given:
-        def lista = listFile("C,${SOURCE_PATH}")
+        File lista = listFile("C,${SOURCE_PATH}")
 
         expect:
         runImpl(lista) == 0
@@ -54,7 +52,7 @@ class PuliziaCassaforteImplSpec extends Specification {
 
     def "C action is idempotent when member already absent"() {
         given:
-        def lista = listFile("C,${SOURCE_PATH}")
+        File lista = listFile("C,${SOURCE_PATH}")
 
         expect:
         runImpl(lista) == 0
@@ -62,7 +60,7 @@ class PuliziaCassaforteImplSpec extends Specification {
 
     def "blank lines and comments are skipped"() {
         given:
-        def lista = listFile("# comment\n\nC,${SOURCE_PATH}\n")
+        File lista = listFile("# comment\n\nC,${SOURCE_PATH}\n")
 
         expect:
         runImpl(lista) == 0
@@ -70,7 +68,7 @@ class PuliziaCassaforteImplSpec extends Specification {
 
     def "malformed line (no comma) increments error count"() {
         given:
-        def lista = listFile("MALFORMED_LINE")
+        File lista = listFile("MALFORMED_LINE")
 
         expect:
         runImpl(lista) == 1
@@ -78,7 +76,7 @@ class PuliziaCassaforteImplSpec extends Specification {
 
     def "unknown action increments error count"() {
         given:
-        def lista = listFile("X,${SOURCE_PATH}")
+        File lista = listFile("X,${SOURCE_PATH}")
 
         expect:
         runImpl(lista) == 1
@@ -86,7 +84,7 @@ class PuliziaCassaforteImplSpec extends Specification {
 
     def "multiple lines: good and bad counted separately"() {
         given:
-        def lista = listFile("C,${SOURCE_PATH}\nMALFORMED\nX,${SOURCE_PATH}")
+        File lista = listFile("C,${SOURCE_PATH}\nMALFORMED\nX,${SOURCE_PATH}")
 
         expect:
         runImpl(lista) == 2
@@ -111,7 +109,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         props.setProperty('fileOpsType', 'local')
         props.setProperty('uxBasedir', tempDir.toString())
         props.setProperty('hlq', 'U0G9700')
-        def errors = hlqImpl.run(lista, 'ATO', 'yo_y_01_ato_r1', props)
+        def errors = hlqImpl.doPuliziaCassaforte(lista, 'ATO', 'yo_y_01_ato_r1', props)
 
         then:
         errors == 0
@@ -131,7 +129,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def lista = listFile("C,${SOURCE_PATH}")
 
         expect:
-        impl.run(lista, ENV, BUILD_GROUP, configFile) == 0
+        impl.doPuliziaCassaforte(lista, BUILDENV, BUILD_GROUP, configFile) == 0
     }
 
     def "config-file: rulesPath and stageMapPath overrides are honoured"() {
@@ -147,7 +145,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def lista = listFile("C,${SOURCE_PATH}")
 
         expect:
-        impl.run(lista, ENV, BUILD_GROUP, configFile) == 0
+        impl.doPuliziaCassaforte(lista, BUILDENV, BUILD_GROUP, configFile) == 0
     }
 
     def "config-file: hlq is passed through"() {
@@ -170,7 +168,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def lista = listFile("C,${HLQ_SOURCE_PATH}")
 
         when:
-        def errors = hlqImpl.run(lista, 'ATO', 'yo_y_01_ato_r1', configFile)
+        def errors = hlqImpl.doPuliziaCassaforte(lista, 'ATO', 'yo_y_01_ato_r1', configFile)
 
         then:
         errors == 0
@@ -183,7 +181,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def lista = listFile("C,${SOURCE_PATH}")
 
         when:
-        impl.run(lista, ENV, BUILD_GROUP, configFile)
+        impl.doPuliziaCassaforte(lista, BUILDENV, BUILD_GROUP, configFile)
 
         then:
         thrown(IllegalArgumentException)
@@ -199,7 +197,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def lista = listFile("C,${SOURCE_PATH}")
 
         when:
-        impl.run(lista, ENV, BUILD_GROUP, configFile)
+        impl.doPuliziaCassaforte(lista, BUILDENV, BUILD_GROUP, configFile)
 
         then:
         thrown(IllegalArgumentException)
@@ -207,13 +205,13 @@ class PuliziaCassaforteImplSpec extends Specification {
 
     // ─── helpers ─────────────────────────────────────────────────────────────
 
-    private int runImpl(String lista) {
+    private int runImpl(File lista) {
         def props = new Properties()
         props.setProperty('buildMapClientType', 'json')
         props.setProperty('buildMapPath', bmFile.canonicalPath)
         props.setProperty('fileOpsType', 'local')
         props.setProperty('uxBasedir', tempDir.toString())
-        impl.run(lista, ENV, BUILD_GROUP, props)
+        impl.doPuliziaCassaforte(lista, BUILDENV, BUILD_GROUP, props)
     }
 
     private void createMember(String library, String member) {
@@ -222,10 +220,10 @@ class PuliziaCassaforteImplSpec extends Specification {
         Files.writeString(path, 'content')
     }
 
-    private String listFile(String content) {
+    private File listFile(String content) {
         def f = tempDir.resolve('lista.csv').toFile()
         f.text = content
-        return f.canonicalPath
+        return f.canonicalFile
     }
 
     private String writeConfig(Map<String, String> entries) {

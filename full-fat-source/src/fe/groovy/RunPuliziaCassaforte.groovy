@@ -6,17 +6,17 @@
 // This groovy script instantiate PuliziaCassaforte class and call the method run passing the three arguments.
 
 if (args.length != 3) {
-    println "Usage: groovyz RunPuliziaCassaforte.groovy  <list path> <environment> <build group>"
+    println "Usage: groovyz RunPuliziaCassaforte.groovy  <sources list path> <environment> <build group>"
     System.exit(1)
 }
 
-String fileList = args[0]
+String sources = args[0]
 String environment = args[1]
 String buildGroup = args[2]
 
-File fileListFile = new File(fileList)
-if (!fileListFile.exists()) {
-    println "List does not exist: ${fileList}"
+File sourcesListFile = new File(sources)
+if (!sourcesListFile.exists()) {
+    println "Sources list file does not exist: ${sources}"
     System.exit(1)
 }
 
@@ -31,6 +31,11 @@ if (dbbBuild == null) {
     println "Environment variable DBB_BUILD is not set."
     System.exit(1)
 }
+String dbbHome = System.getenv("DBB_HOME")
+if (dbbHome == null) {
+    println "Environment variable DBB_HOME is not set."
+    System.exit(1)
+}
 
 // Read PuliziaCassaforte property file from current directory
 Properties cfgProps = new Properties()
@@ -43,5 +48,5 @@ try {
 
 def pcloaded = loadScript(new File("FullPuliziaCassaforte.groovy"))
 def puliziaCassaforte = pcloaded.createPuliziaCassaforteImpl()
-int errors = puliziaCassaforte.run(fileList, environment, buildGroup, cfgProps)
+int errors = puliziaCassaforte.doPuliziaCassaforte(sourcesListFile, environment, buildGroup, cfgProps)
 println "PuliziaCassaforte completed with ${errors} errors."

@@ -48,13 +48,13 @@ class PuliziaCassaforteImpl {
     DeleteCassaforteLogic deleteLogic = null
     SfilamentoLogic sfilamento    = null
 
-    int run(String listFileToProcess, String environment, String buildGroup, String configFile = 'PuliziaCassaforte.properties') {
+    int doPuliziaCassaforte(File listToProcess, String environment, String buildGroup, String configFile = 'PuliziaCassaforte.properties') {
         Properties props = new Properties()
         new File(configFile).withInputStream { props.load(it) }
-        return run(listFileToProcess, environment, buildGroup, props)
+        return doPuliziaCassaforte(listToProcess, environment, buildGroup, props)
     }
 
-    int run(String listFileToProcess, String environment, String buildGroup, Properties props) {
+    int doPuliziaCassaforte(File listToProcess, String environment, String buildGroup, Properties props) {
         log.info("Starting PuliziaCassaforte")
         def cfg = PuliziaCassaforteConfig.from(props)
         if (cfg.fileOpsType)                   this.fileOpsType        = cfg.fileOpsType
@@ -69,11 +69,10 @@ class PuliziaCassaforteImpl {
         if (cfg.buildMapPath)       this.buildMapPath       = cfg.buildMapPath
         if (cfg.jobzExtensions != null) this.jobzExtensions = cfg.jobzExtensions
 
-        if (!listFileToProcess)
-            throw new IllegalArgumentException('listFileToProcess argument is required')
-        File lftp = new File(listFileToProcess)
-        if (!lftp.exists())
-            throw new IllegalArgumentException("listFileToProcess file not found: '$listFileToProcess'")
+        if (!listToProcess)
+            throw new IllegalArgumentException('listToProcess argument is required')
+        if (!listToProcess.exists())
+            throw new IllegalArgumentException("listToProcess file not found: '$listToProcess'")
 
         new PuliziaCassaforteConfig(
             buildMapClientType: this.buildMapClientType,
@@ -121,9 +120,9 @@ class PuliziaCassaforteImpl {
         )
 
         log.info("Processing list='{}' env='{}' buildGroup='{}'",
-                 listFileToProcess, environment, buildGroup)
+                 listToProcess, environment, buildGroup)
         int processed = 0, errors = 0
-        lftp.eachLine { raw ->
+        listToProcess.eachLine { raw ->
             def line = raw.trim()
             if (!line || line.startsWith('#')) return
             def comma = line.indexOf(',')
