@@ -1,4 +1,4 @@
-# scripts/test/fixtures/rules.csv
+# This set of rules is specific for testing DeletionRulesLoader class
 %CPYCOB*;LTM00.D9P${C1STAGE}.PE000.LING.COB@@@@@.@@.COPY;NO
 SZFSSWG ;LTM00.D9P${C1STAGE}.PE000.LING.MAP@@@@@.@@.COPY;BUILD MAP
 SZFSSWG ;LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.ZARA;NO
@@ -8,3 +8,4 @@ SJCL*   ;LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.SJCL;NO
 STWSNCS ;LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.JNCS;NO
 STWSJGO ;LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.JJGO;NO
 STWSJGM ;LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.JJGM;NO
+

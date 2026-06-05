@@ -206,22 +206,36 @@ class PuliziaCassaforteConfigSpec extends Specification {
         cfg.jobzExtensions     == ['JOBN', 'JOBZ'] as Set
     }
 
-    def "from: absent properties leave fields null"() {
+    def "from: absent properties keep field defaults"() {
         when:
         def cfg = PuliziaCassaforteConfig.from(new Properties())
 
         then:
-        cfg.fileOpsType        == null
-        cfg.buildMapClientType == null
-        cfg.rulesPath          == null
-        cfg.stageMapPath       == null
+        cfg.fileOpsType        == 'zos'
+        cfg.buildMapClientType == 'db2'
+        cfg.rulesPath          == 'build-data/rules.csv'
+        cfg.stageMapPath       == 'build-data/stagemap.csv'
         cfg.uxBasedir          == null
         cfg.hlq                == null
         cfg.buildMapPath       == null
         cfg.userId             == null
         cfg.pwFilePath         == null
         cfg.db2ConfigPath      == null
-        cfg.jobzExtensions     == null
+        cfg.jobzExtensions     == ['STWSNCS', 'STWSJGO', 'STWSJGM'] as Set
+    }
+
+    def "from: property with empty value keeps field default"() {
+        given:
+        def props = new Properties()
+        props.setProperty('fileOpsType',        '')
+        props.setProperty('buildMapClientType', '')
+
+        when:
+        def cfg = PuliziaCassaforteConfig.from(props)
+
+        then:
+        cfg.fileOpsType        == 'zos'
+        cfg.buildMapClientType == 'db2'
     }
 
     def "from: env var placeholder in property value is expanded"() {

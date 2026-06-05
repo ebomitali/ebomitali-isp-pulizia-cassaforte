@@ -5,9 +5,16 @@ import java.nio.file.*
 class SfilamentoLogicSpec extends Specification {
 
     static final Map<String, String> STAGE_MAP = [
-        '01|ATO': 'X2A', '01|ST': 'XAD', '01|PR': 'XPE',
-        '03|ATO': 'Y2A', '03|ST': 'YAD',
+        '01|ATO': 'X2A',
+        '01|ST' : 'XAD',
+        '01|PR' : 'XAE',
     ]
+
+    static final LibraryNameResolver RESOLVER      = new LibraryNameResolver()
+    static final String              JNCS_TEMPLATE = 'LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.JNCS'
+    static final String              JJGO_TEMPLATE = 'LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.JJGO'
+    static final String              SJCL_TEMPLATE = 'LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.SJCL'
+    static final String              SJINP_TEMPLATE = 'LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.SJINP'
 
     @TempDir
     Path tempDir
@@ -16,10 +23,14 @@ class SfilamentoLogicSpec extends Specification {
     LocalFileOps ops
 
     def setup() {
-        def rulesFile = new File(getClass().getResource('/fixtures/rules.csv').toURI())
-        def bmFile    = new File(getClass().getResource('/fixtures/buildmap.json').toURI()).canonicalPath
         ops = new LocalFileOps(tempDir.toString())
-        def rules       = new DeletionRulesLoader().load(rulesFile)
+        def rules = [
+            new DeletionRule(typePattern: 'STWSNCS', libraryTemplate: JNCS_TEMPLATE, useBuildMap: false),
+            new DeletionRule(typePattern: 'STWSJGO', libraryTemplate: JJGO_TEMPLATE, useBuildMap: false),
+            new DeletionRule(typePattern: 'SJCL*',   libraryTemplate: SJCL_TEMPLATE,  useBuildMap: false),
+            new DeletionRule(typePattern: '%JCLINP', libraryTemplate: SJINP_TEMPLATE, useBuildMap: false),
+        ]
+        def bmFile = new File(getClass().getResource('/fixtures/buildmap.json').toURI()).canonicalPath
         def deleteLogic = new DeleteCassaforteLogic(
             ops: ops, rules: rules,
             buildMap: new LocalBuildMapClient(bmFile)
@@ -31,73 +42,82 @@ class SfilamentoLogicSpec extends Specification {
             extractor:      new PathVariableExtractor(),
             stageMap:       STAGE_MAP,
             hlq:            '',
-            jobzExtensions: ['STWSNCS'] as Set
+            jobzExtensions: ['STWSNCS','STWSJGO','STWSJGM'] as Set
         )
     }
 
-    def "execute deletes ST cassaforte SJCL member and restores from PR into TOCOLB"() {
+    def "execute SJCLINP in ATO: deletes SJINP member, does not restore (eligible but env has superiors)"() {
         given:
-        def stSjclLib = 'LTM00.D9PXAD.PE000.@@@@.@@@@@@@@.@@.SJCL'
-        def prSjclLib = 'LTM00.D9PXPE.PE000.@@@@.@@@@@@@@.@@.SJCL'
-        [stSjclLib, prSjclLib].each { lib ->
-            def m = tempDir.resolve("${lib}/MYJCL")
-            Files.createDirectories(m.parent)
-            Files.writeString(m, "${lib}-content")
-        }
-
-        when:
-        def result = sfilamento.execute(
-            'ST/yn_r_01_st_r1/src/jcl/batch/sjclinp/MYJCL.SJCLINP',
-            'SJCLINP', 'ST', 'ST'
-        )
-
-        then:
-        result == true
-        !ops.exists("//${stSjclLib}(MYJCL)")
-        ops.exists('//LTM00.D9PXAD.PE000.TO@@.COLB@@@@.@@.SJCL(MYJCL)')
-    }
-
-    def "execute in ATO deletes cassaforte member but does not restore into TOCOLB"() {
-        given:
-        def atoSjclLib = 'LTM00.D9PX2A.PE000.@@@@.@@@@@@@@.@@.SJCL'
-        def m = tempDir.resolve("${atoSjclLib}/MYJCL")
+        def atoSjinpLib = RESOLVER.resolve(SJINP_TEMPLATE, [C1STAGE: 'X2A'])
+        def m = tempDir.resolve("${atoSjinpLib}/YO8AMBDD")
         Files.createDirectories(m.parent)
-        Files.writeString(m, "${atoSjclLib}-content")
+        Files.writeString(m, "${atoSjinpLib}-content")
 
         when:
         def result = sfilamento.execute(
-            'ATO/yn_r_01_ato_r1/src/jcl/batch/sjclinp/MYJCL.SJCLINP',
+            'ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMBDD.SJCLINP',
             'SJCLINP', 'ATO', 'ATO'
         )
 
         then:
         result == false
-        !ops.exists('//LTM00.D9PX2A.PE000.TO@@.COLB@@@@.@@.SJCL(MYJCL)')
+        !ops.exists("//${atoSjinpLib}(YO8AMBDD)")
     }
 
-    def "execute returns false and only deletes for non-JCL type (ACPYCOB)"() {
+    def "execute STWSNCS in ATO: deletes JNCS member, does not restore"() {
         given:
-        def cobLib = 'LTM00.D9PXAD.PE000.LING.COB@@@@@.@@.COPY' //XAD System Test
-        def member = tempDir.resolve("${cobLib}/TESTCPY.ACPYCOB")
-        Files.createDirectories(member.parent)
-        Files.writeString(member, 'cobol-content')
+        def atoJncsLib = RESOLVER.resolve(JNCS_TEMPLATE, [C1STAGE: 'X2A'])
+        def m = tempDir.resolve("${atoJncsLib}/MYJCL")
+        Files.createDirectories(m.parent)
+        Files.writeString(m, "${atoJncsLib}-content")
+
+        when:
+        def result = sfilamento.execute('edux0-jobz/MYJCL.STWSNCS', 'STWSNCS', 'ATO', 'ATO')
+
+        then:
+        result == false
+        !ops.exists("//${atoJncsLib}(MYJCL)")
+    }
+
+    def "execute STWSJGO in ST: deletes JJGO member without restore (not eligible)"() {
+        given:
+        def stJjgoLib = RESOLVER.resolve(JJGO_TEMPLATE, [C1STAGE: 'XAD'])
+        def m = tempDir.resolve("${stJjgoLib}/MYJOB")
+        Files.createDirectories(m.parent)
+        Files.writeString(m, 'jjgo-content')
 
         when:
         def result = sfilamento.execute(
-            'ST/yn_r_01_st_r1/src/cobol/batch/acpycob/TESTCPY.ACPYCOB',
-            'ACPYCOB', 'ST', 'ST'
+            'ST/yn_r_01_st_r1/src/jcl/batch/stwsjgo/MYJOB.STWSJGO',
+            'STWSJGO', 'ST', 'ST'
         )
 
         then:
         result == false
-        !ops.exists("//${cobLib}(TESTCPY)")
+        !ops.exists("//${stJjgoLib}(MYJOB)")
     }
 
-    def "execute on jobz path in ST deletes ST cassaforte member and restores from PR into TOCOLB"() {
+    def "execute STWSNCS in ST when no PR copy exists: deletes, does not restore"() {
         given:
-        def stJobzLib = 'LTM00.D9PXAD.PE000.@@@@.@@@@@@@@.@@.JOBZ'
-        def prJobzLib = 'LTM00.D9PXPE.PE000.@@@@.@@@@@@@@.@@.JOBZ'
-        [stJobzLib, prJobzLib].each { lib ->
+        def stJncsLib = RESOLVER.resolve(JNCS_TEMPLATE, [C1STAGE: 'XAD'])
+        def m = tempDir.resolve("${stJncsLib}/MYMEM")
+        Files.createDirectories(m.parent)
+        Files.writeString(m, "${stJncsLib}-content")
+
+        when:
+        def result = sfilamento.execute('edux0-jobz/MYMEM.STWSNCS', 'STWSNCS', 'ST', 'ST')
+
+        then:
+        result == false
+        !ops.exists("//${stJncsLib}(MYMEM)")
+    }
+
+    def "execute STWSNCS in ST: deletes ST JNCS member and restores from PR into TOCOLB"() {
+        given:
+        // ST -> XAD, PR -> XAE according to stage map
+        def stJncsLib = RESOLVER.resolve(JNCS_TEMPLATE, [C1STAGE: 'XAD'])
+        def prJncsLib = RESOLVER.resolve(JNCS_TEMPLATE, [C1STAGE: 'XAE'])
+        [stJncsLib, prJncsLib].each { lib ->
             def m = tempDir.resolve("${lib}/\$HXQ001")
             Files.createDirectories(m.parent)
             Files.writeString(m, "${lib}-content")
@@ -108,15 +128,15 @@ class SfilamentoLogicSpec extends Specification {
 
         then:
         result == true
-        !ops.exists("//${stJobzLib}(\$HXQ001)")
-        ops.exists('//LTM00.D9PXAD.PE000.TO@@.COLB@@@@.@@.JOBZ($HXQ001)')
+        !ops.exists("//${stJncsLib}(\$HXQ001)")
+        ops.exists("//${RESOLVER.toTocolbLibrary(stJncsLib)}(\$HXQ001)")
     }
 
-    def "execute on jobz path in PR deletes PR cassaforte member only"() {
+    def "execute STWSNCS in PR: deletes PR JNCS member only (degraded to C)"() {
         given:
-        def stJobzLib = 'LTM00.D9PXAD.PE000.@@@@.@@@@@@@@.@@.JOBZ' //ST System Test
-        def prJobzLib = 'LTM00.D9PXPE.PE000.@@@@.@@@@@@@@.@@.JOBZ' //PR Production
-        [stJobzLib, prJobzLib].each { lib ->
+        def stJncsLib = RESOLVER.resolve(JNCS_TEMPLATE, [C1STAGE: 'XAD'])
+        def prJncsLib = RESOLVER.resolve(JNCS_TEMPLATE, [C1STAGE: 'XAE'])
+        [stJncsLib, prJncsLib].each { lib ->
             def m = tempDir.resolve("${lib}/\$HXQ003")
             Files.createDirectories(m.parent)
             Files.writeString(m, "${lib}-content")
@@ -127,8 +147,8 @@ class SfilamentoLogicSpec extends Specification {
 
         then:
         result == true
-        !ops.exists("//${prJobzLib}(\$HXQ003)")
-        ops.exists("//${stJobzLib}(\$HXQ003)")
+        !ops.exists("//${prJncsLib}(\$HXQ003)")
+        ops.exists("//${stJncsLib}(\$HXQ003)")
     }
 
 }

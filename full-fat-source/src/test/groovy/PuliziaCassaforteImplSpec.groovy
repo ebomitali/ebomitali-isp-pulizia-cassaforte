@@ -40,7 +40,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         ops    = new LocalFileOps(tempDir.toString())
         impl   = new PuliziaCassaforteImpl()
         impl.rulesPath    = new File(getClass().getResource('/fixtures/rules.csv').toURI()).canonicalPath
-        impl.stageMapPath = new File(getClass().getResource('/fixtures/stagemap.csv').toURI()).canonicalPath
+        impl.stagemapPath = new File(getClass().getResource('/fixtures/stagemap.csv').toURI()).canonicalPath
         bmFile = new File(getClass().getResource('/fixtures/buildmap.json').toURI())
     }
 
@@ -96,7 +96,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         given:
         def hlqImpl = new PuliziaCassaforteImpl()
         hlqImpl.rulesPath    = new File(getClass().getResource('/fixtures/rules-hlq.csv').toURI()).canonicalPath
-        hlqImpl.stageMapPath = new File(getClass().getResource('/fixtures/stagemap.csv').toURI()).canonicalPath
+        hlqImpl.stagemapPath = new File(getClass().getResource('/fixtures/stagemap.csv').toURI()).canonicalPath
 
         def member = tempDir.resolve("${HLQ_LIBRARY}/${HLQ_MEMBER}")
         Files.createDirectories(member.parent)
@@ -154,7 +154,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         given:
         def hlqImpl = new PuliziaCassaforteImpl()
         hlqImpl.rulesPath    = new File(getClass().getResource('/fixtures/rules-hlq.csv').toURI()).canonicalPath
-        hlqImpl.stageMapPath = new File(getClass().getResource('/fixtures/stagemap.csv').toURI()).canonicalPath
+        hlqImpl.stagemapPath = new File(getClass().getResource('/fixtures/stagemap.csv').toURI()).canonicalPath
 
         def member = tempDir.resolve("${HLQ_LIBRARY}/${HLQ_MEMBER}")
         Files.createDirectories(member.parent)

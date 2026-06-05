@@ -29,10 +29,10 @@ task generateFullFatSource {
 // Task 2: Copy tests and resources from library to fat-source
 task copyTests(type: Copy) {
     description = 'Copy tests and resources from library/src/test to fat-source/src/test'
-    from project(':library').fileTree('src/test/groovy') {
+    from project(':library').fileTree('src/test') {
         include '**/*.*'
     }
-    into 'src/test/groovy'
+    into 'src/test'
 }
 
 // Task 3: Configure compilation and testing
