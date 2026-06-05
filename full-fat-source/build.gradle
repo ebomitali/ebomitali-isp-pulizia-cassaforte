@@ -86,7 +86,7 @@ task copyShLibs(type: Copy) {
 //compileMainGroovy.dependsOn generateFatSource
 compileTestGroovy.dependsOn copyTests, compileGroovy
 processTestResources.dependsOn copyTests
-compileGroovy.dependsOn generateFullFatSource
+compileGroovy.dependsOn generateFullFatSource,copyTests
 
 test {
     useJUnitPlatform()
@@ -100,16 +100,18 @@ task distribute(dependsOn: build) {
         // dbb-scripts repo
         copy {
             from('src/main/groovy') { 
-                include 'FullPuliziaCassaforte.groovy'
+                include 'FullPuliziaCassaforte.groovy' 
+            }
+            from('src/fe/groovy') { 
                 include 'RunPuliziaCassaforte.groovy'  
             }
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte'
         }
         copy {
             from('src/test/resources/fixtures') {
-                include 'rulest2.csv'
-                include 'rulest4.csv'
+                include 'rules.csv'
                 include 'stagemap.csv'
+                rename 'stagemap.csv', 'stagemapT.csv'
             }
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb-scripts/pulizia-cassaforte/resources'
         }
@@ -135,6 +137,7 @@ task distribute(dependsOn: build) {
         // dbb-build repo
         copy {
             from('src/main/groovy') { include 'FullPuliziaCassaforte.groovy' }
+            from('src/fe/groovy') { include 'RunPuliziaCassaforte.groovy'  }
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte'
         }
         copy {
@@ -142,7 +145,7 @@ task distribute(dependsOn: build) {
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/resources'
         }
         copy {
-            from('src/test/sh') 
+            from('src/test/sh') { exclude '**/m*.sh'}
             into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte'
         }
     }
