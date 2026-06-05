@@ -35,7 +35,7 @@ class PuliziaCassaforteImpl {
     // Default paths to rules and stage map CSVs. Override in tests or when running on USS.
     String rulesPath          = null
     File   rulesFile          = null
-    String stageMapPath       = null
+    String stagemapPath       = null
     File   stageMapFile       = null
 
     BuildMapClient buildMapClient = null
@@ -57,10 +57,10 @@ class PuliziaCassaforteImpl {
     int run(String listFileToProcess, String environment, String buildGroup, Properties props) {
         log.info("Starting PuliziaCassaforte")
         def cfg = PuliziaCassaforteConfig.from(props)
-        if (cfg.fileOpsType)        this.fileOpsType        = cfg.fileOpsType
-        if (cfg.buildMapClientType) this.buildMapClientType = cfg.buildMapClientType
-        if (cfg.rulesPath)          this.rulesPath          = cfg.rulesPath
-        if (cfg.stageMapPath)       this.stageMapPath       = cfg.stageMapPath
+        if (cfg.fileOpsType)                   this.fileOpsType        = cfg.fileOpsType
+        if (cfg.buildMapClientType)            this.buildMapClientType = cfg.buildMapClientType
+        if (props.containsKey('rulesPath'))    this.rulesPath          = cfg.rulesPath
+        if (props.containsKey('stageMapPath')) this.stagemapPath       = cfg.stageMapPath
         if (cfg.uxBasedir)          this.uxBasedir          = cfg.uxBasedir
         if (cfg.hlq)                this.hlq                = cfg.hlq
         if (cfg.userId)             this.userId             = cfg.userId
@@ -78,7 +78,7 @@ class PuliziaCassaforteImpl {
         new PuliziaCassaforteConfig(
             buildMapClientType: this.buildMapClientType,
             rulesPath:          this.rulesPath,
-            stageMapPath:       this.stageMapPath,
+            stageMapPath:       this.stagemapPath,
             buildMapPath:       this.buildMapPath,
             userId:             this.userId,
             pwFilePath:         this.pwFilePath,
@@ -86,7 +86,7 @@ class PuliziaCassaforteImpl {
         ).validate()
 
         rulesFile    = new File(rulesPath)
-        stageMapFile = new File(stageMapPath)
+        stageMapFile = new File(stagemapPath)
 
         if (buildMapClientType == 'db2') {
             this.buildMapClient = BuildMapClientFactory.fromConf(buildGroup, userId, pwFilePath, new File(db2ConfigPath))

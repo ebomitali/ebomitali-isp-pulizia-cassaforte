@@ -25,7 +25,7 @@ class PuliziaCassaforteConfig {
     String uxBasedir          = null
     String hlq                = null
     /** {@code null} when the {@code jobzExtensions} key is absent from the properties. */
-    Set<String> jobzExtensions = null
+    Set<String> jobzExtensions = ['STWSNCS','STWSJGO','STWSJGM'] as Set
     String rulesPath          = 'build-data/rules.csv'
     String stageMapPath       = 'build-data/stagemap.csv'
 
@@ -35,19 +35,22 @@ class PuliziaCassaforteConfig {
      */
     static PuliziaCassaforteConfig from(Properties props) {
         Properties resolved = new Properties()
-        props.each { k, v -> resolved.setProperty(k.toString(), expandEnvVars(v?.toString())) }
+        props.each { k, v ->
+            def expanded = expandEnvVars(v?.toString())
+            if (expanded != null) resolved.setProperty(k.toString(), expanded)
+        }
 
         def cfg = new PuliziaCassaforteConfig()
-        cfg.fileOpsType        = resolved.getProperty('fileOpsType')
-        cfg.buildMapClientType = resolved.getProperty('buildMapClientType')
-        cfg.rulesPath          = resolved.getProperty('rulesPath')
-        cfg.stageMapPath       = resolved.getProperty('stageMapPath')
-        cfg.uxBasedir          = resolved.getProperty('uxBasedir')
-        cfg.hlq                = resolved.getProperty('hlq')
-        cfg.userId             = resolved.getProperty('userId')
-        cfg.pwFilePath         = resolved.getProperty('pwFilePath')
-        cfg.db2ConfigPath      = resolved.getProperty('db2ConfigPath')
-        cfg.buildMapPath       = resolved.getProperty('buildMapPath')
+        cfg.fileOpsType        = resolved.getProperty('fileOpsType')        ?: cfg.fileOpsType
+        cfg.buildMapClientType = resolved.getProperty('buildMapClientType') ?: cfg.buildMapClientType
+        cfg.rulesPath          = resolved.getProperty('rulesPath')          ?: cfg.rulesPath
+        cfg.stageMapPath       = resolved.getProperty('stageMapPath')       ?: cfg.stageMapPath
+        cfg.uxBasedir          = resolved.getProperty('uxBasedir')          ?: cfg.uxBasedir
+        cfg.hlq                = resolved.getProperty('hlq')                ?: cfg.hlq
+        cfg.userId             = resolved.getProperty('userId')             ?: cfg.userId
+        cfg.pwFilePath         = resolved.getProperty('pwFilePath')         ?: cfg.pwFilePath
+        cfg.db2ConfigPath      = resolved.getProperty('db2ConfigPath')      ?: cfg.db2ConfigPath
+        cfg.buildMapPath       = resolved.getProperty('buildMapPath')       ?: cfg.buildMapPath
         if (resolved.getProperty('jobzExtensions')) {
             cfg.jobzExtensions = resolved.getProperty('jobzExtensions')
                 .split(',').collect { it.trim().toUpperCase() }.findAll { it }.toSet()
@@ -58,7 +61,7 @@ class PuliziaCassaforteConfig {
     /**
      * Validates the configuration according to the following rules:
      * <ul>
-     *   <li>{@code rulesPath} and {@code stageMapPath} must be set and point to existing files.</li>
+     *   <li>{@code rulesPath} and {@code stagemapPath} must be set and point to existing files.</li>
      *   <li>When {@code buildMapClientType} is {@code db2}: {@code userId}, {@code pwFilePath}
      *       and {@code db2ConfigPath} must all be non-null, and their paths must exist.</li>
      *   <li>When {@code buildMapClientType} is {@code json}: {@code buildMapPath} must be set
