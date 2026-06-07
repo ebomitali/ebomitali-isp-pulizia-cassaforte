@@ -1,129 +1,55 @@
-import com.ibm.dbb.metadata.BuildGroup
-import com.ibm.dbb.metadata.MetadataStore
-import com.ibm.dbb.metadata.MetadataStoreFactory
 import groovy.util.logging.Slf4j
 
 /**
  * Factory for creating {@link BuildMapClient} instances without IBM/DBB compile-time dependencies.
  *
- * <p>Two creation paths:
+ * <p>Dispatches on {@code buildMapClientType}:
  * <ul>
- *   <li>{@link #fromJson} — local dev / fallback; wraps {@link LocalBuildMapClient} over a
- *       pre-captured JSON build map file.</li>
- *   <li>{@link #fromConf} — USS production; delegates to {@code ZosBuildMapClient.fromConf()}
- *       (in the USS-only jar) via reflection.</li>
+ *   <li>{@code 'json'} — {@link JsonBuildMapClient}: reads a pre-captured JSON file; no IBM deps;
+ *       used for local dev and unit testing.</li>
+ *   <li>{@code 'db2'} — {@code Db2BuildMapClient}: connects to the DBB DB2 metadata store on USS;
+ *       loaded via reflection to avoid compile-time IBM dependency.</li>
+ *   <li>{@code 'dbb'} — {@code DbbBuildMapClient}: reuses the {@code BuildGroup} already resolved
+ *       by the {@code MetadataInit} task in a DBB task context; loaded via reflection.</li>
  * </ul>
  *
+ * <p>IBM-dep clients ({@code Db2BuildMapClient}, {@code DbbBuildMapClient}) must be on the runtime
+ * classpath (from {@code pulizia-cassaforte-zos.jar}) and expose a static
+ * {@code create(String buildGroupName, PuliziaCassaforteConfig cfg)} method.
+ *
  * @see BuildMapClient
- * @see LocalBuildMapClient
+ * @see JsonBuildMapClient
  */
 @Slf4j
 class BuildMapClientFactory {
 
     /**
-     * Creates a {@link BuildMapClient} backed by a pre-captured JSON build map file.
+     * Creates a {@link BuildMapClient} for the given type.
      *
-     * @param bmFile JSON file in the {@link LocalBuildMapClient} array format.
+     * <p>{@code 'json'} is instantiated directly; {@code 'db2'} and {@code 'dbb'} are loaded
+     * via reflection so that this class has zero IBM compile-time dependencies (Strategy D).
+     *
+     * @param buildMapClientType  {@code 'json'}, {@code 'db2'}, or {@code 'dbb'}.
+     * @param buildGroupName      DBB build group name.
+     * @param cfg                 Configuration; provides all type-specific parameters.
+     * @throws ClassNotFoundException   if the IBM-dep class is not on the runtime classpath.
+     * @throws IllegalArgumentException if the type is not recognised.
      */
-    static BuildMapClient fromJson(File bmFile) {
-        log.debug("Creating local BuildMapClient from JSON: {}", bmFile)
-        return new LocalBuildMapClient(bmFile.canonicalPath)
-    }
-
-    /**
-     * Creates a {@link BuildMapClient} connecting to a DB2 metadata store.
-     *
-     * <p>{@code ZosBuildMapClient} is resolved via reflection to avoid a compile-time
-     * dependency on IBM jars — it must be on the classpath at runtime (USS only).
-     *
-     * @param buildGroupName DBB build group name.
-     * @param userId         DB2 user ID.
-     * @param pwFilePath     Path to the DB2 password file.
-     * @param configFile     {@code db2Connection.conf} to use; defaults to
-     *                       {@code ${DBB_CONF:-${DBB_HOME}/conf}/db2Connection.conf}.
-     * @throws ClassNotFoundException  if {@code ZosBuildMapClient} is not on the classpath.
-     * @throws IllegalStateException   if the build group is not found in the metadata store.
-     */
-    static BuildMapClient fromConf(String buildGroupName, String userId, String pwFilePath,
-                                   File configFile = defaultConfigFile()) {
-        log.info("Creating ZosBuildMapClient for group '{}' user '{}'", buildGroupName, userId)
-        Properties db2ConnectionProps = new Properties()
-        configFile.withInputStream { stream ->
-            db2ConnectionProps.load(stream)
+    static BuildMapClient create(String buildMapClientType,
+                                 String buildGroupName,
+                                 PuliziaCassaforteConfig cfg) {
+        log.debug("Creating BuildMapClient: type='{}' group='{}'", buildMapClientType, buildGroupName)
+        switch (buildMapClientType) {
+            case 'json':
+                return new JsonBuildMapClient(buildGroupName, cfg)
+            case 'db2':
+                return Class.forName('Db2BuildMapClient')
+                            .create(buildGroupName, cfg) as BuildMapClient
+            case 'dbb':
+                return Class.forName('DbbBuildMapClient')
+                            .create(buildGroupName, cfg) as BuildMapClient
+            default:
+                throw new IllegalArgumentException("Unknown buildMapClientType: '${buildMapClientType}'")
         }
-        // Create file pwFile from pwFilePath and verify it exists
-        File pwFile = new File(pwFilePath)
-        if (!pwFile.exists()) {
-            log.error("Password file '{}' not found", pwFilePath)
-            throw new IllegalStateException("Password file '${pwFilePath}' not found")
-        }
-        //MetadataStore store = createStore(userId, pwFile, db2ConnectionProps)
-        MetadataStore store = MetadataStoreFactory.createDb2MetadataStore(userId, pwFile, db2ConnectionProps)
-        BuildGroup group = store.getBuildGroup(buildGroupName)
-        if (!group) {
-            log.error("Build group '{}' not found in metadata store", buildGroupName)
-            throw new IllegalStateException("Build group '${buildGroupName}' not found in metadata store")
-        }
-        return new ZosBuildMapClient(group)
     }
-
-    /**
-     * Creates a client by reading DB2 connection properties from {@code db2Connection.conf}
-     * in {@code confDir} and connecting to the named build group.
-     *
-     * <p>Mirrors the connection pattern used by {@code GetBuildMapFields.groovy} and
-     * {@code QueryBuildMap.groovy}: reads {@code url}, {@code user}, and {@code password}
-     * keys from the conf file, then delegates to
-     * {@link MetadataStoreFactory#createDb2MetadataStore(String, String, Properties)}.
-     *
-     * @param confDir        Directory containing {@code db2Connection.conf}
-     *                       (typically {@code $DBB_CONF} or {@code $DBB_HOME/conf}).
-     * @param buildGroupName Name of the DBB build group to look up.
-     * @param userId         DB2 user ID.
-     * @param pwFilePath     Path to the DB2 password file.
-     * @throws IllegalStateException if the build group is not found in the metadata store.
-     */
-    static ZosBuildMapClient fromConf(String buildGroupName,
-                                      String userId, File pwFile, Properties db2ConnectionProps) {
-        log.info("Connecting to metadata store: group='{}' user='{}' url='{}'",
-                 buildGroupName, userId, db2ConnectionProps?.getProperty('url'))
-        MetadataStore store = MetadataStoreFactory.createDb2MetadataStore(userId, pwFile, db2ConnectionProps)
-        BuildGroup group = store.getBuildGroup(buildGroupName)
-        if (!group) {
-            log.error("Build group '{}' not found in metadata store", buildGroupName)
-            throw new IllegalStateException("Build group '${buildGroupName}' not found in metadata store")
-        }
-        return new ZosBuildMapClient(group)
-    }
-
-    @groovy.transform.PackageScope
-    static MetadataStore createStore(String userId, File pwFile, Properties props) {
-        MetadataStoreFactory.createDb2MetadataStore(userId, pwFile, props)
-    }
-
-    private static File defaultConfigFile() {
-        String confDir = System.getenv('DBB_CONF') ?: "${System.getenv('DBB_HOME')}/conf"
-        return new File(confDir, 'db2Connection.conf')
-    }
-
-    /**
-     * Creates a {@link BuildMapClient} reusing context BUILD_GROUP created by MetadataInit Task 
-     *
-     * <p>{@code ZosBuildMapClient} is resolved via reflection to avoid a compile-time
-     * dependency on IBM jars — it must be on the classpath at runtime (USS only).
-     *
-     * @param buildGroupName DBB build group name.
-     * @param userId         DB2 user ID.
-     * @param pwFilePath     Path to the DB2 password file.
-     * @param configFile     {@code db2Connection.conf} to use; defaults to
-     *                       {@code ${DBB_CONF:-${DBB_HOME}/conf}/db2Connection.conf}.
-     * @throws ClassNotFoundException  if {@code DbbCtxBuildMapClient} is not on the classpath.
-     * @throws IllegalStateException   if the build group is not found in the metadata store.
-     */
-    // static BuildMapClient fromDbbCtx(String buildGroupName) {
-    //     log.info("Creating DbbCtxBuildMapClient from DBB context")
-    //     return Class.forName('DbbCtxBuildMapClient')
-    //                 .fromDbbCtx(buildGroupName) as BuildMapClient
-    // }
-
 }

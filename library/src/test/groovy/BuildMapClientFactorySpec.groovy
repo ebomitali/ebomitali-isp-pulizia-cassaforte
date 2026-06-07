@@ -1,42 +1,43 @@
-import com.ibm.dbb.metadata.BuildGroup
-import com.ibm.dbb.metadata.MetadataStore
-import com.ibm.dbb.metadata.MetadataStoreFactory
 import spock.lang.Specification
 
 /**
  * Spock specification for {@link BuildMapClientFactory}.
  *
- * <p>{@link BuildMapClientFactory#fromJson} uses no IBM/DBB classes and tests normally.
- * {@link BuildMapClientFactory#fromConf(String, String, File, Properties)} is tested via
+ * <p>{@link BuildMapClientFactory#create} with type {@code 'json'} uses no IBM/DBB classes
+ * and tests normally.  The {@code 'db2'} path is tested via
  * {@code GroovySpy(MetadataStoreFactory, global: true)} to intercept the static DB2 call
- * without a real DB2 connection. {@code fromDbbCtx} requires a live DBB task context —
- * not covered here.
+ * without a real DB2 connection.  The {@code 'dbb'} path requires a live DBB task context
+ * and is not covered here.
  */
 class BuildMapClientFactorySpec extends Specification {
 
     File bmFile
+    PuliziaCassaforteConfig jsonCfg
 
     def setup() {
-        bmFile = new File(getClass().getResource('/fixtures/buildmap.json').toURI())
+        bmFile  = new File(getClass().getResource('/fixtures/buildmap.json').toURI())
+        jsonCfg = new PuliziaCassaforteConfig(buildMapPath: bmFile.canonicalPath)
     }
 
-    def "fromJson returns a BuildMapClient from a valid JSON file"() {
+    // ─── json ─────────────────────────────────────────────────────────────────
+
+    def "create('json') returns a JsonBuildMapClient"() {
         when:
-        def client = BuildMapClientFactory.fromJson(bmFile)
+        def client = BuildMapClientFactory.create('json', 'ATO', jsonCfg)
 
         then:
         client != null
         client instanceof BuildMapClient
+        client instanceof JsonBuildMapClient
     }
 
-    def "fromJson delegates getGeneratedObjects for known source path"() {
+    def "create('json') delegates getGeneratedObjects for known source path"() {
         given:
-        def client = BuildMapClientFactory.fromJson(bmFile)
+        def client = BuildMapClientFactory.create('json', 'ATO', jsonCfg)
 
         when:
         def results = client.getGeneratedObjects(
-            'ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP',
-            'ATO'
+            'ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP'
         )
 
         then:
@@ -45,43 +46,44 @@ class BuildMapClientFactorySpec extends Specification {
         results[0].member  == 'YO8AMADD'
     }
 
-    def "fromJson returns empty list for unknown source path"() {
+    def "create('json') returns empty list for unknown source path"() {
         given:
-        def client = BuildMapClientFactory.fromJson(bmFile)
+        def client = BuildMapClientFactory.create('json', 'ATO', jsonCfg)
 
         expect:
-        client.getGeneratedObjects('no/such/file.cbl', 'ATO') == []
+        client.getGeneratedObjects('no/such/file.cbl') == []
     }
 
-    // ─── fromConf ─────────────────────────────────────────────────────────────
+    // ─── db2 ─────────────────────────────────────────────────────────────────
+    // Note: Db2BuildMapClient constructor is lazy (no DB2 connection until getGeneratedObjects).
+    // Full behavior (build group resolution, lazy connect) is covered in Db2BuildMapClientSpec.
 
-    def "fromConf returns ZosBuildMapClient wrapping the found build group"() {
+    def "create('db2') returns Db2BuildMapClient without connecting to DB2"() {
         given:
-        def mockStore = Mock(MetadataStore)
-        def mockGroup = Mock(BuildGroup)
-        GroovySpy(MetadataStoreFactory, global: true)
-        MetadataStoreFactory.createDb2MetadataStore(*_) >> mockStore
-        mockStore.getBuildGroup('MY_GROUP') >> mockGroup
+        // Constructor is fully lazy — no file reading at instantiation time
+        def cfg = new PuliziaCassaforteConfig(
+            buildMapClientType: 'db2',
+            userId:        'user1',
+            pwFilePath:    '/tmp/pw',
+            db2ConfigPath: '/tmp/fake-db2.conf'
+        )
 
         when:
-        def client = BuildMapClientFactory.fromConf('MY_GROUP', 'user1', new File('/tmp/pw'), new Properties())
+        def client = BuildMapClientFactory.create('db2', 'MY_GROUP', cfg)
 
         then:
-        client instanceof ZosBuildMapClient
+        client instanceof Db2BuildMapClient
+        noExceptionThrown()
     }
 
-    def "fromConf throws IllegalStateException when build group not found in store"() {
-        given:
-        def mockStore = Mock(MetadataStore)
-        GroovySpy(MetadataStoreFactory, global: true)
-        MetadataStoreFactory.createDb2MetadataStore(*_) >> mockStore
-        mockStore.getBuildGroup('MISSING') >> null
+    // ─── unknown type ─────────────────────────────────────────────────────────
 
+    def "create with unknown type throws IllegalArgumentException"() {
         when:
-        BuildMapClientFactory.fromConf('MISSING', 'user1', new File('/tmp/pw'), new Properties())
+        BuildMapClientFactory.create('bogus', 'GRP', jsonCfg)
 
         then:
-        def ex = thrown(IllegalStateException)
-        ex.message.contains('MISSING')
+        def ex = thrown(IllegalArgumentException)
+        ex.message.contains('bogus')
     }
 }

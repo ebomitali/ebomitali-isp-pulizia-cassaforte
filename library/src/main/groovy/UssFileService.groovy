@@ -2,7 +2,7 @@ import groovy.util.logging.Slf4j
 import java.nio.file.*
 
 /**
- * Local-filesystem adapter of the {@link ZosFileOps} trait used during unit testing.
+ * USS Unix-filesystem adapter of the {@link FileService} trait.
  *
  * <p>Simulates a z/OS PDS environment by mapping z/OS-style dataset paths onto ordinary
  * directories under a configurable {@code baseDir} (default: {@code /tmp/zos-sim/}):
@@ -13,19 +13,19 @@ import java.nio.file.*
  * </pre>
  *
  * <p>Uses {@link java.nio.file.Files} for all I/O — no IBM/DBB dependencies.
- * Tests inject a JUnit 5 {@code @TempDir} as {@code baseDir} for full isolation.
+ * Suitable for running on USS HFS/zFS without the IBM JZOS jar.
  *
- * @see ZosFileOps
- * @see ZosFileOpsUSS
+ * @see FileService
+ * @see JzosFileService
  */
 @Slf4j
-class LocalFileOps implements ZosFileOps {
+class UssFileService implements FileService {
 
     final String baseDir
 
-    LocalFileOps(String baseDir = '/tmp/zos-sim') {
+    UssFileService(String baseDir = '/tmp/zos-sim') {
         this.baseDir = baseDir
-        log.debug("LocalFileOps initialized with baseDir: {}", baseDir)
+        log.debug("UssFileService initialized with baseDir: {}", baseDir)
     }
 
     // Translates a z/OS-style path to a local filesystem path under baseDir.

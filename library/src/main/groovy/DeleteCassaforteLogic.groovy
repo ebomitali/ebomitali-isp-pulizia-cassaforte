@@ -12,11 +12,11 @@ import groovy.util.logging.Slf4j
  *       {@link LibraryNameResolver}.</li>
  *   <li>Determines the PDS member name — either directly from the source filename, or
  *       by querying the {@link BuildMapClient} when {@code useBuildMap = true}.</li>
- *   <li>Calls {@link ZosFileOps#delete} on each matching member that exists.</li>
+ *   <li>Calls {@link FileService#delete} on each matching member that exists.</li>
  * </ol>
  *
  * <p>This class has zero IBM/DBB imports; all environment interaction is injected
- * via the {@link ZosFileOps} and {@link BuildMapClient} traits.
+ * via the {@link FileService} and {@link BuildMapClient} traits.
  *
  * @see DeletionRule
  * @see SfilamentoLogic
@@ -24,7 +24,7 @@ import groovy.util.logging.Slf4j
  */
 @Slf4j
 class DeleteCassaforteLogic {
-    ZosFileOps          ops
+    FileService          ops
     List<DeletionRule>  rules
     BuildMapClient      buildMap
     PatternMatcher      matcher  = new PatternMatcher()
@@ -42,7 +42,7 @@ class DeleteCassaforteLogic {
         matching.each { rule ->
             def lib = resolver.resolve(rule.libraryTemplate, vars)
             if (rule.useBuildMap) {
-                buildMap.getGeneratedObjects(sourcePath, buildGroup).each { obj ->
+                buildMap.getGeneratedObjects(sourcePath).each { obj ->
                     def zp = "//${lib}(${obj.member})"
                     if (ops.exists(zp)) {
                         log.info("Deleting (build-map): {}", zp)

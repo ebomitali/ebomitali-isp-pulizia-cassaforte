@@ -17,7 +17,7 @@ class DeleteCassaforteLogicSpec extends Specification {
         logic = new DeleteCassaforteLogic(
             ops:      ops,
             rules:    new DeletionRulesLoader().load(rulesFile),
-            buildMap: new LocalBuildMapClient(bmFile)
+            buildMap: new LocalBuildMapClient(bmFile, 'yn_r_01_ato_r1')
         )
     }
 
@@ -60,8 +60,8 @@ class DeleteCassaforteLogicSpec extends Specification {
         Files.createDirectories(member.parent)
         Files.writeString(member, 'content')
 
-        def buildMapMock = [getGeneratedObjects: { sp, bg ->
-            sp == sourcePath && bg == buildGroup
+        def buildMapMock = [getGeneratedObjects: { sp ->
+            sp == sourcePath
                 ? [[library: lib, member: 'MAPOBJ']]
                 : []
         }] as BuildMapClient

@@ -5,7 +5,7 @@ import java.nio.file.*
 /**
  * Spock specification for {@link PuliziaCassaforteImpl} — JSON build map path only.
  *
- * <p>Uses {@link LocalFileOps} (rooted at a JUnit 5 {@code @TempDir}) and the classpath
+ * <p>Uses {@link MacosFileService} (rooted at a JUnit 5 {@code @TempDir}) and the classpath
  * fixtures ({@code fixtures/rules.csv}, {@code fixtures/buildmap.json}).  No IBM/DBB deps.
  *
  * <p>Source path uses extension {@code .SZFSSWG} (7 chars → padded to {@code "SZFSSWG "})
@@ -31,11 +31,11 @@ class PuliziaCassaforteImplSpec extends Specification {
     Path tempDir
 
     PuliziaCassaforteImpl impl
-    LocalFileOps ops
+    MacosFileService ops
     File bmFile
 
     def setup() {
-        ops    = new LocalFileOps(tempDir.toString())
+        ops    = new MacosFileService(tempDir.toString())
         impl   = new PuliziaCassaforteImpl()
         impl.rulesPath    = new File(getClass().getResource('/fixtures/rules.csv').toURI()).canonicalPath
         impl.stagemapPath = new File(getClass().getResource('/fixtures/stagemap.csv').toURI()).canonicalPath
@@ -106,7 +106,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def props = new Properties()
         props.setProperty('buildMapClientType', 'json')
         props.setProperty('buildMapPath', bmFile.canonicalPath)
-        props.setProperty('fileOpsType', 'local')
+        props.setProperty('fileOpsType', 'macos')
         props.setProperty('uxBasedir', tempDir.toString())
         props.setProperty('hlq', 'U0G9700')
         def errors = hlqImpl.doPuliziaCassaforte(lista, 'ATO', 'yo_y_01_ato_r1', props)
@@ -123,7 +123,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def configFile = writeConfig([
             buildMapClientType: 'json',
             buildMapPath: bmFile.canonicalPath,
-            fileOpsType : 'local',
+            fileOpsType : 'macos',
             uxBasedir   : tempDir.toString()
         ])
         def lista = listFile("C,${SOURCE_PATH}")
@@ -137,7 +137,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def configFile = writeConfig([
             buildMapClientType: 'json',
             buildMapPath: bmFile.canonicalPath,
-            fileOpsType : 'local',
+            fileOpsType : 'macos',
             uxBasedir   : tempDir.toString(),
             rulesPath   : new File(getClass().getResource('/fixtures/rules.csv').toURI()).canonicalPath,
             stageMapPath: new File(getClass().getResource('/fixtures/stagemap.csv').toURI()).canonicalPath
@@ -161,7 +161,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def configFile = writeConfig([
             buildMapClientType: 'json',
             buildMapPath: bmFile.canonicalPath,
-            fileOpsType : 'local',
+            fileOpsType : 'macos',
             uxBasedir   : tempDir.toString(),
             hlq         : 'U0G9700'
         ])
@@ -209,7 +209,7 @@ class PuliziaCassaforteImplSpec extends Specification {
         def props = new Properties()
         props.setProperty('buildMapClientType', 'json')
         props.setProperty('buildMapPath', bmFile.canonicalPath)
-        props.setProperty('fileOpsType', 'local')
+        props.setProperty('fileOpsType', 'macos')
         props.setProperty('uxBasedir', tempDir.toString())
         impl.doPuliziaCassaforte(lista, BUILDENV, BUILD_GROUP, props)
     }

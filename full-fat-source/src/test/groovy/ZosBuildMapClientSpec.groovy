@@ -44,7 +44,7 @@ class ZosBuildMapClientSpec extends Specification {
         def client = new ZosBuildMapClient(group)
 
         expect:
-        client.getGeneratedObjects('some/path/file.cbl', 'ATO') == []
+        client.getGeneratedObjects('some/path/file.cbl') == []
     }
 
     def "returns mapped outputs for known source path"() {
@@ -56,7 +56,7 @@ class ZosBuildMapClientSpec extends Specification {
         def client = new ZosBuildMapClient(group)
 
         when:
-        def results = client.getGeneratedObjects('ATO/path/YO8AMADD.SJCLINP', 'ATO')
+        def results = client.getGeneratedObjects('ATO/path/YO8AMADD.SJCLINP')
 
         then:
         results.size() == 1
@@ -73,7 +73,7 @@ class ZosBuildMapClientSpec extends Specification {
         def client = new ZosBuildMapClient(group)
 
         expect:
-        client.getGeneratedObjects('path/file.cbl', 'ATO') == []
+        client.getGeneratedObjects('path/file.cbl') == []
     }
 
     def "filters out outputs with null dataset or null member"() {
@@ -89,7 +89,7 @@ class ZosBuildMapClientSpec extends Specification {
         def client = new ZosBuildMapClient(group)
 
         when:
-        def results = client.getGeneratedObjects('path/file.cbl', 'ATO')
+        def results = client.getGeneratedObjects('path/file.cbl')
 
         then:
         results.size() == 1
@@ -108,7 +108,7 @@ class ZosBuildMapClientSpec extends Specification {
         def client = new ZosBuildMapClient(group)
 
         when:
-        def results = client.getGeneratedObjects('path/file.cbl', 'ATO')
+        def results = client.getGeneratedObjects('path/file.cbl')
 
         then:
         results.size() == 2
@@ -122,10 +122,10 @@ class ZosBuildMapClientSpec extends Specification {
         def client = new ZosBuildMapClient(group)
 
         expect:
-        client.getGeneratedObjects('path/file.cbl', 'ATO') == []
+        client.getGeneratedObjects('path/file.cbl') == []
     }
 
-    def "buildGroup parameter is ignored — scope is fixed by constructor arg"() {
+    def "scope is fixed by constructor arg — same results regardless of call context"() {
         given:
         def group = Mock(BuildGroup)
         def bm    = Mock(BuildMap)
@@ -134,8 +134,7 @@ class ZosBuildMapClientSpec extends Specification {
         def client = new ZosBuildMapClient(group)
 
         expect:
-        client.getGeneratedObjects('path/file.cbl', 'ANY_VALUE').size() == 1
-        client.getGeneratedObjects('path/file.cbl', 'OTHER_VALUE').size() == 1
+        client.getGeneratedObjects('path/file.cbl').size() == 1
     }
 
     // ─── fromConf ─────────────────────────────────────────────────────────────

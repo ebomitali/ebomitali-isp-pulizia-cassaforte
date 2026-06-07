@@ -1,42 +1,43 @@
 import groovy.util.logging.Slf4j
 
 /**
- * Factory for creating {@link ZosFileOps} instances without IBM/DBB compile-time dependencies.
+ * Factory for creating {@link FileService} instances without IBM/DBB compile-time dependencies.
  *
- * <p>On USS (with {@code ZosFileOpsUSS} on the classpath) returns a live USS implementation;
- * falls back to {@link LocalFileOps} for local dev.
+ * <p>On USS (with {@code JzosFileService} on the classpath) returns a live IBM JZOS implementation;
+ * falls back to {@link MacosFileService} for local dev.
  *
- * @see ZosFileOps
- * @see LocalFileOps
+ * @see FileService
+ * @see MacosFileService
+ * @see UssFileService
  */
 @Slf4j
 class ZosFileOpsFactory {
 
-    /** Returns {@code ZosFileOpsUSS} on USS, {@link LocalFileOps} otherwise. */
-    static ZosFileOps create() {
+    /** Returns {@code JzosFileService} on USS, {@link MacosFileService} otherwise. */
+    static FileService create() {
         try {
             def impl = createOnZos()
-            log.info("Using ZosFileOpsUSS")
+            log.info("Using JzosFileService")
             return impl
         } catch (ClassNotFoundException ignored) {
-            log.info("ZosFileOpsUSS not found on classpath — using LocalFileOps")
+            log.info("JzosFileService not found on classpath — using MacosFileService")
             return mockZos()
         }
     }
 
     /**
-     * Loads and returns a {@code ZosFileOpsUSS} instance via reflection.
+     * Loads and returns a {@code JzosFileService} instance via reflection.
      *
-     * @throws ClassNotFoundException if {@code ZosFileOpsUSS} is not on the classpath.
+     * @throws ClassNotFoundException if {@code JzosFileService} is not on the classpath.
      */
-    static ZosFileOps createOnZos() {
-        log.debug("Loading ZosFileOpsUSS via reflection")
-        return Class.forName('ZosFileOpsUSS').newInstance() as ZosFileOps
+    static FileService createOnZos() {
+        log.debug("Loading JzosFileService via reflection")
+        return Class.forName('JzosFileService').newInstance() as FileService
     }
 
-    /** Returns a {@link LocalFileOps} instance for local testing without z/OS dependencies. */
-    static ZosFileOps mockZos() {
-        log.debug("Creating LocalFileOps for local testing")
-        return new LocalFileOps()
+    /** Returns a {@link MacosFileService} instance for local testing without z/OS dependencies. */
+    static FileService mockZos() {
+        log.debug("Creating MacosFileService for local testing")
+        return new MacosFileService()
     }
 }

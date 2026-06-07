@@ -13,14 +13,13 @@ class LocalBuildMapClientSpec extends Specification {
 
     def setup() {
         def jsonFile = new File(getClass().getResource('/fixtures/buildmap.json').toURI()).canonicalPath
-        client = new LocalBuildMapClient(jsonFile)
+        client = new LocalBuildMapClient(jsonFile, 'ATO')
     }
 
     def "getGeneratedObjects returns mapped objects for known JCL source"() {
         when:
         def results = client.getGeneratedObjects(
-            'ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP',
-            'ATO'
+            'ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP'
         )
 
         then:
@@ -29,9 +28,8 @@ class LocalBuildMapClientSpec extends Specification {
         results[0].member  == 'YO8AMADD'
     }
 
-    def "getGeneratedObjects returns empty list for unknown source or build group"() {
+    def "getGeneratedObjects returns empty list for unknown source path"() {
         expect:
-        client.getGeneratedObjects('ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP', 'UNKNOWN') == []
-        client.getGeneratedObjects('ATO/no/such/file.cbl', 'ATO') == []
+        client.getGeneratedObjects('ATO/no/such/file.cbl') == []
     }
 }

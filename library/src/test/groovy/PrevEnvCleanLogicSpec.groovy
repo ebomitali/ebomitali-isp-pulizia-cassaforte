@@ -12,16 +12,16 @@ class PrevEnvCleanLogicSpec extends Specification {
     Path tempDir
 
     PrevEnvCleanLogic logic
-    LocalFileOps ops
+    MacosFileService ops
 
     def setup() {
         def rulesFile = new File(getClass().getResource('/fixtures/rules.csv').toURI())
         def bmFile    = new File(getClass().getResource('/fixtures/buildmap.json').toURI()).canonicalPath
-        ops = new LocalFileOps(tempDir.toString())
+        ops = new MacosFileService(tempDir.toString())
         def deleteLogic = new DeleteCassaforteLogic(
             ops:      ops,
             rules:    new DeletionRulesLoader().load(rulesFile),
-            buildMap: new LocalBuildMapClient(bmFile)
+            buildMap: new JsonBuildMapClient('', new PuliziaCassaforteConfig(buildMapPath: bmFile))
         )
         logic = new PrevEnvCleanLogic(
             deleteLogic: deleteLogic,
