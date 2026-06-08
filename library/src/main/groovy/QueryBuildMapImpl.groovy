@@ -25,7 +25,7 @@ class QueryBuildMapImpl {
                 pwFilePath:    pwFilePath,
                 db2ConfigPath: db2ConfigFile.canonicalPath
             )
-            buildMap = BuildMapClientFactory.create('db2', buildGroup, cfg)
+            buildMap = new Db2BuildMapClient(buildGroup, cfg)
         } catch (IllegalStateException e) {
             log.warn("build map unavailable: {} — build map lookups will return empty", e.message)
             System.exit(1)

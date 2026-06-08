@@ -19,8 +19,8 @@ import groovy.util.logging.Slf4j
  * This class delegates MVS operations to the IBM JZOS {@link ZFile} API and
  * USS operations to standard {@link java.io.File}.
  *
- * Packaged separately into pulizia-cassaforte-zos.jar (requires IBM jars in libs/).
- * Never loaded by a local JVM — instantiated only inside the groovyz USS entry point.
+ * Compiled against JZOS stubs (compileOnly) so it builds locally without IBM jars.
+ * At runtime on z/OS USS the real JZOS classes must be on the classpath.
  */
 @Slf4j
 class JzosFileService implements FileService {

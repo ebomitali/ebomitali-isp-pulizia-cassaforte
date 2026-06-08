@@ -88,10 +88,15 @@ class PuliziaCassaforteImpl {
         rulesFile    = new File(rulesPath)
         stageMapFile = new File(stagemapPath)
 
-        this.buildMapClient = BuildMapClientFactory.create(this.buildMapClientType, buildGroup, effectiveCfg)
+        switch (this.buildMapClientType) {
+            case 'json': this.buildMapClient = new JsonBuildMapClient(buildGroup, effectiveCfg); break
+            case 'db2':  this.buildMapClient = new Db2BuildMapClient(buildGroup, effectiveCfg);  break
+            case 'dbb':  this.buildMapClient = new DbbBuildMapClient(buildGroup, effectiveCfg);  break
+            default: throw new IllegalArgumentException("Unknown buildMapClientType: '${this.buildMapClientType}'")
+        }
 
         if (fileOpsType == 'zos') {
-            this.fileOps = ZosFileOpsFactory.createOnZos()
+            this.fileOps = new JzosFileService()
         } else if (fileOpsType == 'uss') {
             if (uxBasedir == null)
                 throw new IllegalArgumentException('uxBasedir must be defined when fileOpsType is set to uss')

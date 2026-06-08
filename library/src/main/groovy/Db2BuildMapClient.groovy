@@ -21,8 +21,8 @@ import groovy.util.logging.Slf4j
  *       a mock or pre-fetched group without touching the DB2 stack.</li>
  * </ul>
  *
- * <p>Packaged separately into {@code pulizia-cassaforte-zos.jar} (requires IBM DBB jars in libs/).
- * Instantiated via reflection from {@link BuildMapClientFactory} — never imported directly.
+ * <p>Compiled against DBB metadata stubs (compileOnly) so it builds locally without IBM jars.
+ * At runtime on z/OS USS the real DBB jars must be on the classpath.
  *
  * @see BuildMapClient
  * @see JsonBuildMapClient
@@ -64,11 +64,6 @@ class Db2BuildMapClient extends BuildMapClient {
         this.pwFilePath     = null
         this.db2ConfigPath  = null
         log.debug("Db2BuildMapClient initialized for group '{}'", buildGroupName)
-    }
-
-    /** Static factory invoked via reflection from {@link BuildMapClientFactory}. */
-    static BuildMapClient create(String buildGroupName, PuliziaCassaforteConfig cfg) {
-        new Db2BuildMapClient(buildGroupName, cfg)
     }
 
     private BuildGroup resolveBuildGroup() {

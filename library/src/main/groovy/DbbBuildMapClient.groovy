@@ -1,6 +1,7 @@
 // Mainframe-only. Must be compiled and run with groovyz in a DBB task or groovy step.
 // After upload to USS: chtag -tc IBM-1047 DbbBuildMapClient.groovy
 import com.ibm.dbb.build.BuildException
+import com.ibm.dbb.dbb.BuildContext
 import com.ibm.dbb.metadata.BuildGroup
 import com.ibm.dbb.metadata.BuildMap
 import groovy.util.logging.Slf4j
@@ -15,12 +16,12 @@ import groovy.util.logging.Slf4j
  *
  * <p>Usage from a DBB task script:
  * <pre>
- *   def client = BuildMapClientFactory.create('dbb', buildGroupName, cfg) as DbbBuildMapClient
+ *   def client = new DbbBuildMapClient(buildGroupName, cfg)
  *   client.setContext(context)   // inject the running BuildContext
  * </pre>
  *
- * <p>Packaged separately into {@code pulizia-cassaforte-zos.jar} (requires IBM DBB jars in libs/).
- * Instantiated via reflection from {@link BuildMapClientFactory} — never imported directly.
+ * <p>Compiled against DBB metadata stubs (compileOnly) so it builds locally without IBM jars.
+ * At runtime on z/OS USS the real DBB jars must be on the classpath.
  *
  * @see BuildMapClient
  * @see Db2BuildMapClient
@@ -28,8 +29,8 @@ import groovy.util.logging.Slf4j
 @Slf4j
 class DbbBuildMapClient extends BuildMapClient {
 
-    private BuildGroup buildGroup
-    private Object     context   // BuildContext at runtime; untyped to avoid compile-time IBM dep
+    private BuildGroup  buildGroup
+    private BuildContext context
 
     /**
      * Primary constructor: {@link BuildContext} must be injected via {@link #setContext} before
@@ -48,7 +49,7 @@ class DbbBuildMapClient extends BuildMapClient {
      * @param buildGroupName  DBB build group name (used for logging and validation).
      * @param context         Running DBB {@link BuildContext}; must contain {@code BUILD_GROUP}.
      */
-    DbbBuildMapClient(String buildGroupName, Object context) {
+    DbbBuildMapClient(String buildGroupName, BuildContext context) {
         this.buildGroupName = buildGroupName
         this.buildGroup     = null
         this.context        = context
@@ -56,13 +57,8 @@ class DbbBuildMapClient extends BuildMapClient {
     }
 
     /** Allows late injection of the {@link BuildContext} after construction. */
-    void setContext(Object context) {
+    void setContext(BuildContext context) {
         this.context = context
-    }
-
-    /** Static factory invoked via reflection from {@link BuildMapClientFactory}. */
-    static BuildMapClient create(String buildGroupName, PuliziaCassaforteConfig cfg) {
-        new DbbBuildMapClient(buildGroupName, cfg)
     }
 
     private BuildGroup resolveBuildGroup() {
