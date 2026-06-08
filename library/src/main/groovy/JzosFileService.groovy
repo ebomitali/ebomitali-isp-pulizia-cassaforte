@@ -1,12 +1,12 @@
 // Mainframe-only. Must be compiled and run with groovyz on z/OS USS.
-// After upload to USS: chtag -tc IBM-1047 ZosFileOpsUSS.groovy
+// After upload to USS: chtag -tc IBM-1047 JzosFileService.groovy
 // ZFile javadoc https://www.ibm.com/docs/en/sdk-java-technology/8?topic=jzos-zfile
 import com.ibm.jzos.ZFile
 import com.ibm.jzos.ZFileException
 import groovy.util.logging.Slf4j
 
 /**
- * z/OS USS implementation of the {@link ZosFileOps} trait.
+ * z/OS USS implementation of the {@link FileService} trait.
  *
  * Provides file-system operations (exists, delete, copy, list) that transparently
  * target either MVS datasets or USS HFS/zFS paths depending on the path prefix:
@@ -19,11 +19,11 @@ import groovy.util.logging.Slf4j
  * This class delegates MVS operations to the IBM JZOS {@link ZFile} API and
  * USS operations to standard {@link java.io.File}.
  *
- * Packaged separately into pulizia-cassaforte-zos.jar (requires IBM jars in libs/).
- * Never loaded by a local JVM — instantiated only inside the groovyz USS entry point.
+ * Compiled against JZOS stubs (compileOnly) so it builds locally without IBM jars.
+ * At runtime on z/OS USS the real JZOS classes must be on the classpath.
  */
 @Slf4j
-class ZosFileOpsUSS implements ZosFileOps {
+class JzosFileService implements FileService {
 
     /**
      * Checks whether a dataset, PDS member, or USS path exists.

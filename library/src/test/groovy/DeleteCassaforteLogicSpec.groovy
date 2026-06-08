@@ -7,17 +7,17 @@ class DeleteCassaforteLogicSpec extends Specification {
     @TempDir
     Path tempDir
 
-    LocalFileOps ops
+    MacosFileService ops
     DeleteCassaforteLogic logic
 
     def setup() {
         def rulesFile = new File(getClass().getResource('/fixtures/rules.csv').toURI())
         def bmFile    = new File(getClass().getResource('/fixtures/buildmap.json').toURI()).canonicalPath
-        ops   = new LocalFileOps(tempDir.toString())
+        ops   = new MacosFileService(tempDir.toString())
         logic = new DeleteCassaforteLogic(
             ops:      ops,
             rules:    new DeletionRulesLoader().load(rulesFile),
-            buildMap: new LocalBuildMapClient(bmFile)
+            buildMap: new JsonBuildMapClient('yn_r_01_ato_r1', new PuliziaCassaforteConfig(buildMapPath: bmFile))
         )
     }
 
@@ -60,8 +60,8 @@ class DeleteCassaforteLogicSpec extends Specification {
         Files.createDirectories(member.parent)
         Files.writeString(member, 'content')
 
-        def buildMapMock = [getGeneratedObjects: { sp, bg ->
-            sp == sourcePath && bg == buildGroup
+        def buildMapMock = [getGeneratedObjects: { sp ->
+            sp == sourcePath
                 ? [[library: lib, member: 'MAPOBJ']]
                 : []
         }] as BuildMapClient

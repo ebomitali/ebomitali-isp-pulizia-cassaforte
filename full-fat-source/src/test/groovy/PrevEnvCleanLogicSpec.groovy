@@ -21,7 +21,7 @@ class PrevEnvCleanLogicSpec extends Specification {
         def deleteLogic = new DeleteCassaforteLogic(
             ops:      ops,
             rules:    new DeletionRulesLoader().load(rulesFile),
-            buildMap: new LocalBuildMapClient(bmFile)
+            buildMap: new LocalBuildMapClient(bmFile, '')
         )
         logic = new PrevEnvCleanLogic(
             deleteLogic: deleteLogic,

@@ -24,10 +24,10 @@ class PuliziaCassaforteImpl {
     // Used by JSON build map client
     String buildMapPath       = null
 
-    // Used by LocalFileOps if fileOpsType is set to 'local'
+    // Used by UssFileService/MacosFileService when fileOpsType is 'uss' or 'macos'
     String uxBasedir          = null
 
-    // Used by ZosFileOps if fileOpsType is set to 'zos'
+    // Used by JzosFileService if fileOpsType is set to 'zos'
     String hlq                = null
 
     Set<String> jobzExtensions = [] as Set
@@ -39,7 +39,7 @@ class PuliziaCassaforteImpl {
     File   stageMapFile       = null
 
     BuildMapClient buildMapClient = null
-    ZosFileOps fileOps = null
+    FileService fileOps = null
 
     List rules                      = null
     Map stageMap                    = null
@@ -74,7 +74,7 @@ class PuliziaCassaforteImpl {
         if (!listToProcess.exists())
             throw new IllegalArgumentException("listToProcess file not found: '$listToProcess'")
 
-        new PuliziaCassaforteConfig(
+        def effectiveCfg = new PuliziaCassaforteConfig(
             buildMapClientType: this.buildMapClientType,
             rulesPath:          this.rulesPath,
             stageMapPath:       this.stagemapPath,
@@ -82,23 +82,29 @@ class PuliziaCassaforteImpl {
             userId:             this.userId,
             pwFilePath:         this.pwFilePath,
             db2ConfigPath:      this.db2ConfigPath
-        ).validate()
+        )
+        effectiveCfg.validate()
 
         rulesFile    = new File(rulesPath)
         stageMapFile = new File(stagemapPath)
 
-        if (buildMapClientType == 'db2') {
-            this.buildMapClient = BuildMapClientFactory.fromConf(buildGroup, userId, pwFilePath, new File(db2ConfigPath))
-        } else {
-            this.buildMapClient = BuildMapClientFactory.fromJson(new File(buildMapPath))
+        switch (this.buildMapClientType) {
+            case 'json': this.buildMapClient = new JsonBuildMapClient(buildGroup, effectiveCfg); break
+            case 'db2':  this.buildMapClient = new Db2BuildMapClient(buildGroup, effectiveCfg);  break
+            case 'dbb':  this.buildMapClient = new DbbBuildMapClient(buildGroup, effectiveCfg);  break
+            default: throw new IllegalArgumentException("Unknown buildMapClientType: '${this.buildMapClientType}'")
         }
 
         if (fileOpsType == 'zos') {
-            this.fileOps = ZosFileOpsFactory.createOnZos()
-        } else if (fileOpsType == 'local') {
+            this.fileOps = new JzosFileService()
+        } else if (fileOpsType == 'uss') {
             if (uxBasedir == null)
-                throw new IllegalArgumentException('uxBasedir must be defined when fileOpsType is set to local')
-            this.fileOps = new LocalFileOps(uxBasedir)
+                throw new IllegalArgumentException('uxBasedir must be defined when fileOpsType is set to uss')
+            this.fileOps = new UssFileService(uxBasedir)
+        } else if (fileOpsType == 'macos') {
+            if (uxBasedir == null)
+                throw new IllegalArgumentException('uxBasedir must be defined when fileOpsType is set to macos')
+            this.fileOps = new MacosFileService(uxBasedir)
         } else {
             throw new IllegalArgumentException("Unknown fileOpsType '$fileOpsType'")
         }
@@ -160,6 +166,10 @@ class PuliziaCassaforteImpl {
 
         log.info("PuliziaCassaforte: processed={} errors={}", processed, errors)
         return errors
+    }
+
+    int doPuliziaPostBuild(String sourceToProcess, String environment, String buildGroup, Properties props) {
+        // This method processes one file at a time 
     }
 
     private boolean isJobzType(String fileType) {

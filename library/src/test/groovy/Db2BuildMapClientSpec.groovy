@@ -6,14 +6,12 @@ import com.ibm.dbb.metadata.MetadataStoreFactory
 import spock.lang.Specification
 
 /**
- * Spock specification for {@link ZosBuildMapClient}.
+ * Spock specification for {@link Db2BuildMapClient}.
  *
  * <p>IBM DBB classes are replaced by stubs from the {@code stubs} subproject, so
- * all tests run locally without mainframe access. {@link MetadatastoreFactory}
- * is intercepted via {@code GroovySpy(global: true)} to avoid file-system and DB2
- * setup in the {@link ZosBuildMapClient#fromConf} path.
+ * all tests run locally without mainframe access.
  */
-class ZosBuildMapClientSpec extends Specification {
+class Db2BuildMapClientSpec extends Specification {
 
     /** Minimal stub for the IBM BuildMap output objects. */
     static class OutputStub {
@@ -23,12 +21,12 @@ class ZosBuildMapClientSpec extends Specification {
 
     // ─── constructor ─────────────────────────────────────────────────────────
 
-    def "constructor accepts a BuildGroup without error"() {
+    def "injection constructor accepts a BuildGroup without error"() {
         given:
         def group = Mock(BuildGroup)
 
         when:
-        def client = new ZosBuildMapClient(group)
+        def client = new Db2BuildMapClient(group)
 
         then:
         client != null
@@ -41,10 +39,10 @@ class ZosBuildMapClientSpec extends Specification {
         given:
         def group = Mock(BuildGroup)
         group.getBuildMap(_) >> null
-        def client = new ZosBuildMapClient(group)
+        def client = new Db2BuildMapClient(group)
 
         expect:
-        client.getGeneratedObjects('some/path/file.cbl', 'ATO') == []
+        client.getGeneratedObjects('some/path/file.cbl') == []
     }
 
     def "returns mapped outputs for known source path"() {
@@ -53,10 +51,10 @@ class ZosBuildMapClientSpec extends Specification {
         def bm    = Mock(BuildMap)
         group.getBuildMap('ATO/path/YO8AMADD.SJCLINP') >> bm
         bm.getOutputs() >> [new OutputStub(dataset: 'LTM00.D9PX2A.PE000.@@@@.JINP', member: 'YO8AMADD')]
-        def client = new ZosBuildMapClient(group)
+        def client = new Db2BuildMapClient(group)
 
         when:
-        def results = client.getGeneratedObjects('ATO/path/YO8AMADD.SJCLINP', 'ATO')
+        def results = client.getGeneratedObjects('ATO/path/YO8AMADD.SJCLINP')
 
         then:
         results.size() == 1
@@ -70,10 +68,10 @@ class ZosBuildMapClientSpec extends Specification {
         def bm    = Mock(BuildMap)
         group.getBuildMap(_) >> bm
         bm.getOutputs() >> []
-        def client = new ZosBuildMapClient(group)
+        def client = new Db2BuildMapClient(group)
 
         expect:
-        client.getGeneratedObjects('path/file.cbl', 'ATO') == []
+        client.getGeneratedObjects('path/file.cbl') == []
     }
 
     def "filters out outputs with null dataset or null member"() {
@@ -86,10 +84,10 @@ class ZosBuildMapClientSpec extends Specification {
             new OutputStub(dataset: 'LTM00.VALID.DS', member: null),
             new OutputStub(dataset: 'LTM00.VALID.DS', member: 'GOOD'),
         ]
-        def client = new ZosBuildMapClient(group)
+        def client = new Db2BuildMapClient(group)
 
         when:
-        def results = client.getGeneratedObjects('path/file.cbl', 'ATO')
+        def results = client.getGeneratedObjects('path/file.cbl')
 
         then:
         results.size() == 1
@@ -105,10 +103,10 @@ class ZosBuildMapClientSpec extends Specification {
             new OutputStub(dataset: 'LTM00.DS1', member: 'MBR1'),
             new OutputStub(dataset: 'LTM00.DS2', member: 'MBR2'),
         ]
-        def client = new ZosBuildMapClient(group)
+        def client = new Db2BuildMapClient(group)
 
         when:
-        def results = client.getGeneratedObjects('path/file.cbl', 'ATO')
+        def results = client.getGeneratedObjects('path/file.cbl')
 
         then:
         results.size() == 2
@@ -119,54 +117,21 @@ class ZosBuildMapClientSpec extends Specification {
         given:
         def group = Mock(BuildGroup)
         group.getBuildMap(_) >> { throw new BuildException('db error') }
-        def client = new ZosBuildMapClient(group)
+        def client = new Db2BuildMapClient(group)
 
         expect:
-        client.getGeneratedObjects('path/file.cbl', 'ATO') == []
+        client.getGeneratedObjects('path/file.cbl') == []
     }
 
-    def "buildGroup parameter is ignored — scope is fixed by constructor arg"() {
+    def "scope is fixed by constructor arg — same results regardless of call context"() {
         given:
         def group = Mock(BuildGroup)
         def bm    = Mock(BuildMap)
         group.getBuildMap('path/file.cbl') >> bm
         bm.getOutputs() >> [new OutputStub(dataset: 'DS', member: 'MBR')]
-        def client = new ZosBuildMapClient(group)
+        def client = new Db2BuildMapClient(group)
 
         expect:
-        client.getGeneratedObjects('path/file.cbl', 'ANY_VALUE').size() == 1
-        client.getGeneratedObjects('path/file.cbl', 'OTHER_VALUE').size() == 1
+        client.getGeneratedObjects('path/file.cbl').size() == 1
     }
-
-    // ─── fromConf ─────────────────────────────────────────────────────────────
-
-    // def "fromConf throws IllegalStateException when build group not found in store"() {
-    //     given:
-    //     def mockStore = Mock(MetadataStore)
-    //     GroovySpy(MetadataStoreFactory, global: true)
-    //     MetadataStoreFactory.createDb2MetadataStore(*_) >> mockStore
-    //     mockStore.getBuildGroup('MISSING') >> null
-
-    //     when:
-    //     ZosBuildMapClient.fromConf('MISSING', 'user1', new File('/tmp/pw'), new Properties())
-
-    //     then:
-    //     def ex = thrown(IllegalStateException)
-    //     ex.message.contains('MISSING')
-    // }
-
-    // def "fromConf returns ZosBuildMapClient wrapping the found build group"() {
-    //     given:
-    //     def mockGroup = Mock(BuildGroup)
-    //     def mockStore = Mock(MetadataStore)
-    //     GroovySpy(MetadataStoreFactory, global: true)
-    //     MetadataStoreFactory.createDb2MetadataStore(*_) >> mockStore
-    //     mockStore.getBuildGroup('MY_GROUP') >> mockGroup
-
-    //     when:
-    //     def client = ZosBuildMapClient.fromConf('MY_GROUP', 'user1', new File('/tmp/pw'), new Properties())
-
-    //     then:
-    //     client instanceof ZosBuildMapClient
-    // }
 }

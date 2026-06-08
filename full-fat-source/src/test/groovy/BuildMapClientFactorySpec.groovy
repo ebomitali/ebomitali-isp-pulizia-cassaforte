@@ -22,7 +22,7 @@ class BuildMapClientFactorySpec extends Specification {
 
     def "fromJson returns a BuildMapClient from a valid JSON file"() {
         when:
-        def client = BuildMapClientFactory.fromJson(bmFile)
+        def client = BuildMapClientFactory.fromJson(bmFile, 'ATO')
 
         then:
         client != null
@@ -31,12 +31,11 @@ class BuildMapClientFactorySpec extends Specification {
 
     def "fromJson delegates getGeneratedObjects for known source path"() {
         given:
-        def client = BuildMapClientFactory.fromJson(bmFile)
+        def client = BuildMapClientFactory.fromJson(bmFile, 'ATO')
 
         when:
         def results = client.getGeneratedObjects(
-            'ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP',
-            'ATO'
+            'ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP'
         )
 
         then:
@@ -47,10 +46,10 @@ class BuildMapClientFactorySpec extends Specification {
 
     def "fromJson returns empty list for unknown source path"() {
         given:
-        def client = BuildMapClientFactory.fromJson(bmFile)
+        def client = BuildMapClientFactory.fromJson(bmFile, 'ATO')
 
         expect:
-        client.getGeneratedObjects('no/such/file.cbl', 'ATO') == []
+        client.getGeneratedObjects('no/such/file.cbl') == []
     }
 
     // ─── fromConf ─────────────────────────────────────────────────────────────

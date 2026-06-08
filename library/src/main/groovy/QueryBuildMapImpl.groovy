@@ -20,7 +20,12 @@ class QueryBuildMapImpl {
             String userId, String pwFilePath, File db2ConfigFile) {
         BuildMapClient buildMap
         try {
-            buildMap = BuildMapClientFactory.fromConf(buildGroup, userId, pwFilePath, db2ConfigFile)
+            def cfg = new PuliziaCassaforteConfig(
+                userId:        userId,
+                pwFilePath:    pwFilePath,
+                db2ConfigPath: db2ConfigFile.canonicalPath
+            )
+            buildMap = new Db2BuildMapClient(buildGroup, cfg)
         } catch (IllegalStateException e) {
             log.warn("build map unavailable: {} — build map lookups will return empty", e.message)
             System.exit(1)
@@ -33,11 +38,12 @@ class QueryBuildMapImpl {
      *
      * @param listFile   Path to the list file.
      * @param buildGroup DBB build group name.
-     * @param bmFile     JSON build map file in {@link LocalBuildMapClient} format.
+     * @param bmFile     JSON build map file in {@link JsonBuildMapClient} format.
      * @return Number of errors encountered (0 = success).
      */
     int run(String listFile, String buildGroup, File bmFile) {
-        return execute(listFile, buildGroup, BuildMapClientFactory.fromJson(bmFile))
+        def cfg = new PuliziaCassaforteConfig(buildMapPath: bmFile.canonicalPath)
+        return execute(listFile, buildGroup, new JsonBuildMapClient(buildGroup, cfg))
     }
 
     /** Overload with explicit {@link BuildMapClient} — used by tests for injection. */
@@ -61,7 +67,7 @@ class QueryBuildMapImpl {
             log.info("Querying build map on '{}' for '{}'", buildGroup, sourcePath)
 
             try {
-                buildMap.getGeneratedObjects(sourcePath, buildGroup).each { genObj ->
+                buildMap.getGeneratedObjects(sourcePath).each { genObj ->
                     log.info("{} -> {}", sourcePath, genObj)
                 }
                 processed++

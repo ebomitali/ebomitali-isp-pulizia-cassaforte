@@ -33,7 +33,7 @@ class SfilamentoLogicSpec extends Specification {
         def bmFile = new File(getClass().getResource('/fixtures/buildmap.json').toURI()).canonicalPath
         def deleteLogic = new DeleteCassaforteLogic(
             ops: ops, rules: rules,
-            buildMap: new LocalBuildMapClient(bmFile)
+            buildMap: new LocalBuildMapClient(bmFile, '')
         )
         sfilamento = new SfilamentoLogic(
             ops:            ops,

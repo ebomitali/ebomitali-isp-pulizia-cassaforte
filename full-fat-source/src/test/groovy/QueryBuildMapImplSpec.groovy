@@ -53,7 +53,7 @@ class QueryBuildMapImplSpec extends Specification {
     def "processes each source path and returns 0 errors"() {
         given:
         def results = [[library: 'LTM00.D9PO1.PE000.@@@@.@@@@@@@@.@@.SJCL', member: 'YO8AMADD']]
-        def mock    = [getGeneratedObjects: { sp, bg -> results }] as BuildMapClient
+        def mock    = [getGeneratedObjects: { sp -> results }] as BuildMapClient
         def lista   = listFile("Q,${SOURCE_PATH}")
 
         expect:
@@ -62,7 +62,7 @@ class QueryBuildMapImplSpec extends Specification {
 
     def "blank lines and comments are skipped"() {
         given:
-        def mock  = [getGeneratedObjects: { sp, bg -> [] }] as BuildMapClient
+        def mock  = [getGeneratedObjects: { sp -> [] }] as BuildMapClient
         def lista = listFile("# comment\n\nQ,${SOURCE_PATH}\n")
 
         expect:
@@ -71,7 +71,7 @@ class QueryBuildMapImplSpec extends Specification {
 
     def "malformed line (no comma) increments error count"() {
         given:
-        def mock  = [getGeneratedObjects: { sp, bg -> [] }] as BuildMapClient
+        def mock  = [getGeneratedObjects: { sp -> [] }] as BuildMapClient
         def lista = listFile("MALFORMED_LINE")
 
         expect:
@@ -80,7 +80,7 @@ class QueryBuildMapImplSpec extends Specification {
 
     def "exception during getGeneratedObjects increments error count"() {
         given:
-        def mock  = [getGeneratedObjects: { sp, bg -> throw new RuntimeException("db error") }] as BuildMapClient
+        def mock  = [getGeneratedObjects: { sp -> throw new RuntimeException("db error") }] as BuildMapClient
         def lista = listFile("Q,${SOURCE_PATH}")
 
         expect:
@@ -89,7 +89,7 @@ class QueryBuildMapImplSpec extends Specification {
 
     def "multiple lines: good and bad counted separately"() {
         given:
-        def mock  = [getGeneratedObjects: { sp, bg -> [] }] as BuildMapClient
+        def mock  = [getGeneratedObjects: { sp -> [] }] as BuildMapClient
         def lista = listFile("Q,${SOURCE_PATH}\nMALFORMED\nQ,${SOURCE_PATH}")
 
         expect:
@@ -99,7 +99,7 @@ class QueryBuildMapImplSpec extends Specification {
     def "processed count covers all successful queries regardless of result size"() {
         given:
         int callCount = 0
-        def mock  = [getGeneratedObjects: { sp, bg -> callCount++; [] }] as BuildMapClient
+        def mock  = [getGeneratedObjects: { sp -> callCount++; [] }] as BuildMapClient
         def lista = listFile("Q,path/one.cbl\nQ,path/two.cbl\nQ,path/three.cbl")
 
         when:

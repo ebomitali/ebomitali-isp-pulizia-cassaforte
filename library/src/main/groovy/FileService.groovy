@@ -6,7 +6,7 @@ import groovy.util.logging.Slf4j
  * <p>Two implementations are provided:
  * <ul>
  *   <li>{@link LocalFileOps}    — maps z/OS-style paths onto the local filesystem for unit testing.</li>
- *   <li>{@code ZosFileOpsUSS}   — delegates to IBM JZOS {@code ZFile} on z/OS USS (packaged separately).</li>
+ *   <li>{@link JzosFileService}  — delegates to IBM JZOS {@code ZFile} on z/OS USS (packaged separately).</li>
  * </ul>
  *
  * <p>Path convention used by all implementations:
@@ -17,7 +17,7 @@ import groovy.util.logging.Slf4j
  * </pre>
  */
 @Slf4j
-trait ZosFileOps {
+trait FileService {
 
     abstract boolean exists(String path)
     abstract void    delete(String path)

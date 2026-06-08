@@ -16,8 +16,8 @@ class PuliziaCassaforteConfig {
 
     // Sensible defaults for ease of use on USS, where properties files are less convenient.  
     // These can be overridden by properties files or test code.
-    String fileOpsType        = 'zos' // 'zos' or 'local'
-    String buildMapClientType = 'db2' // 'db2' or 'json'
+    String fileOpsType        = 'zos' // 'zos', 'uss', or 'macos'
+    String buildMapClientType = 'db2' // 'db2', 'dbb', 'json'
     String userId             = null
     String pwFilePath         = null
     String db2ConfigPath      = null
@@ -28,6 +28,7 @@ class PuliziaCassaforteConfig {
     Set<String> jobzExtensions = ['STWSNCS','STWSJGO','STWSJGM'] as Set
     String rulesPath          = 'build-data/rules.csv'
     String stageMapPath       = 'build-data/stagemap.csv'
+    String buildGroupName     = null
 
     /**
      * Build a config by expanding env-var placeholders in {@code props} and mapping

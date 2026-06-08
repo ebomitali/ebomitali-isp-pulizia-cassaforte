@@ -20,10 +20,10 @@ class SfilamentoLogicSpec extends Specification {
     Path tempDir
 
     SfilamentoLogic sfilamento
-    LocalFileOps ops
+    MacosFileService ops
 
     def setup() {
-        ops = new LocalFileOps(tempDir.toString())
+        ops = new MacosFileService(tempDir.toString())
         def rules = [
             new DeletionRule(typePattern: 'STWSNCS', libraryTemplate: JNCS_TEMPLATE, useBuildMap: false),
             new DeletionRule(typePattern: 'STWSJGO', libraryTemplate: JJGO_TEMPLATE, useBuildMap: false),
@@ -33,7 +33,7 @@ class SfilamentoLogicSpec extends Specification {
         def bmFile = new File(getClass().getResource('/fixtures/buildmap.json').toURI()).canonicalPath
         def deleteLogic = new DeleteCassaforteLogic(
             ops: ops, rules: rules,
-            buildMap: new LocalBuildMapClient(bmFile)
+            buildMap: new JsonBuildMapClient('', new PuliziaCassaforteConfig(buildMapPath: bmFile))
         )
         sfilamento = new SfilamentoLogic(
             ops:            ops,

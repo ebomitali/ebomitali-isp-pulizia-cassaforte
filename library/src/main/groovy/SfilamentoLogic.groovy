@@ -25,7 +25,7 @@ import groovy.util.logging.Slf4j
  */
 @Slf4j
 class SfilamentoLogic {
-    ZosFileOps            ops
+    FileService           ops
     DeleteCassaforteLogic deleteLogic
     List<DeletionRule>    rules
     PathVariableExtractor extractor      = new PathVariableExtractor()
