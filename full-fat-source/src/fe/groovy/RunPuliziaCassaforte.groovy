@@ -69,10 +69,10 @@ if (!fatSourceFile.exists()) {
 
 println "Starting PuliziaCassaforte with sources list: ${sources}, environment: ${environment}, build group: ${buildGroup}"
 def gcl = new GroovyClassLoader(this.class.classLoader)
-Class scriptClass = gcl.parseClass(fatSourceFile)
-def scriptInstance = scriptClass.getDeclaredConstructor().newInstance()
-def puliziaCassaforte = scriptInstance.createPuliziaCassaforteImpl()
+gcl.parseClass(fatSourceFile)
+def clazz = gcl.loadClass('com.intesasanpaolo.bes.pc.PuliziaCassaforteImpl')
+def puliziaCassaforteImpl = clazz.getDeclaredConstructor().newInstance()
 
-int errors = puliziaCassaforte.doPuliziaCassaforte(sourcesListFile, environment, buildGroup, cfgProps)
+int errors = puliziaCassaforteImpl.doPuliziaCassaforte(sourcesListFile, environment, buildGroup, cfgProps)
 println "PuliziaCassaforte completed with ${errors} errors."
 if (errors > 0) System.exit(1)
