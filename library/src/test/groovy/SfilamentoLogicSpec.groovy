@@ -8,6 +8,8 @@ class SfilamentoLogicSpec extends Specification {
         '01|ATO': 'X2A',
         '01|ST' : 'XAD',
         '01|PR' : 'XAE',
+        'STWSNCS|PR' : 'XPE',
+        'STWSJGO|PR' : 'XPE'
     ]
 
     static final LibraryNameResolver RESOLVER      = new LibraryNameResolver()
@@ -116,7 +118,7 @@ class SfilamentoLogicSpec extends Specification {
         given:
         // ST -> XAD, PR -> XAE according to stage map
         def stJncsLib = RESOLVER.resolve(JNCS_TEMPLATE, [C1STAGE: 'XAD'])
-        def prJncsLib = RESOLVER.resolve(JNCS_TEMPLATE, [C1STAGE: 'XAE'])
+        def prJncsLib = RESOLVER.resolve(JNCS_TEMPLATE, [C1STAGE: 'XPE'])
         [stJncsLib, prJncsLib].each { lib ->
             def m = tempDir.resolve("${lib}/\$HXQ001")
             Files.createDirectories(m.parent)
@@ -135,7 +137,7 @@ class SfilamentoLogicSpec extends Specification {
     def "execute STWSNCS in PR: deletes PR JNCS member only (degraded to C)"() {
         given:
         def stJncsLib = RESOLVER.resolve(JNCS_TEMPLATE, [C1STAGE: 'XAD'])
-        def prJncsLib = RESOLVER.resolve(JNCS_TEMPLATE, [C1STAGE: 'XAE'])
+        def prJncsLib = RESOLVER.resolve(JNCS_TEMPLATE, [C1STAGE: 'XPE']) // STWSNCS -> XPE special case
         [stJncsLib, prJncsLib].each { lib ->
             def m = tempDir.resolve("${lib}/\$HXQ003")
             Files.createDirectories(m.parent)

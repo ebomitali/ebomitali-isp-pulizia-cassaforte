@@ -39,7 +39,7 @@ class SfilamentoLogic {
     boolean execute(String sourcePath, String fileType, String environment, String buildGroup) {
         boolean isJobz = fileType?.trim() in jobzExtensions
         def currentVars = isJobz
-            ? extractor.extractJobz(environment, stageMap, hlq)
+            ? extractor.extractJobz(environment, stageMap, hlq, fileType)
             : extractor.extract(sourcePath, environment, stageMap, hlq)
         deleteLogic.execute(sourcePath, fileType, currentVars, buildGroup)
 
@@ -66,7 +66,7 @@ class SfilamentoLogic {
 
         for (String superEnv : envChain.getSuperiors(environment)) {
             def superVars = isJobz
-                ? extractor.extractJobz(superEnv, stageMap, hlq)
+                ? extractor.extractJobz(superEnv, stageMap, hlq, fileType)
                 : extractor.extract(sourcePath, superEnv, stageMap, hlq)
             for (def rule : matching) {
                 def srcLib = resolver.resolve(rule.libraryTemplate, superVars)
