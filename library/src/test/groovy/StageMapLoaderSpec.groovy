@@ -31,16 +31,20 @@ class StageMapLoaderSpec extends Specification {
     }
 
     def "load skips blank lines"() {
-        given:
-        def path = new File(getClass().getResource('/fixtures/stagemap.csv').toURI())
+        when:
+        def tmp = File.createTempFile('stagemap', '.csv')
+        tmp.text = '\n\n"01|ATO";"X2A"\n\n"02|ST";"YAD"\n\n'
 
-        expect:
-        loader.load(path).size() == 17
+        then:
+        loader.load(tmp).size() == 2
+
+        cleanup:
+        tmp.delete()
     }
 
     def "load throws on malformed row missing semicolon"() {
         given:
-        def tmp = File.createTempFile('stage-map', '.csv')
+        def tmp = File.createTempFile('stagemap', '.csv')
         tmp.text = '"01|ATO" "X2A"\n'
 
         when:
