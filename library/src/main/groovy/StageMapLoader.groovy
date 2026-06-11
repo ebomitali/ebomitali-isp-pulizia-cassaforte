@@ -15,7 +15,7 @@ import groovy.util.logging.Slf4j
 class StageMapLoader {
 
     Map<String, String> load(File file) {
-        log.debug("Loading stage map from: {}", file)
+        log.debug("Loading stage map from: {}", file.canonicalPath)
         def result = file.readLines()
             .findAll { it.trim() }
             .collectEntries { line ->
@@ -26,7 +26,7 @@ class StageMapLoader {
                 def value = parts[1].trim().replace('"', '')
                 [key, value]
             }
-        log.info("Loaded {} stagemap entries from: {}", result.size(), file)
+        log.info("Loaded {} stagemap entries from: {}", result.size(), file.canonicalPath)
         result
     }
 }

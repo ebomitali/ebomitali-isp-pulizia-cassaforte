@@ -24,7 +24,7 @@ import groovy.util.logging.Slf4j
 class DeletionRulesLoader {
 
     List<DeletionRule> load(File file) {
-        log.debug("Loading deletion rules from: {}", file)
+        log.debug("Loading deletion rules from: {}", file.canonicalPath)
         def result = file.readLines()
             .findAll { it.trim() && !it.startsWith('#') }
             .collect { line ->
@@ -37,7 +37,7 @@ class DeletionRulesLoader {
                     useBuildMap:     parts[2].trim() == 'BUILD MAP'
                 )
             }
-        log.info("Loaded {} deletion rules from: {}", result.size(), file)
+        log.info("Loaded {} deletion rules from: {}", result.size(), file.canonicalPath)
         result
     }
 }
