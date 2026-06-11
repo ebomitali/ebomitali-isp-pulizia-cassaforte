@@ -8,9 +8,9 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SUBPROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../.." && pwd)"
-echo "Running test with SCRIPT_DIR: $SCRIPT_DIR"
-echo "Subproject root: $SUBPROJECT_ROOT"
-echo "Project root: $PROJECT_ROOT"
+# echo "Running test with SCRIPT_DIR: $SCRIPT_DIR"
+# echo "Subproject root: $SUBPROJECT_ROOT"
+# echo "Project root: $PROJECT_ROOT"
 
 ENV="ATO"
 BUILD_GROUP="ATO"

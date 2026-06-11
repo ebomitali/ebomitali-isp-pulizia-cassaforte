@@ -27,6 +27,7 @@ cleanup() {
     rm -f "$SCRIPT_DIR/PuliziaCassaforte.properties"
     rm -f "$SCRIPT_DIR/simplelogger.properties"
     rm -f "$SCRIPT_DIR/lista.csv"
+    rm -f "$SCRIPT_DIR/rules.csv"
     rm -rf "$TEMP_DIR"
 }
 trap cleanup EXIT
@@ -37,6 +38,7 @@ mkdir -p "$ZOSSTDST"
 ZOSPRDST="$TEMP_DIR/LTM00.D9PXAE.PE000.@@@@.@@@@@@@@.@@.SJCL"
 mkdir -p "$ZOSPRDST"
 ZOSSTTCB="$TEMP_DIR/LTM00.D9PXAD.PE000.TO@@.COLB@@@@.@@.SJCL"
+mkdir -p "$ZOSSTTCB"
 echo "Simulated z/OS dataset directory created at: $ZOSTDST"
 
 
@@ -127,6 +129,13 @@ if [ -f "$ZOSSTTCB/YO810BDD" ]; then
     echo "Verified: $ZOSSTTCB/YO810BDD exists (created)"
 else
     echo "Test failed: expected file $ZOSSTTCB/YO810BDD to exist, but it does not"
+    result=1
+fi
+# check that ZOSSTTCB/YO810BDD content is "pr-content" (copied from ZOSPRDST/YO810BDD) not "st-content"
+if [ "$(cat "$ZOSSTTCB/YO810BDD")" = "pr-content" ]; then
+    echo "Verified: $ZOSSTTCB/YO810BDD content is correct (pr-content)"
+else
+    echo "Test failed: expected content 'pr-content' in $ZOSSTTCB/YO810BDD, but found '$(cat "$ZOSSTTCB/YO810BDD")'"
     result=1
 fi
 
