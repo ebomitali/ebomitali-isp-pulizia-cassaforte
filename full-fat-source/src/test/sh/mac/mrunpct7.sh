@@ -12,6 +12,21 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../.." && pwd)"
 # echo "Subproject root: $SUBPROJECT_ROOT"
 # echo "Project root: $PROJECT_ROOT"
 
+cleanup() {
+    rm -f "$SCRIPT_DIR/FullPuliziaCassaforte.groovy"
+    rm -f "$SCRIPT_DIR/PuliziaCassaforte.properties"
+    rm -f "$SCRIPT_DIR/simplelogger.properties"
+    rm -f "$SCRIPT_DIR/lista.csv"
+    rm -f "$SCRIPT_DIR/rules.csv"
+    rm -rf "$TEMP_DIR"
+}
+cleanup
+
+# Set fake DBB_BUILD, DBB_HOME, DBB_CONF
+export DBB_BUILD="$TEMP_DIR/build"
+export DBB_HOME="$TEMP_DIR/dbb"
+export DBB_CONF="$TEMP_DIR/conf"
+
 ENV="ST"
 BUILD_GROUP="ST-MAIN"
 
@@ -22,15 +37,8 @@ SF1="ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLCA7/YO810BDD.SJCLCA7"
 TEMP_DIR="${TMPDIR:-/tmp/}run-puliziacassaforte.$$"
 mkdir -p "$TEMP_DIR"
 
-cleanup() {
-    rm -f "$SCRIPT_DIR/FullPuliziaCassaforte.groovy"
-    rm -f "$SCRIPT_DIR/PuliziaCassaforte.properties"
-    rm -f "$SCRIPT_DIR/simplelogger.properties"
-    rm -f "$SCRIPT_DIR/lista.csv"
-    rm -f "$SCRIPT_DIR/rules.csv"
-    rm -rf "$TEMP_DIR"
-}
-trap cleanup EXIT
+
+# trap cleanup EXIT
 
 # Simulated z/OS PDS
 ZOSSTDST="$TEMP_DIR/LTM00.D9PXAD.PE000.@@@@.@@@@@@@@.@@.SJCL"
@@ -106,10 +114,13 @@ SH_LIB="$SUBPROJECT_ROOT/build/sh-lib"
 # GroovyClassLoader.parseClass(new File("FullPuliziaCassaforte.groovy")) resolves relative to CWD.
 # Copy fat source alongside the runner script, then cd there.
 cp "$SUBPROJECT_ROOT/src/main/groovy/FullPuliziaCassaforte.groovy" "$SCRIPT_DIR/FullPuliziaCassaforte.groovy"
+cp "$SUBPROJECT_ROOT/src/fe/groovy/RunPuliziaCassaforte.groovy" "$SCRIPT_DIR/RunPuliziaCassaforte.groovy"
 
 result=0
 cd "$SCRIPT_DIR"
+echo "Working on directory: $(pwd)"
 # SCRIPT_DIR on classpath → simplelogger.properties picked up by slf4j-simple
+echo "cmd: groovy -cp \"$STUBS_DIR:$SH_LIB/*:$SCRIPT_DIR\" RunPuliziaCassaforte.groovy \"$lista\" \"$ENV\" \"$BUILD_GROUP\""
 groovy -cp "$STUBS_DIR:$SH_LIB/*:$SCRIPT_DIR" RunPuliziaCassaforte.groovy "$lista" "$ENV" "$BUILD_GROUP" || result=$?
 
 # Check that ZOSSTDST/MEMBER was deleted, ZOSPRDST/MEMBER was not touched and ZOSSTTCB/MEMBER was created
@@ -138,6 +149,8 @@ else
     echo "Test failed: expected content 'pr-content' in $ZOSSTTCB/YO810BDD, but found '$(cat "$ZOSSTTCB/YO810BDD")'"
     result=1
 fi
+# Cleanup, remove files in TEMP_DIR to avoid leaving test artifacts, but keep TEMP_DIR itself for inspection if needed
+rm -rf "$TEMP_DIR"
 
 if [ "$result" -eq 0 ]; then
     echo "Test passed: no errors"

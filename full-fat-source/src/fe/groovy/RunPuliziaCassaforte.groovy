@@ -1,4 +1,3 @@
-@groovy.transform.BaseScript com.ibm.dbb.groovy.ScriptLoader baseScript
 //This groovy script is intended to be called from Jenkins in a USS context,
 // managing PuliziaCassaforte z/OS library and accessing Metadatastore
 // if rules require it. It can be called from command line as well, but it is not intended 
@@ -18,7 +17,7 @@ if (args.length != 3) {
 
 String sources = args[0]
 String environment = args[1]
-String buildGroup = args[2]
+String buildGroup  = args[2]
 
 File sourcesListFile = new File(sources)
 if (!sourcesListFile.exists()) {
@@ -26,22 +25,22 @@ if (!sourcesListFile.exists()) {
     System.exit(1)
 }
 
-// Read env var DBB_CONF
-String dbbConf = System.getenv("DBB_CONF")
-if (dbbConf == null) {
-    println "Environment variable DBB_CONF is not set."
-    System.exit(1)
-}
-String dbbBuild = System.getenv("DBB_BUILD")
-if (dbbBuild == null) {
-    println "Environment variable DBB_BUILD is not set."
-    System.exit(1)
-}
-String dbbHome = System.getenv("DBB_HOME")
-if (dbbHome == null) {
-    println "Environment variable DBB_HOME is not set."
-    System.exit(1)
-}
+// // Read env var DBB_CONF
+// String dbbConf = System.getenv("DBB_CONF")
+// if (dbbConf == null) {
+//     println "Environment variable DBB_CONF is not set."
+//     System.exit(1)
+// }
+// String dbbBuild = System.getenv("DBB_BUILD")
+// if (dbbBuild == null) {
+//     println "Environment variable DBB_BUILD is not set."
+//     System.exit(1)
+// }
+// String dbbHome = System.getenv("DBB_HOME")
+// if (dbbHome == null) {
+//     println "Environment variable DBB_HOME is not set."
+//     System.exit(1)
+// }
 
 // Read PuliziaCassaforte property file from current directory
 Properties cfgProps = new Properties()
@@ -61,7 +60,19 @@ if (!cfgProps.containsKey('fileOpsType')) {
     cfgProps.setProperty('fileOpsType', 'zos')
 }
 
-def pcloaded = loadScript(new File("FullPuliziaCassaforte.groovy"))
-def puliziaCassaforte = pcloaded.createPuliziaCassaforteImpl()
+// FullPuliziaCassaforte.groovy is copied alongside this script by mrunpct2.sh
+def fatSourceFile = new File("FullPuliziaCassaforte.groovy")
+if (!fatSourceFile.exists()) {
+    println "FullPuliziaCassaforte.groovy not found at: ${fatSourceFile.canonicalPath}"
+    System.exit(1)
+}
+
+println "Starting PuliziaCassaforte with sources list: ${sources}, environment: ${environment}, build group: ${buildGroup}"
+def gcl = new GroovyClassLoader(this.class.classLoader)
+Class scriptClass = gcl.parseClass(fatSourceFile)
+def scriptInstance = scriptClass.getDeclaredConstructor().newInstance()
+def puliziaCassaforte = scriptInstance.createPuliziaCassaforteImpl()
+
 int errors = puliziaCassaforte.doPuliziaCassaforte(sourcesListFile, environment, buildGroup, cfgProps)
 println "PuliziaCassaforte completed with ${errors} errors."
+if (errors > 0) System.exit(1)
