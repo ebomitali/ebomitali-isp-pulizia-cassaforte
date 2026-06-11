@@ -1,11 +1,11 @@
 // Standalone runner — no DBB build context required.
 // Uses a plain GroovyClassLoader to load FullPuliziaCassaforte.groovy from the current directory.
 // Run from this script's directory (full-fat-source/src/test/sh/mac/), via mrunpct2.sh:
-//   groovy MRunPuliziaCassaforte.groovy <list path> <environment> <build group>
+//   groovy RunPuliziaCassaforte.groovy <list path> <environment> <build group>
 // Reads PuliziaCassaforte.properties from the current working directory.
 
 if (args.length != 3) {
-    println "Usage: groovy MRunPuliziaCassaforte.groovy <list path> <environment> <build group>"
+    println "Usage: groovy RunPuliziaCassaforte.groovy <list path> <environment> <build group>"
     System.exit(1)
 }
 
