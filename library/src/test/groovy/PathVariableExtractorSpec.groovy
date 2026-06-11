@@ -1,10 +1,12 @@
 import spock.lang.Specification
+import spock.lang.Unroll
 
 class PathVariableExtractorSpec extends Specification {
 
     static final Map<String, String> STAGE_MAP = [
-        '01|ATO': 'X2A', '01|ST': 'XAD', '01|PR': 'XPE',
+        '01|ATO': 'X2A', '01|ST': 'XAD', '01|PR': 'XAE',
         '03|ATO': 'Y2A', '03|ST': 'YAD',
+        'STWSNCS|PR': 'XPE', 'STWSJGO|PR': 'XPE'
     ]
 
     def extractor = new PathVariableExtractor()
@@ -86,5 +88,27 @@ class PathVariableExtractorSpec extends Specification {
 
         then:
         thrown(IllegalArgumentException)
+    }
+
+    @Unroll("extractJobz env=#buildEnv fileType=#fileType expects C1STAGEP=#expectedC1STAGEP C1STAGE=#expectedC1STAGE")
+    def "extractJobz with multiple scenarios"() {
+        // Jobz files (fileType 'STWSNCS','STWSJGO','STWSJGM') returns C1STAGEP same as C1STAGE
+        when:
+        def vars = extractor.extractJobz(buildEnv, STAGE_MAP, null, fileType)
+
+        then:
+        vars['C1STAGEP'] == expectedC1STAGEP
+        vars['C1STAGE']  == expectedC1STAGE
+        vars['C1SYSTEM'] == ''
+        vars['HLQ']      == ''
+
+        where:
+        buildEnv | fileType    | expectedC1STAGEP | expectedC1STAGE
+        'PR'     | 'STWSNCS'   | 'XPE'            | 'XPE'
+        'ATO'    | 'STWSNCS'   | 'X2A'            | 'X2A'
+        'PR'     | 'STWSJGO'   | 'XPE'            | 'XPE'
+        'ATO'    | 'STWSJGO'   | 'X2A'            | 'X2A'
+        'PR'     | 'STWSJGM'   | 'XAE'            | 'XAE'
+        'ST'     | 'STWSJGM'   | 'XAD'            | 'XAD'
     }
 }

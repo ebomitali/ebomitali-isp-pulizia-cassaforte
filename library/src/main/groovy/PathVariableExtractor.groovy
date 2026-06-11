@@ -15,17 +15,26 @@ import groovy.util.logging.Slf4j
 @Slf4j
 class PathVariableExtractor {
 
-    // Jobz paths have no application segment; layer operativo is always '01' and C1SYSTEM is not applicable.
-    Map<String, String> extractJobz(String buildEnv, Map<String, String> stageMap, String hlq) {
+    // Jobz (fileType 'STWSNCS','STWSJGO','STWSJGM') paths have no application segment; 
+    // layer operativo is always '01' and C1SYSTEM is not applicable.
+    // Jobz extensions are set as a default in PuliziaCassaforteConfig 
+    // and can be overridden via properties or test code.
+    Map<String, String> extractJobz(String buildEnv, Map<String, String> stageMap, String hlq, String fileType) {
         def key = "01|${buildEnv}"
-        def c1stage = stageMap[key]
-        if (!c1stage)
+        // if fileType is STWSNCS, STWSJGO, or STWSJGM and buildEnv is PR then set key to fileType|PR
+        if (fileType in ['STWSNCS', 'STWSJGO'] && buildEnv == 'PR') {
+            key = "${fileType}|${buildEnv}"
+        }
+        log.debug("extractJobz: fileType='{}' buildEnv='{}' -> key='{}'", fileType, buildEnv, key)
+        def c1stagep = stageMap[key]
+        if (!c1stagep)
             throw new IllegalArgumentException(
                 "No stage-map entry for '${key}' (jobz path, env='${buildEnv}')"
             )
-        def result = [C1STAGE: c1stage, C1SYSTEM: '', HLQ: hlq ?: '']
-        log.debug("extractJobz: env='{}' -> C1STAGE='{}' HLQ='{}'", buildEnv, c1stage, hlq)
-        result
+        def result = [C1STAGE: c1stagep, C1STAGEP: c1stagep, C1SYSTEM: '', HLQ: hlq ?: '']
+        log.debug("extractJobz (special case): env='{}' C1STAGE='{}' C1STAGEP='{}' HLQ='{}'", 
+                    buildEnv, c1stagep, c1stagep, hlq)
+        return result
     }
 
     Map<String, String> extract(String sourcePath, String buildEnv,

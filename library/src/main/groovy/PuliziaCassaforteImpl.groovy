@@ -145,7 +145,7 @@ class PuliziaCassaforteImpl {
                 switch (action) {
                     case 'C':
                         def vars = isJobzType(fileType)
-                            ? extractor.extractJobz(environment, stageMap, hlq)
+                            ? extractor.extractJobz(environment, stageMap, hlq, fileType)
                             : extractor.extract(sourcePath, environment, stageMap, hlq)
                         deleteLogic.execute(sourcePath, fileType, vars, buildGroup)
                         processed++

@@ -1,7 +1,7 @@
 // Mainframe-only. Must be compiled and run with groovyz in a DBB task or groovy step.
 // After upload to USS: chtag -tc IBM-1047 DbbBuildMapClient.groovy
 import com.ibm.dbb.build.BuildException
-import com.ibm.dbb.dbb.BuildContext
+import com.ibm.dbb.task.BuildContext
 import com.ibm.dbb.metadata.BuildGroup
 import com.ibm.dbb.metadata.BuildMap
 import groovy.util.logging.Slf4j

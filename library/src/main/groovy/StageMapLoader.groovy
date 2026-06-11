@@ -15,7 +15,7 @@ import groovy.util.logging.Slf4j
 class StageMapLoader {
 
     Map<String, String> load(File file) {
-        log.debug("Loading stage map from: {}", file)
+        log.debug("Loading stage map from: {}", file.canonicalPath)
         def result = file.readLines()
             .findAll { it.trim() }
             .collectEntries { line ->
@@ -24,6 +24,7 @@ class StageMapLoader {
                     throw new IllegalArgumentException("Malformed stagemap row: '$line'")
                 def key   = parts[0].trim().replace('"', '')
                 def value = parts[1].trim().replace('"', '')
+                log.debug("Parsed stagemap entry: '{}' -> '{}'", key, value)
                 [key, value]
             }
         log.info("Loaded {} stagemap entries from: {}", result.size(), file)

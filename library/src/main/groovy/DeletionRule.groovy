@@ -15,7 +15,6 @@
  * @see PatternMatcher
  * @see LibraryNameResolver
  */
-@groovy.util.logging.Slf4j
 @groovy.transform.Immutable
 class DeletionRule {
     String typePattern
