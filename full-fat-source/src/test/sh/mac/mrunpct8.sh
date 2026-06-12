@@ -1,7 +1,6 @@
 #!/bin/sh
 # Local (Mac) script to test FullPuliziaCassaforte vai RunPuliziaCassaforte f/e
-# Mirrors urunpct2.sh but uses: groovy + ScriptLoader mock instead of groovyz.
-# Test: fileOpsType=local, buildMapClientType=json, one match / two no-match.
+# Env PR, C flag, only delete from PR
 
 set -e
 
@@ -12,10 +11,10 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../.." && pwd)"
 # echo "Subproject root: $SUBPROJECT_ROOT"
 # echo "Project root: $PROJECT_ROOT"
 
-ENV="ST"
-BUILD_GROUP="ST-MAIN"
+ENV="PR"
+BUILD_GROUP="PROD-JOBZ"
 
-SLIST="ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLCA7/YO810BDD.SJCLCA7"
+SLIST="edux0-jobz/\$HXL007.STWSNCS"
 
 
 # Create temporary directory, $TMPDIR include trailing slash
@@ -34,19 +33,13 @@ cleanup
 # trap cleanup EXIT
 
 # Simulated z/OS PDS
-ZOSSTDST="$TEMP_DIR/LTM00.D9PXAD.PE000.@@@@.@@@@@@@@.@@.SJCL"
-mkdir -p "$ZOSSTDST"
-ZOSPRDST="$TEMP_DIR/LTM00.D9PXAE.PE000.@@@@.@@@@@@@@.@@.SJCL"
+ZOSPRDST="$TEMP_DIR/LTM00.D9PXPE.PE000.@@@@.@@@@@@@@.@@.JNCS"
 mkdir -p "$ZOSPRDST"
-ZOSSTTCB="$TEMP_DIR/LTM00.D9PXAD.PE000.TO@@.COLB@@@@.@@.SJCL"
-mkdir -p "$ZOSSTTCB"
-echo "Simulated z/OS dataset directory created"
+echo "Simulated z/OS dataset directory created at: $ZOSPRDST"
 
 
 for SF in "$SLIST"; do
     BASENAMENOEXT=$(basename "$SF" | cut -d. -f1)
-    touch "$ZOSSTDST/$BASENAMENOEXT"
-    echo "st-content" > "$ZOSSTDST/$BASENAMENOEXT"
     touch "$ZOSPRDST/$BASENAMENOEXT"
     echo "pr-content" > "$ZOSPRDST/$BASENAMENOEXT"
 done
@@ -58,7 +51,7 @@ resource_file() {
 
 write_rules() {
     _rules="$SCRIPT_DIR/rules.csv"
-    echo "SJCL*   ;LTM00.D9P\${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.SJCL;NO" > "$_rules"
+    echo "STWSNCS   ;LTM00.D9P\${C1STAGEP}.PE000.@@@@.@@@@@@@@.@@.JNCS;NO" > "$_rules"
 }
 
 write_config() {
@@ -84,7 +77,7 @@ write_simplelogger_config() {
 list_file() {
     _lista="$SCRIPT_DIR/lista.csv"
     for SF in "$SLIST"; do
-        printf 'S,%s\n' "$SF" >> "$_lista"
+        printf 'C,%s\n' "$SF" >> "$_lista"
     done
     echo "$_lista"
 }
@@ -113,31 +106,12 @@ cd "$SCRIPT_DIR"
 # SCRIPT_DIR on classpath → simplelogger.properties picked up by slf4j-simple
 groovy -cp "$STUBS_DIR:$SH_LIB/*:$SCRIPT_DIR" RunPuliziaCassaforte.groovy "$lista" "$ENV" "$BUILD_GROUP" || result=$?
 
-# Check that ZOSSTDST/MEMBER was deleted, ZOSPRDST/MEMBER was not touched and ZOSSTTCB/MEMBER was created
-if [ -f "$ZOSSTDST/YO810BDD" ]; then
-    echo "Test failed: expected file $ZOSSTDST/YO810BDD to be deleted, but it exists"
+# Check ZOSPRDST/MEMBER was deleted
+if [ -f "$ZOSPRDST/\$HXL007" ]; then
+    echo "Test failed: expected file $ZOSPRDST/\$HXL007 to be deleted, but it exists"
     result=1
 else
-    echo "Verified: $ZOSSTDST/YO810BDD was deleted"
-fi
-if [ -f "$ZOSPRDST/YO810BDD" ]; then
-    echo "Verified: $ZOSPRDST/YO810BDD exists (not deleted)"
-else
-    echo "Test failed: expected file $ZOSPRDST/YO810BDD to exist, but it does not"
-    result=1
-fi
-if [ -f "$ZOSSTTCB/YO810BDD" ]; then
-    echo "Verified: $ZOSSTTCB/YO810BDD exists (created)"
-else
-    echo "Test failed: expected file $ZOSSTTCB/YO810BDD to exist, but it does not"
-    result=1
-fi
-# check that ZOSSTTCB/YO810BDD content is "pr-content" (copied from ZOSPRDST/YO810BDD) not "st-content"
-if [ "$(cat "$ZOSSTTCB/YO810BDD")" = "pr-content" ]; then
-    echo "Verified: $ZOSSTTCB/YO810BDD content is correct (pr-content)"
-else
-    echo "Test failed: expected content 'pr-content' in $ZOSSTTCB/YO810BDD, but found '$(cat "$ZOSSTTCB/YO810BDD")'"
-    result=1
+    echo "Verified: $ZOSPRDST/\$HXL007 was deleted"
 fi
 
 if [ "$result" -eq 0 ]; then

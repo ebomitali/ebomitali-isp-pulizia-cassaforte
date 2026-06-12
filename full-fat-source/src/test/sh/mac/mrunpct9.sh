@@ -1,23 +1,20 @@
 #!/bin/sh
 # Local (Mac) script to test FullPuliziaCassaforte vai RunPuliziaCassaforte f/e
-# Mirrors urunpct2.sh but uses: groovy + ScriptLoader mock instead of groovyz.
-# Test: fileOpsType=local, buildMapClientType=json, one match / two no-match.
+# Env ST, sfilamento of source
 
 set -e
+# Configure test values
+ENV="ST"
+BUILD_GROUP="ST-JOBZ"
+SLIST="edux0-jobz/\$HXL007.STWSNCS"
 
+# Set relevant variables for test, using script location as reference point
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SUBPROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../.." && pwd)"
 # echo "Running test with SCRIPT_DIR: $SCRIPT_DIR"
 # echo "Subproject root: $SUBPROJECT_ROOT"
 # echo "Project root: $PROJECT_ROOT"
-
-ENV="ST"
-BUILD_GROUP="ST-MAIN"
-
-SLIST="ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLCA7/YO810BDD.SJCLCA7"
-
-
 # Create temporary directory, $TMPDIR include trailing slash
 TEMP_DIR="${TMPDIR:-/tmp/}run-puliziacassaforte.$$"
 mkdir -p "$TEMP_DIR"
@@ -34,13 +31,13 @@ cleanup
 # trap cleanup EXIT
 
 # Simulated z/OS PDS
-ZOSSTDST="$TEMP_DIR/LTM00.D9PXAD.PE000.@@@@.@@@@@@@@.@@.SJCL"
+ZOSSTDST="$TEMP_DIR/LTM00.D9PXAD.PE000.@@@@.@@@@@@@@.@@.JNCS"
 mkdir -p "$ZOSSTDST"
-ZOSPRDST="$TEMP_DIR/LTM00.D9PXAE.PE000.@@@@.@@@@@@@@.@@.SJCL"
+ZOSPRDST="$TEMP_DIR/LTM00.D9PXPE.PE000.@@@@.@@@@@@@@.@@.JNCS"
 mkdir -p "$ZOSPRDST"
-ZOSSTTCB="$TEMP_DIR/LTM00.D9PXAD.PE000.TO@@.COLB@@@@.@@.SJCL"
+ZOSSTTCB="$TEMP_DIR/LTM00.D9PXAD.PE000.TO@@.COLB@@@@.@@.JNCS"
 mkdir -p "$ZOSSTTCB"
-echo "Simulated z/OS dataset directory created"
+echo "Simulated z/OS dataset directorys created"
 
 
 for SF in "$SLIST"; do
@@ -51,6 +48,16 @@ for SF in "$SLIST"; do
     echo "pr-content" > "$ZOSPRDST/$BASENAMENOEXT"
 done
 
+# Check creation
+if [ ! -f "$ZOSSTDST/\$HXL007" ]; then
+    echo "Test failed: expected file $ZOSSTDST/\$HXL007.STWSNCS to be deleted, but it exists"
+    exit 1
+fi
+if [ ! -f "$ZOSPRDST/\$HXL007" ]; then
+    echo "Test failed: expected file $ZOSPRDST/\$HXL007.STWSNCS to exist, but it does not"
+    exit 1
+fi
+
 # Helper: absolute path to a resource (local layout differs from USS deployment)
 resource_file() {
     echo "$SUBPROJECT_ROOT/src/test/resources/fixtures/$1"
@@ -58,7 +65,7 @@ resource_file() {
 
 write_rules() {
     _rules="$SCRIPT_DIR/rules.csv"
-    echo "SJCL*   ;LTM00.D9P\${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.SJCL;NO" > "$_rules"
+     echo "STWSNCS   ;LTM00.D9P\${C1STAGEP}.PE000.@@@@.@@@@@@@@.@@.JNCS;NO" > "$_rules"
 }
 
 write_config() {
@@ -113,30 +120,30 @@ cd "$SCRIPT_DIR"
 # SCRIPT_DIR on classpath → simplelogger.properties picked up by slf4j-simple
 groovy -cp "$STUBS_DIR:$SH_LIB/*:$SCRIPT_DIR" RunPuliziaCassaforte.groovy "$lista" "$ENV" "$BUILD_GROUP" || result=$?
 
-# Check that ZOSSTDST/MEMBER was deleted, ZOSPRDST/MEMBER was not touched and ZOSSTTCB/MEMBER was created
-if [ -f "$ZOSSTDST/YO810BDD" ]; then
-    echo "Test failed: expected file $ZOSSTDST/YO810BDD to be deleted, but it exists"
+# Sfilamento, remove from ST library, copy from PR library to TOCOLB ST library, PR untouuched
+if [ -f "$ZOSSTDST/\$HXL007" ]; then
+    echo "Test failed: expected file $ZOSSTDST/\$HXL007 to be deleted, but it exists"
     result=1
 else
-    echo "Verified: $ZOSSTDST/YO810BDD was deleted"
+    echo "Verified: $ZOSSTDST/\$HXL007 was deleted"
 fi
-if [ -f "$ZOSPRDST/YO810BDD" ]; then
-    echo "Verified: $ZOSPRDST/YO810BDD exists (not deleted)"
+if [ -f "$ZOSPRDST/\$HXL007" ]; then
+    echo "Verified: $ZOSPRDST/\$HXL007 exists (not deleted)"
 else
-    echo "Test failed: expected file $ZOSPRDST/YO810BDD to exist, but it does not"
+    echo "Test failed: expected file $ZOSPRDST/\$HXL007 to exist, but it does not"
     result=1
 fi
-if [ -f "$ZOSSTTCB/YO810BDD" ]; then
-    echo "Verified: $ZOSSTTCB/YO810BDD exists (created)"
+if [ -f "$ZOSSTTCB/\$HXL007" ]; then
+    echo "Verified: $ZOSSTTCB/\$HXL007 exists (created)"
 else
-    echo "Test failed: expected file $ZOSSTTCB/YO810BDD to exist, but it does not"
+    echo "Test failed: expected file $ZOSSTTCB/\$HXL007 to exist, but it does not"
     result=1
 fi
-# check that ZOSSTTCB/YO810BDD content is "pr-content" (copied from ZOSPRDST/YO810BDD) not "st-content"
-if [ "$(cat "$ZOSSTTCB/YO810BDD")" = "pr-content" ]; then
-    echo "Verified: $ZOSSTTCB/YO810BDD content is correct (pr-content)"
+# check that ZOSSTTCB/\$HXL007 content is "pr-content" (copied from ZOSPRDST/\$HXL007) not "st-content"
+if [ "$(cat "$ZOSSTTCB/\$HXL007")" = "pr-content" ]; then
+    echo "Verified: $ZOSSTTCB/\$HXL007 content is correct (pr-content)"
 else
-    echo "Test failed: expected content 'pr-content' in $ZOSSTTCB/YO810BDD, but found '$(cat "$ZOSSTTCB/YO810BDD")'"
+    echo "Test failed: expected content 'pr-content' in $ZOSSTTCB/\$HXL007, but found '$(cat "$ZOSSTTCB/\$HXL007")'"
     result=1
 fi
 
