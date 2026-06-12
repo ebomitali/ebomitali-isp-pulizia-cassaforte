@@ -62,9 +62,16 @@ class JzosFileService implements FileService {
     /**
      * Deletes a dataset member, a sequential dataset, or a USS file.
      *
-     * For MVS paths: builds the ZFile name spec (DSN or DSN(MEMBER)) and calls
-     * {@link ZFile#remove(String)}, which maps to the z/OS remove() system call.
+     * For MVS PDS members: pre-allocates the PDS with SHR disposition and deletes via
+     * {@code //DD:} reference to avoid exclusive lock contention that can cause
+     * ZFile.remove() to fail with EDC5091I errors when the dataset is in use.
+     * For sequential datasets: allocates with SHR and deletes via DD reference for consistency.
      * For USS paths: delegates to {@link java.io.File#delete()}.
+     *
+     * <p>Pre-allocation pattern: ZFile.remove() normally takes an exclusive (OLD) allocation,
+     * which fails if the dataset/member is in use. By pre-allocating with SHR and using
+     * {@code //DD:ddname} reference, LE's C runtime reuses the SHR allocation instead.
+     * See docs/zfile_remove.md for architectural details.
      *
      * @param path  MVS dataset reference (// prefix) or USS absolute path.
      * @throws ZFileException if the MVS remove fails (e.g. dataset in use, not found).
@@ -73,9 +80,21 @@ class JzosFileService implements FileService {
         log.debug("delete({})", path)
         if (path.startsWith('//')) {
             def (dsn, member) = parseDsn(path)
-            // Build the ZFile-style spec: DSN(MEMBER) for PDS members, plain DSN otherwise
-            def spec = member ? "${dsn}(${member})" : dsn
-            ZFile.remove("//'${spec}'")
+            String ddname = 'DELDD'
+            String spec = member ? "${dsn}(${member})" : dsn
+            try {
+                // Allocate the dataset with SHR to avoid exclusive lock contention
+                ZFile.bpxwdyn("alloc fi(${ddname}) da('${dsn}') shr msg(2)")
+                // Delete via //DD: reference so LE reuses the SHR allocation
+                ZFile.remove("//DD:${ddname}${member ? '(' + member + ')' : ''}")
+            } finally {
+                // Always free the allocation
+                try {
+                    ZFile.bpxwdyn("free fi(${ddname})")
+                } catch (ZFileException e) {
+                    log.warn("Failed to free DD ${ddname}: {}", e.message)
+                }
+            }
             return
         }
         new File(path).delete()
