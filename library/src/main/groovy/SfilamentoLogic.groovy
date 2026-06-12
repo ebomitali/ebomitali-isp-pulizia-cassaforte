@@ -61,15 +61,15 @@ class SfilamentoLogic {
 
         def member   = DeleteCassaforteLogic.memberName(sourcePath)
         def matching = rules.findAll { matcher.matches(it.typePattern, fileType) }
-        log.info("Sfilamento: searching restore for member '{}' fileType '{}' in environment '{}'",
-                 member, fileType, environment)
 
         for (String superEnv : envChain.getSuperiors(environment)) {
+            log.debug("Sfilamento: checking in superior environment '{}'", superEnv)
             def superVars = isJobz
                 ? extractor.extractJobz(superEnv, stageMap, hlq, fileType)
                 : extractor.extract(sourcePath, superEnv, stageMap, hlq)
             for (def rule : matching) {
                 def srcLib = resolver.resolve(rule.libraryTemplate, superVars)
+                log.debug("Sfilamento: looking for '{}({})'", srcLib, member)
                 def src    = "//${srcLib}(${member})"
                 if (ops.exists(src)) {
                     def localLib = resolver.resolve(rule.libraryTemplate, currentVars)

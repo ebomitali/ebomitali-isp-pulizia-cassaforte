@@ -1,6 +1,8 @@
 // Mainframe-only. Must be compiled and run with groovyz on z/OS USS.
 // After upload to USS: chtag -tc IBM-1047 JzosFileService.groovy
 // ZFile javadoc https://www.ibm.com/docs/en/sdk-java-technology/8?topic=jzos-zfile
+import com.ibm.jzos.PdsDirectory
+import com.ibm.jzos.PdsDirectory.MemberInfo
 import com.ibm.jzos.ZFile
 import com.ibm.jzos.ZFileException
 import groovy.util.logging.Slf4j
@@ -152,8 +154,7 @@ class JzosFileService implements FileService {
     /**
      * Lists members of a PDS/PDSE or files in a USS directory.
      *
-     * For MVS paths: calls {@link ZFile#listMembers(String)} which returns the directory
-     * entries of the PDS/PDSE identified by the dataset name (member component ignored).
+     * For MVS paths: uses PdsDirectory to read PDS member directory.
      * For USS paths: delegates to {@link java.io.File#list()} for directory entries.
      *
      * @param container  MVS PDS/PDSE reference (// prefix) or USS directory path.
@@ -161,10 +162,18 @@ class JzosFileService implements FileService {
      */
     List<String> list(String container) {
         if (container.startsWith('//')) {
-            // listMembers returns null if the PDS has no members — coerce to empty list
-            def result = ZFile.listMembers(mvsName(container))?.toList() ?: []
-            log.debug("list({}): {} member(s)", container, result.size())
-            return result
+            def dsn = mvsName(container)
+            def members = []
+            PdsDirectory dir = new PdsDirectory("//'${dsn}'")
+            try {
+                for (MemberInfo mi : dir) {
+                    members << mi.getName()
+                }
+            } finally {
+                dir.close()
+            }
+            log.debug("list({}): {} member(s)", container, members.size())
+            return members
         }
         def result = new File(container).list()?.toList() ?: []
         log.debug("list({}): {} entry(s)", container, result.size())

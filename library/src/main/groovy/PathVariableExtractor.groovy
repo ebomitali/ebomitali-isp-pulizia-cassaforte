@@ -24,8 +24,8 @@ class PathVariableExtractor {
         // if fileType is STWSNCS, STWSJGO, or STWSJGM and buildEnv is PR then set key to fileType|PR
         if (fileType in ['STWSNCS', 'STWSJGO'] && buildEnv == 'PR') {
             key = "${fileType}|${buildEnv}"
+            log.trace("extractJobz: special case for fileType='{}' and buildEnv='{}', using key='{}'", fileType, buildEnv, key)
         }
-        log.debug("extractJobz: fileType='{}' buildEnv='{}' -> key='{}'", fileType, buildEnv, key)
         def c1stagep = stageMap[key]
         if (!c1stagep)
             throw new IllegalArgumentException(
