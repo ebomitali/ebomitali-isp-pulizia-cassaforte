@@ -1,0 +1,283 @@
+#!/bin/sh
+# Test FileService implementations on z/OS USS
+# Uses groovyz and TSOCMD to create z/OS datasets
+# POSIX shell compliant, USS compatible
+#
+# Usage: zos-test.sh <properties-file>
+#
+# Properties file should contain:
+#   fileOpsType=jzos
+#   (uxBasedir is ignored for jzos)
+
+set -e
+
+# Validate arguments
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <properties-file>"
+    echo ""
+    echo "Properties file should contain:"
+    echo "  fileOpsType=jzos"
+    exit 1
+fi
+
+PROPS_FILE="$1"
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+
+if [ ! -f "$PROPS_FILE" ]; then
+    echo "Error: properties file not found: $PROPS_FILE"
+    exit 1
+fi
+
+# Read properties
+FILE_OPS_TYPE=$(grep '^fileOpsType=' "$PROPS_FILE" | cut -d= -f2)
+
+if [ -z "$FILE_OPS_TYPE" ] || [ "$FILE_OPS_TYPE" != "jzos" ]; then
+    echo "Error: fileOpsType must be 'jzos' for z/OS tests"
+    exit 1
+fi
+
+# Get user ID for dataset naming
+USERID=${LOGNAME:-${USER:-TESTUSER}}
+USERID=$(echo "$USERID" | tr '[:lower:]' '[:upper:]')
+
+# Set up temp directory in USS for test
+TEMP_DIR="/tmp/fileservice-test.$$"
+mkdir -p "$TEMP_DIR"
+
+cleanup() {
+    rm -rf "$TEMP_DIR"
+}
+trap cleanup EXIT
+
+# Create MVS datasets via TSOCMD
+# Format: TEST.PDS - allocated PDS dataset
+TESTPDS="${USERID}.TEST.PDS"
+TESTSEQ="${USERID}.TEST.SEQ"
+
+echo "Test FileService: $FILE_OPS_TYPE"
+echo "Temp directory: $TEMP_DIR"
+echo "Test PDS: $TESTPDS"
+echo "Test Sequential: $TESTSEQ"
+echo ""
+
+# Get paths to Groovy sources
+PROJECT_ROOT=$(cd "$SCRIPT_DIR/../../../../" && pwd)
+echo "Project root: $PROJECT_ROOT"
+STUBS_DIR=$(cd "$PROJECT_ROOT/stubs/build/classes/java/main" && pwd)
+JZOS_SRC=$(cd "$PROJECT_ROOT/jzos/src/main/groovy" && pwd)
+LIBRARY_SRC=$(cd "$PROJECT_ROOT/library/src/main/groovy" && pwd)
+SH_LIB=$(cd "$PROJECT_ROOT/jzos/build/sh-lib" && pwd 2>/dev/null || echo "")
+
+# Build classpath
+CLASSPATH="$STUBS_DIR:$JZOS_SRC:$LIBRARY_SRC:$TEMP_DIR"
+if [ -n "$SH_LIB" ] && [ -d "$SH_LIB" ]; then
+    CLASSPATH="$CLASSPATH:$SH_LIB/*"
+fi
+
+# Generate simplelogger.properties
+cat > "$TEMP_DIR/simplelogger.properties" << 'PROPS_EOF'
+org.slf4j.simpleLogger.defaultLogLevel=debug
+org.slf4j.simpleLogger.showLogName=true
+org.slf4j.simpleLogger.showThreadName=false
+org.slf4j.simpleLogger.showDateTime=true
+org.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss.SSS
+org.slf4j.simpleLogger.logFile=System.out
+PROPS_EOF
+
+# Create Groovy test script
+TEST_SCRIPT="$TEMP_DIR/test-fileservice.groovy"
+
+cat > "$TEST_SCRIPT" << 'GROOVY_EOF'
+import java.nio.file.Paths
+import groovy.util.logging.Slf4j
+import groovy.lang.GroovyClassLoader
+
+@Slf4j
+class FileServiceTest {
+    static void main(String[] args) {
+        new FileServiceTest().run()
+    }
+
+    void run() {
+        // Get system properties
+        String fileOpsType = System.getProperty('fileOpsType')
+        String testPds = System.getProperty('testPds')
+        String testSeq = System.getProperty('testSeq')
+        String tempDir = System.getProperty('tempDir')
+        String fatSourceFile = System.getProperty('fatSourceFile')
+
+        log.info("=" * 70)
+        log.info("Testing FileService: $fileOpsType on z/OS")
+        log.info("=" * 70)
+        log.debug("Test PDS: $testPds")
+        log.debug("Test Sequential: $testSeq")
+        log.debug("Temp directory: $tempDir")
+        log.debug("Loading fat source from: $fatSourceFile")
+
+        // Load FatFileService dynamically using GroovyClassLoader
+        GroovyClassLoader gcl = new GroovyClassLoader(this.class.classLoader)
+        File fatSource = new File(fatSourceFile)
+
+        if (!fatSource.exists()) {
+            throw new FileNotFoundException("FatFileService not found: $fatSourceFile")
+        }
+
+        Class<?> fatServiceClass = gcl.parseClass(fatSource)
+        log.debug("Parsed FatFileService from: $fatSourceFile")
+
+        // Load the appropriate FileService implementation class
+        Class<?> fileServiceClass = gcl.loadClass(fileOpsType.capitalize() + 'FileService')
+        log.debug("Loaded class: ${fileServiceClass.name}")
+
+        // Instantiate the FileService
+        Object fileService
+
+        switch (fileOpsType) {
+            case 'jzos':
+                log.debug("Creating JzosFileService for z/OS")
+                fileService = fileServiceClass.getConstructor().newInstance()
+                break
+            default:
+                throw new IllegalArgumentException("Unknown fileOpsType: $fileOpsType")
+        }
+        log.info("Instantiated FileService: ${fileService.class.simpleName}")
+        log.debug("FileService class: ${fileService.class.name}")
+
+        // Convert to z/OS format
+        String pdsPath = "//$testPds(MEMBER1)"
+        String seqPath = "//$testSeq"
+
+        // Test 1: exists() on PDS member
+        log.info("[TEST 1] exists(PDS member)")
+        boolean exists = fileService.exists(pdsPath)
+        log.info("  exists('$pdsPath'): $exists")
+        if (!exists) {
+            log.error("  FAILED: member should exist")
+            throw new AssertionError("Member should exist: $pdsPath")
+        }
+        log.info("  PASSED")
+
+        // Test 2: exists() on nonexistent member
+        log.info("[TEST 2] exists(nonexistent member)")
+        exists = fileService.exists("//$testPds(NOMEM)")
+        log.info("  exists('//$testPds(NOMEM)'): $exists")
+        if (exists) {
+            log.error("  FAILED: nonexistent member should not exist")
+            throw new AssertionError("Nonexistent member should not exist")
+        }
+        log.info("  PASSED")
+
+        // Test 3: list() PDS members
+        log.info("[TEST 3] list(PDS)")
+        List<String> members = fileService.list(pdsPath)
+        log.info("  list('//$testPds'): $members")
+        if (!members.contains('MEMBER1') || !members.contains('MEMBER2')) {
+            log.error("  FAILED: expected MEMBER1 and MEMBER2 in $members")
+            throw new AssertionError("Members not found: MEMBER1, MEMBER2")
+        }
+        log.info("  PASSED")
+
+        // Test 4: copy() member
+        log.info("[TEST 4] copy(PDS member)")
+        String copyDst = "//$testPds(MEMBER3)"
+        fileService.copy(pdsPath, copyDst)
+        exists = fileService.exists(copyDst)
+        log.info("  Copied $pdsPath -> $copyDst")
+        log.info("  exists('$copyDst'): $exists")
+        if (!exists) {
+            log.error("  FAILED: copied member should exist")
+            throw new AssertionError("Copied member should exist: $copyDst")
+        }
+        log.info("  PASSED")
+
+        // Test 5: delete() member
+        log.info("[TEST 5] delete(PDS member)")
+        fileService.delete(copyDst)
+        exists = fileService.exists(copyDst)
+        log.info("  Deleted $copyDst")
+        log.info("  exists('$copyDst'): $exists")
+        if (exists) {
+            log.error("  FAILED: deleted member should not exist")
+            throw new AssertionError("Deleted member should not exist: $copyDst")
+        }
+        log.info("  PASSED")
+
+        log.info("=" * 70)
+        log.info("All tests passed!")
+        log.info("=" * 70)
+    }
+}
+
+FileServiceTest.main(args)
+GROOVY_EOF
+
+# Run TSOCMD to allocate datasets
+echo "Allocating z/OS datasets via TSOCMD..."
+TSOCMD 2>&1 << TSOCMD_EOF
+PROFILE NOPREFIX
+ALLOCATE DATASET('$TESTPDS') NEW CATALOG DSORG(PO) RECFM(F,B) LRECL(80) BLKSIZE(3120) SPACE(1,1,10) DIR(10)
+ALLOCATE DATASET('$TESTSEQ') NEW CATALOG DSORG(PS) RECFM(F,B) LRECL(80) SPACE(1,1)
+END
+TSOCMD_EOF
+
+if [ $? -ne 0 ]; then
+    echo "Warning: TSOCMD dataset allocation may have failed (continuing anyway)"
+fi
+
+# Use USS/z/OS tools to populate datasets
+echo "Populating datasets..."
+
+# Add members to PDS using echo and datasets
+echo "test content 1" | dd of="//'$TESTPDS(MEMBER1)'" 2>/dev/null || true
+echo "test content 2" | dd of="//'$TESTPDS(MEMBER2)'" 2>/dev/null || true
+echo "sequential content" | dd of="//'$TESTSEQ'" 2>/dev/null || true
+
+# Get path to FatFileService (generated by jzos subproject)
+JZOS_DIR=$(cd "$PROJECT_ROOT/jzos" && pwd)
+FAT_SOURCE="$JZOS_DIR/src/main/groovy/FatFileService.groovy"
+
+if [ ! -f "$FAT_SOURCE" ]; then
+    echo "Error: FatFileService.groovy not found. Run: ./gradlew jzos:generateFatFileService"
+    exit 1
+fi
+
+# Run Groovy test script from temp dir
+echo ""
+echo "Running Groovy test script via groovyz..."
+cd "$TEMP_DIR"
+
+# Export CLASSPATH for groovyz
+export CLASSPATH="$CLASSPATH"
+
+# Run groovyz (z/OS Groovy) with FatFileService
+groovyz \
+    -Dfile.encoding=UTF-8 \
+    -DfileOpsType="jzos" \
+    -DtestPds="$TESTPDS" \
+    -DtestSeq="$TESTSEQ" \
+    -DtempDir="$TEMP_DIR" \
+    -DfatSourceFile="$FAT_SOURCE" \
+    -cp "$CLASSPATH" \
+    "$TEST_SCRIPT"
+
+RESULT=$?
+
+# Cleanup datasets
+echo ""
+echo "Cleaning up z/OS datasets..."
+TSOCMD 2>&1 << TSOCMD_EOF
+PROFILE NOPREFIX
+DELETE '$TESTPDS'
+DELETE '$TESTSEQ'
+END
+TSOCMD_EOF
+
+if [ $RESULT -eq 0 ]; then
+    echo ""
+    echo "Test completed successfully."
+    exit 0
+else
+    echo ""
+    echo "Test failed with exit code $RESULT"
+    exit 1
+fi
