@@ -7,19 +7,27 @@ import com.ibm.jzos.ZFile
 import com.ibm.jzos.ZFileException
 import groovy.util.logging.Slf4j
 
+import java.util.concurrent.atomic.AtomicInteger
+
 /**
- * z/OS USS implementation of the {@link FileService} trait.
+ * z/OS PDS/PDSE member operations, implementing the member-only {@link FileService} trait.
  *
- * Provides file-system operations (exists, delete, copy, list) that transparently
- * target either MVS datasets or USS HFS/zFS paths depending on the path prefix:
+ * Every operation acts on a partitioned dataset member. References use the form:
  *
- *   //DATASET.NAME          — sequential dataset or PDS without member
- *   //DATASET.NAME(MEMBER)  — PDS/PDSE member
- *   /u/path/to/file         — USS HFS/zFS file or directory (any path not starting with //)
+ *   //DSN(MEMBER)   or   DSN(MEMBER)     — a single member (exists / delete / copy)
+ *   //DSN           or   DSN             — the library itself (list)
  *
- * The // prefix convention mirrors the JCL DSN= notation used by IBM tools.
- * This class delegates MVS operations to the IBM JZOS {@link ZFile} API and
- * USS operations to standard {@link java.io.File}.
+ * A leading {@code //} is optional and stripped; the dataset name is always treated as
+ * fully qualified (no userid prefix is added). exists / delete / copy reject a reference
+ * without a member component, since this service does not perform dataset-level operations.
+ *
+ * Disposition: every path here is either a directory read or a member STOW, so DISP=SHR is
+ * always the correct choice.
+ *   - exists / list / copy-source  -> input open => SHR implicitly.
+ *   - delete / copy-target         -> the library is pre-allocated SHR and the member is
+ *                                     driven through a //DD: reference, so LE reuses the SHR
+ *                                     allocation instead of taking its default exclusive
+ *                                     (OLD) lock. STOW serializes the directory update.
  *
  * Compiled against JZOS stubs (compileOnly) so it builds locally without IBM jars.
  * At runtime on z/OS USS the real JZOS classes must be on the classpath.
@@ -27,192 +35,165 @@ import groovy.util.logging.Slf4j
 @Slf4j
 class JzosFileService implements FileService {
 
+    /** 32760 = max payload of a RECFM=VB block (0x7FF8); safe upper bound for any LRECL. */
+    private static final int MAX_RECORD = 32760
+
+    /** Per-JVM counter for unique DD names; avoids S99ERROR 0x410 on concurrent/retried ops. */
+    private static final AtomicInteger DD_SEQ = new AtomicInteger()
+
     /**
-     * Checks whether a dataset, PDS member, or USS path exists.
+     * True if {@code MEMBER} exists in the PDS named by {@code path} (//DSN(MEMBER)).
      *
-     * For MVS PDS members (//DSN(MBR)): lists PDS directory and checks membership.
-     * For MVS datasets (//DSN): queries the system catalog via {@link ZFile#dsExists(String)}.
-     * For USS paths: delegates to {@link java.io.File#exists()}.
-     *
-     * @param path  MVS dataset reference (// prefix) or USS absolute path.
-     * @return true if the dataset, member, or file is found.
+     * Uses {@link ZFile#exists(String)}, which for a member reference reads the PDS
+     * directory (input open => SHR). No exclusive allocation is taken.
      */
     boolean exists(String path) {
-        if (path.startsWith('//')) {
-            def (dsn, member) = parseDsn(path)
-            boolean result
-            if (member) {
-                // dsExists is catalog-level only; open the member to confirm it exists
-                try {
-                    def zf = new ZFile("//'${dsn}(${member})'", 'rb,type=record')
-                    zf.close()
-                    result = true
-                } catch (ZFileException ignored) {
-                    result = false
-                }
-            } else {
-                result = ZFile.dsExists(dsn)
-            }
-            log.debug("exists({}): {}", path, result)
-            return result
+        def (dsn, member) = parse(path)
+        requireMember(member, 'exists', path)
+        boolean result
+        try {
+            result = ZFile.exists("//'${dsn}(${member})'")
+        } catch (ZFileException ignored) {
+            // Older JZOS levels could throw instead of returning false (APAR PM64118).
+            result = false
         }
-        def result = new File(path).exists()
-        log.debug("exists({}): {}", path, result)
-        result
+        log.debug('exists({}): {}', path, result)
+        return result
     }
 
     /**
-     * Deletes a dataset member, a sequential dataset, or a USS file.
+     * Deletes {@code MEMBER} from the PDS named by {@code path} (//DSN(MEMBER)).
      *
-     * For MVS PDS members: pre-allocates the PDS with SHR disposition and deletes via
-     * {@code //DD:} reference to avoid exclusive lock contention that can cause
-     * ZFile.remove() to fail with EDC5091I errors when the dataset is in use.
-     * For sequential datasets: allocates with SHR and deletes via DD reference for consistency.
-     * For USS paths: delegates to {@link java.io.File#delete()}.
-     *
-     * <p>Pre-allocation pattern: ZFile.remove() normally takes an exclusive (OLD) allocation,
-     * which fails if the dataset/member is in use. By pre-allocating with SHR and using
-     * {@code //DD:ddname} reference, LE's C runtime reuses the SHR allocation instead.
-     * See docs/zfile_remove.md for architectural details.
-     *
-     * @param path  MVS dataset reference (// prefix) or USS absolute path.
-     * @throws ZFileException if the MVS remove fails (e.g. dataset in use, not found).
+     * A member delete is a STOW DELETE on the directory, performed under DISP=SHR via a
+     * //DD: reference so the whole library is not locked.
      */
     void delete(String path) {
-        log.debug("delete({})", path)
-        if (path.startsWith('//')) {
-            def (dsn, member) = parseDsn(path)
-            String ddname = 'DELDD'
-            String spec = member ? "${dsn}(${member})" : dsn
-            try {
-                // Allocate the dataset with SHR to avoid exclusive lock contention
-                ZFile.bpxwdyn("alloc fi(${ddname}) da('${dsn}') shr msg(2)")
-                // Delete via //DD: reference so LE reuses the SHR allocation
-                ZFile.remove("//DD:${ddname}${member ? '(' + member + ')' : ''}")
-            } finally {
-                // Always free the allocation
-                try {
-                    ZFile.bpxwdyn("free fi(${ddname})")
-                } catch (ZFileException e) {
-                    log.warn("Failed to free DD ${ddname}: {}", e.message)
-                }
-            }
-            return
+        log.debug('delete({})', path)
+        def (dsn, member) = parse(path)
+        requireMember(member, 'delete', path)
+        withShrDd(dsn) { String dd ->
+            ZFile.remove("//DD:${dd}(${member})")
         }
-        new File(path).delete()
     }
 
     /**
-     * Copies a dataset (or member) to another dataset (or member), or copies a USS file.
+     * Copies a member from one PDS to another (or to a different member of the same PDS).
+     * Both {@code src} and {@code dst} must be member references.
      *
-     * MVS-to-MVS copy: opens source with {@code rb,type=record} and destination with
-     * {@code wb,type=record} so that logical z/OS records are preserved exactly.
-     * Reads and writes in chunks of 32760 bytes — the maximum LRECL for RECFM=VB records
-     * on z/OS (0x7FF8). Both files are closed in finally blocks to avoid dataset locks
-     * even if an exception occurs mid-transfer.
-     *
-     * USS copy: reads all bytes from src and writes them to dst atomically via Groovy's
-     * {@link java.io.File#setBytes(byte[])} assignment — suitable for small USS files.
-     *
-     * Mixed USS→MVS or MVS→USS is not supported; both paths must be of the same type.
-     *
-     * @param src  Source: MVS dataset reference (// prefix) or USS path.
-     * @param dst  Destination: MVS dataset reference (// prefix) or USS path.
-     * @throws ZFileException if the MVS open, read, or write fails.
+     * Records are copied one logical record at a time with rb/wb + type=record, preserving
+     * RECFM and record boundaries with no EBCDIC<->ASCII translation. The source opens for
+     * input (SHR); the target member is written through a SHR-allocated //DD: reference, so
+     * the target library is not exclusively locked. Both libraries must already exist and be
+     * attribute-compatible.
      */
     void copy(String src, String dst) {
-        log.debug("copy({} -> {})", src, dst)
-        if (src.startsWith('//') && dst.startsWith('//')) {
-            def (srcDsn, srcMember) = parseDsn(src)
-            def (dstDsn, dstMember) = parseDsn(dst)
-            def srcSpec = srcMember ? "${srcDsn}(${srcMember})" : srcDsn
-            def dstSpec = dstMember ? "${dstDsn}(${dstMember})" : dstDsn
-            // rb/wb with type=record: ZFile reads/writes complete logical records,
-            // preserving RECFM and blocking without EBCDIC↔ASCII translation
-            def srcFile = new ZFile("//'${srcSpec}'", 'rb,type=record')
-            try {
-                def dstFile = new ZFile("//'${dstSpec}'", 'wb,type=record')
-                try {
-                    // 32760 = max VB block payload (0x7FF8); safe upper bound for any LRECL
-                    def buf = new byte[32760]
-                    int len
-                    while ((len = srcFile.read(buf)) >= 0) {
-                        dstFile.write(buf, 0, len)
-                    }
-                } finally {
-                    dstFile.close()
-                }
-            } finally {
-                srcFile.close()
+        log.debug('copy({} -> {})', src, dst)
+        def (srcDsn, srcMember) = parse(src)
+        def (dstDsn, dstMember) = parse(dst)
+        requireMember(srcMember, 'copy(source)', src)
+        requireMember(dstMember, 'copy(target)', dst)
+
+        ZFile srcFile = new ZFile("//'${srcDsn}(${srcMember})'", 'rb,type=record')
+        try {
+            withShrDd(dstDsn) { String dd ->
+                writeRecords(srcFile, "//DD:${dd}(${dstMember})")
             }
-            return
+        } finally {
+            srcFile.close()
         }
-        // USS file copy
-        new File(dst).bytes = new File(src).bytes
     }
 
     /**
-     * Lists members of a PDS/PDSE or files in a USS directory.
+     * Lists the members of the PDS/PDSE named by {@code dsn}, equivalent to
+     * {@code tsocmd "LISTDS '<dsn>' MEMBERS"}. A leading {@code //} and any accidental
+     * member component are tolerated and ignored. Members come back in directory order
+     * (ascending by name), which is the order LISTDS reports; aliases are included.
      *
-     * For MVS paths: uses PdsDirectory to read PDS member directory.
-     * For USS paths: delegates to {@link java.io.File#list()} for directory entries.
-     *
-     * @param container  MVS PDS/PDSE reference (// prefix) or USS directory path.
-     * @return list of member or file names; empty list if the container is empty or null.
+     * The directory is read with an input open (SHR). A sequential dataset, or a name that
+     * cannot be opened as a directory, yields a clear IllegalArgumentException.
      */
-    List<String> list(String container) {
-        if (container.startsWith('//')) {
-            def dsn = mvsName(container)
-            def members = []
-            PdsDirectory dir = new PdsDirectory("//'${dsn}'")
-            try {
-                for (MemberInfo mi : dir) {
-                    members << mi.getName()
-                }
-            } finally {
-                dir.close()
-            }
-            log.debug("list({}): {} member(s)", container, members.size())
-            return members
+    List<String> list(String dsn) {
+        String lib = parse(dsn)[0]
+        def members = []
+        PdsDirectory dir
+        try {
+            dir = new PdsDirectory("//'${lib}'")   // input open => SHR
+        } catch (ZFileException e) {
+            throw new IllegalArgumentException(
+                    "Cannot list '${lib}': not a partitioned dataset, or not found", e)
         }
-        def result = new File(container).list()?.toList() ?: []
-        log.debug("list({}): {} entry(s)", container, result.size())
-        result
+        try {
+            for (MemberInfo mi : dir) {
+                members << mi.getName()             // mi.isAlias() available if filtering is wanted
+            }
+        } finally {
+            dir.close()
+        }
+        log.debug('list({}): {} member(s)', dsn, members.size())
+        return members
     }
 
     // ─── private helpers ──────────────────────────────────────────────────────
 
     /**
-     * Extracts the dataset name from an MVS path, discarding any member component.
-     * Used for catalog-level operations (exists) where only the DSN is needed.
-     *
-     * Examples:
-     *   //MY.DATASET          → MY.DATASET
-     *   //MY.DATASET(MEMBER)  → MY.DATASET
-     *
-     * @param path  MVS path with // prefix.
-     * @return dataset name without member.
+     * Allocates {@code dsn} with DISP=SHR to a unique DD, runs {@code body} with that DD
+     * name, and unconditionally frees the DD afterwards. The unique DD name prevents the
+     * S99ERROR 0x410 ("ddname already allocated") that a hardcoded name would cause on
+     * concurrent or retried operations. A failure to free is logged, never propagated, so
+     * it cannot mask the real outcome of {@code body}.
      */
-    private String mvsName(String path) {
-        def inner = path.substring(2)
-        def m = (inner =~ /^(.+?)\((.+?)\)$/)
-        m.matches() ? m.group(1) : inner
+    private void withShrDd(String dsn, Closure body) {
+        String dd = uniqueDd()
+        ZFile.bpxwdyn("alloc fi(${dd}) da('${dsn}') shr msg(2)")
+        try {
+            body.call(dd)
+        } finally {
+            try {
+                ZFile.bpxwdyn("free fi(${dd})")
+            } catch (Exception e) {
+                log.warn('Failed to free DD {}: {}', dd, e.message)
+            }
+        }
+    }
+
+    /** Copies all logical records from an already-open source into {@code dstSpec}. */
+    private void writeRecords(ZFile srcFile, String dstSpec) {
+        ZFile dstFile = new ZFile(dstSpec, 'wb,type=record')
+        try {
+            byte[] buf = new byte[MAX_RECORD]
+            int len
+            // read() returns one record's length, or -1 at EOF; 0 is a valid empty record.
+            while ((len = srcFile.read(buf)) >= 0) {
+                dstFile.write(buf, 0, len)
+            }
+        } finally {
+            dstFile.close()
+        }
+    }
+
+    /** DD name "DDnnnnnn" (8 chars, leading alpha, hex suffix — all valid DD characters). */
+    private String uniqueDd() {
+        String.format('DD%06X', DD_SEQ.incrementAndGet() & 0xFFFFFF)
     }
 
     /**
-     * Parses an MVS path into a [dsn, member] pair.
-     * Returns [dsn, null] when no member component is present.
-     *
-     * Examples:
-     *   //MY.DATASET          → ['MY.DATASET', null]
-     *   //MY.DATASET(MEMBER)  → ['MY.DATASET', 'MEMBER']
-     *
-     * @param path  MVS path with // prefix.
-     * @return two-element list [datasetName, memberName]; memberName is null if absent.
+     * Parses a reference into [dsn, member]; member is null when absent. A leading {@code //}
+     * is optional.
+     *   //MY.PDS(MBR)  -> ['MY.PDS', 'MBR']
+     *   MY.PDS(MBR)    -> ['MY.PDS', 'MBR']
+     *   //MY.PDS       -> ['MY.PDS', null]
      */
-    private List<String> parseDsn(String path) {
-        def inner = path.substring(2)
-        def m = (inner =~ /^(.+?)\((.+?)\)$/)
-        m.matches() ? [m.group(1), m.group(2)] : [inner, null]
+    private List<String> parse(String ref) {
+        String s = ref.startsWith('//') ? ref.substring(2) : ref
+        def m = (s =~ /^(.+?)\((.+?)\)$/)
+        m.matches() ? [m.group(1), m.group(2)] : [s, null]
+    }
+
+    /** Enforces the member-only contract for exists / delete / copy. */
+    private void requireMember(String member, String op, String ref) {
+        if (!member) {
+            throw new IllegalArgumentException(
+                    "${op} requires a PDS member reference like //DSN(MEMBER), got: ${ref}")
+        }
     }
 }

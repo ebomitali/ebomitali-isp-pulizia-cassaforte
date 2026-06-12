@@ -1,71 +1,38 @@
 package com.ibm.jzos;
 
 import java.util.Iterator;
-import java.util.Collections;
 
 /**
- * Stub for IBM JZOS PdsDirectory - reads PDS member directory.
- * Provides iteration over member information for a partitioned dataset.
+ * compileOnly STUB of {@code com.ibm.jzos.PdsDirectory} and its nested {@code MemberInfo} —
+ * only the members JzosFileService uses.
  *
- * Real implementation available in JZOS runtime on z/OS.
+ * <p>The real PdsDirectory is iterable over MemberInfo, which is what lets the
+ * {@code for (MemberInfo mi : dir)} loop in {@code list()} compile. This stub exists so the
+ * code builds off-host (Strategy D) and must NOT be on the runtime classpath, where the real
+ * JZOS class shadows it. Bodies throw so any accidental runtime use of the stub fails loudly.
  */
 public class PdsDirectory implements Iterable<PdsDirectory.MemberInfo> {
 
-    private String dataset;
-
-    /**
-     * Create a PdsDirectory for the given dataset.
-     * @param dataset Dataset path (e.g., "//'MY.PDS'")
-     */
-    public PdsDirectory(String dataset) {
-        this.dataset = dataset;
+    public PdsDirectory(String filename) throws ZFileException {
+        throw new UnsupportedOperationException("JZOS PdsDirectory stub");
     }
 
-    /**
-     * Close the directory reader.
-     */
-    public void close() {
-        // Stub: no-op
-    }
-
-    /**
-     * Get iterator over member information.
-     * @return Iterator of MemberInfo objects
-     */
     @Override
     public Iterator<MemberInfo> iterator() {
-        // Stub: return empty iterator
-        // Real implementation returns actual members from dataset
-        return Collections.emptyIterator();
+        throw new UnsupportedOperationException("JZOS PdsDirectory stub");
     }
 
-    /**
-     * Member information from PDS directory.
-     * Contains metadata about a PDS member.
-     */
+    public void close() {
+        throw new UnsupportedOperationException("JZOS PdsDirectory stub");
+    }
+
+    /** compileOnly STUB of {@code com.ibm.jzos.PdsDirectory.MemberInfo}. */
     public static class MemberInfo {
-        private String name;
-        private boolean alias;
-
-        public MemberInfo(String name) {
-            this.name = name;
-            this.alias = false;
-        }
-
-        /**
-         * Get member name.
-         * @return Member name (up to 8 characters)
-         */
         public String getName() {
-            return name;
+            throw new UnsupportedOperationException("JZOS MemberInfo stub");
         }
-
-        /**
-         * Check if member is an alias.
-         * @return true if member is an alias
-         */
         public boolean isAlias() {
-            return alias;
+            throw new UnsupportedOperationException("JZOS MemberInfo stub");
         }
     }
 }

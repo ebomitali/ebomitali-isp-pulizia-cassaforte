@@ -82,21 +82,21 @@ class MacosFileServiceSpec extends Specification {
     }
 
     /**
-     * Verifies that {@link MacosFileService#exists} handles plain USS file paths
-     * (i.e. paths that do NOT start with {@code //}) by delegating directly to
-     * {@link java.nio.file.Files#exists} without any dataset-path translation.
+     * Verifies that {@link MacosFileService#exists} rejects plain USS file paths
+     * (i.e. paths that do NOT start with {@code //}) with IllegalArgumentException.
      *
-     * This is the passthrough branch used when the caller already holds a real
-     * filesystem path rather than a z/OS-style {@code //DATASET(MEMBER)} path.
+     * FileService is member-only and requires z/OS syntax (//DSN or //DSN(MEMBER)).
+     * Unix paths are not supported.
      */
-    def "exists works for USS file path passthrough"() {
-        given: "a MacosFileService instance and a real file on disk"
+    def "exists rejects non-z/OS paths"() {
+        given: "a MacosFileService instance"
         def ops = new MacosFileService(tempDir.toString())
-        def ussFile = tempDir.resolve('uss-test.txt')
-        Files.writeString(ussFile, 'x')   // create the file so it really exists
 
-        expect: "exists() returns true for the real file and false for a non-existent path"
-        ops.exists(ussFile.toString())
-        !ops.exists(tempDir.resolve('nonexistent.txt').toString())
+        when: "exists() is called with a Unix path"
+        ops.exists('/tmp/some/unix/path')
+
+        then: "IllegalArgumentException is thrown with z/OS syntax message"
+        def ex = thrown(IllegalArgumentException)
+        ex.message.contains('z/OS syntax')
     }
 }
