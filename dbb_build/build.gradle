@@ -8,29 +8,24 @@ plugins {
     id 'groovy'
 }
 
-// Task 1: Generate merged FileService fat source
-task generateFatFileService {
-    description = 'Generate FatFileService.groovy by merging all *FileService.groovy files'
+// Task 1: Generate the single fat source file
+task generateFullFatSource {
+    description = 'Generate the single fat source file from library:/src/main/groovy and library:/src/zos/groovy'
     doLast {
-        def tempDir = file("${buildDir}/temp-filesources")
+        def tempDir = file("${buildDir}/temp-sources")
         tempDir.mkdirs()
 
         copy {
-            from project(':library').fileTree('src/main/groovy') {
-                include '**/*FileService.groovy'
-            }
+            from project(':library').fileTree('src/main/groovy')
             into "${tempDir}"
         }
 
         file("${projectDir}/src/main/groovy").mkdirs()
         exec {
-            commandLine 'sh', "${rootProject.projectDir}/helper/sh/create-source-blob.sh", "${tempDir}", "${projectDir}/src/main/groovy/FatFileService.groovy"
+            commandLine 'sh', "${rootProject.projectDir}/helper/sh/create-source-blob.sh", "${tempDir}", "${projectDir}/src/main/groovy/FullPuliziaCassaforte.groovy"
         }
     }
 }
-
-// Note: Individual *FileService.groovy files are merged into FatFileService.groovy
-// Do not copy individual files to avoid duplicate class definitions
 
 // Task 2: Copy tests and resources from library to fat-source
 task copyTests(type: Copy) {
@@ -71,14 +66,12 @@ configurations {
 
 dependencies {
     compileOnly project(':stubs')
-    compileOnly project(':library')
     implementation 'org.apache.groovy:groovy-all:4.0.25'
     implementation 'org.slf4j:slf4j-api:2.0.16'
     testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
     testImplementation 'net.bytebuddy:byte-buddy:1.14.18'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testImplementation project(':stubs')
-    testImplementation project(':library')
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
     testRuntimeOnly 'ch.qos.logback:logback-classic:1.5.15'
     shRuntime 'org.slf4j:slf4j-simple:2.0.16'
@@ -91,10 +84,11 @@ task copyShLibs(type: Copy) {
     into layout.buildDirectory.dir('sh-lib')
 }
 
-// Ensure fat sources and tests are copied before compilation
+// Ensure tests are copied before compilation
+//compileMainGroovy.dependsOn generateFatSource
 compileTestGroovy.dependsOn copyTests, compileGroovy
 processTestResources.dependsOn copyTests
-compileGroovy.dependsOn generateFatFileService, copyTests
+compileGroovy.dependsOn generateFullFatSource,copyTests
 
 test {
     useJUnitPlatform()
@@ -107,15 +101,17 @@ task distribute(dependsOn: build) {
     doLast {
         // dbb-build repo
         copy {
-            from('src/main/groovy')
-            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/fileservice'
+            from('src/main/groovy') { include 'FullPuliziaCassaforte.groovy' }
+            from('src/fe/groovy') { include 'RunPuliziaCassaforte.groovy'  }
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte'
         }
         copy {
-            from('src/test/sh') { 
-                exclude '**/m*.sh'
-                exclude '**/m*.properties'
-            }
-            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/fileservice'
+            from('src/test/resources/fixtures') { exclude 'META-INF/**' }
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte/resources'
+        }
+        copy {
+            from('src/test/sh') { exclude '**/m*.sh'}
+            into '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/dbb_build/cassaforte'
         }
     }
 }

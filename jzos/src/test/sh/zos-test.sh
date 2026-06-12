@@ -1,19 +1,22 @@
 #!/bin/sh
 # Test FileService implementations on z/OS USS
-# Uses groovyz and TSOCMD to create z/OS datasets
+# Uses groovyz to test JzosFileService against real MVS datasets
 # POSIX shell compliant, USS compatible
 #
 # Usage: zos-test.sh <properties-file>
 #
+# Prerequisites: Run setup-zos.sh first to allocate datasets and create members
+#
 # Properties file should contain:
 #   fileOpsType=jzos
-#   (uxBasedir is ignored for jzos)
 
 set -e
 
 # Validate arguments
 if [ $# -lt 1 ]; then
     echo "Usage: $0 <properties-file>"
+    echo ""
+    echo "Prerequisites: run setup-zos.sh <properties-file> first"
     echo ""
     echo "Properties file should contain:"
     echo "  fileOpsType=jzos"
@@ -46,11 +49,11 @@ mkdir -p "$TEMP_DIR"
 
 cleanup() {
     # rm -rf "$TEMP_DIR"
+    :
 }
 #trap cleanup EXIT
 
-# Create MVS datasets via TSOCMD
-# Format: TEST.PDS - allocated PDS dataset
+# Dataset names (must match setup-zos.sh)
 TESTPDS="${USERID}.TEST.PDS"
 TESTSEQ="${USERID}.TEST.SEQ"
 
@@ -197,26 +200,13 @@ class FileServiceTest {
 FileServiceTest.main(args)
 GROOVY_EOF
 
-# Run TSOCMD to allocate datasets
-echo "Allocating z/OS datasets via TSOCMD..."
-TSOCMD 2>&1 << TSOCMD_EOF
-PROFILE NOPREFIX
-ALLOCATE DATASET('$TESTPDS') NEW CATALOG DSORG(PO) RECFM(F,B) LRECL(80) BLKSIZE(3120) SPACE(1,1,10) DIR(10)
-ALLOCATE DATASET('$TESTSEQ') NEW CATALOG DSORG(PS) RECFM(F,B) LRECL(80) SPACE(1,1)
-END
-TSOCMD_EOF
-
+# Setup datasets and members
+echo "Setting up z/OS datasets and test members..."
+"$SCRIPT_DIR/setup-zos.sh" "$PROPS_FILE"
 if [ $? -ne 0 ]; then
-    echo "Warning: TSOCMD dataset allocation may have failed (continuing anyway)"
+    echo "Setup failed"
+    exit 1
 fi
-
-# Use USS/z/OS tools to populate datasets
-echo "Populating datasets..."
-
-# Add members to PDS using echo and datasets
-echo "test content 1" | dd of="//'$TESTPDS(MEMBER1)'" 2>/dev/null || true
-echo "test content 2" | dd of="//'$TESTPDS(MEMBER2)'" 2>/dev/null || true
-echo "sequential content" | dd of="//'$TESTSEQ'" 2>/dev/null || true
 
 # Get path same directory as script
 FAT_SOURCE="$SCRIPT_DIR/FatFileService.groovy"
@@ -232,6 +222,7 @@ echo "Running Groovyz test script via groovyz..."
 cd "$TEMP_DIR"
 
 # Run groovyz (z/OS Groovy) with FatFileService
+# Use basename since already cd'd into TEMP_DIR
 groovyz \
     -Dfile.encoding=IBM-1047 \
     -DfileOpsType="jzos" \
@@ -241,19 +232,15 @@ groovyz \
     -DfatSourceFile="$FAT_SOURCE" \
     -Dorg.slf4j.simpleLogger \
     -cp "." \
-    "$TEST_SCRIPT"
+    "test-fileservice.groovy"
 
 RESULT=$?
 
-# Cleanup datasets
 echo ""
-echo "Cleaning up z/OS datasets..."
-TSOCMD 2>&1 << TSOCMD_EOF
-PROFILE NOPREFIX
-DELETE '$TESTPDS'
-DELETE '$TESTSEQ'
-END
-TSOCMD_EOF
+echo "Test datasets created by setup-zos.sh remain allocated for reuse."
+echo "To clean up manually, run in TSO:"
+echo "  DELETE '$TESTPDS'"
+echo "  DELETE '$TESTSEQ'"
 
 if [ $RESULT -eq 0 ]; then
     echo ""
