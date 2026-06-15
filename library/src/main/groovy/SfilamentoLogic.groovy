@@ -70,6 +70,7 @@ class SfilamentoLogic {
                 : extractor.extract(sourcePath, superEnv, stageMap, hlq)
             for (def rule : matching) {
                 def srcLib = resolver.resolve(rule.libraryTemplate, superVars)
+                log.debug("Sfilamento: looking for '{}({})'", srcLib, member)
                 def src    = "//${srcLib}(${member})"
                 if (ops.exists(src)) {
                     def localLib = resolver.resolve(rule.libraryTemplate, currentVars)

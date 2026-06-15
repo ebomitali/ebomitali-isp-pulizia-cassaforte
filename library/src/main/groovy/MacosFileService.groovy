@@ -9,10 +9,10 @@ import java.nio.file.*
  * <pre>
  *   //DATASET.NAME(MEMBER)  →  &lt;baseDir&gt;/DATASET.NAME/MEMBER   (PDS member = file)
  *   //DATASET.NAME          →  &lt;baseDir&gt;/DATASET.NAME           (PDS = directory)
- *   /path/to/file           →  /path/to/file                     (USS path, passed through)
  * </pre>
  *
- * <p>Uses {@link java.nio.file.Files} for all I/O — no IBM/DBB dependencies.
+ * <p>Only z/OS syntax (//DSN(MEMBER)) is supported. Unix paths are rejected with
+ * {@link IllegalArgumentException}. Uses {@link java.nio.file.Files} for all I/O — no IBM/DBB dependencies.
  * Tests inject a JUnit 5 {@code @TempDir} as {@code baseDir} for full isolation.
  *
  * @see FileService
@@ -29,34 +29,61 @@ class MacosFileService implements FileService {
         log.debug("MacosFileService initialized with baseDir: {}", baseDir)
     }
 
-    // Translates a z/OS-style path to a local filesystem path under baseDir.
-    // PDS member //HLQ.DS(MEMBER) → <baseDir>/HLQ.DS/MEMBER; plain //HLQ.DS → <baseDir>/HLQ.DS; USS path passed through.
-    private Path resolve(String zosPath) {
-        if (zosPath.startsWith('//')) {
-            def inner = zosPath.substring(2)
-            def m = (inner =~ /^(.+?)\((.+?)\)$/) // matches DATASET(MEMBER) pattern
-            if (m.matches()) return Paths.get(baseDir, m.group(1), m.group(2))
-            return Paths.get(baseDir, inner)
+    /**
+     * Parses a z/OS path into [dsn, member].
+     * Member is null if path has no (MEMBER) component.
+     * //DSN(MEMBER) → ['DSN', 'MEMBER']
+     * //DSN → ['DSN', null]
+     * Non-z/OS paths throw IllegalArgumentException.
+     */
+    private List<String> parseDsnMember(String zosPath) {
+        if (!zosPath.startsWith('//')) {
+            throw new IllegalArgumentException("Path must use z/OS syntax (//DSN or //DSN(MEMBER)), got: ${zosPath}")
         }
-        Paths.get(zosPath)
+        def inner = zosPath.substring(2)
+        def m = (inner =~ /^(.+?)\((.+?)\)$/) // matches DATASET(MEMBER) pattern
+        m.matches() ? [m.group(1), m.group(2)] : [inner, null]
+    }
+
+    private Path resolve(String dsn, String member) {
+        member ? Paths.get(baseDir, dsn, member) : Paths.get(baseDir, dsn)
     }
 
     boolean exists(String path) {
-        def result = Files.exists(resolve(path))
+        def (dsn, member) = parseDsnMember(path)
+        if (!member) {
+            throw new IllegalArgumentException("exists() requires a member reference (//DSN(MEMBER)), got: ${path}")
+        }
+        def result = Files.exists(resolve(dsn, member))
         log.debug("exists({}): {}", path, result)
         result
     }
 
     void delete(String path) {
         log.debug("delete({})", path)
-        Files.deleteIfExists(resolve(path))
+        def (dsn, member) = parseDsnMember(path)
+        if (!member) {
+            throw new IllegalArgumentException("delete() requires a member reference (//DSN(MEMBER)), got: ${path}")
+        }
+        Files.deleteIfExists(resolve(dsn, member))
     }
 
     void copy(String src, String dst) {
         log.debug("copy({} -> {})", src, dst)
-        def dstPath = resolve(dst)
+        def (srcDsn, srcMember) = parseDsnMember(src)
+        def (dstDsn, dstMember) = parseDsnMember(dst)
+
+        if (!srcMember || !dstMember) {
+            throw new IllegalArgumentException("copy() requires member references (//DSN(MEMBER)), got: src=${src} dst=${dst}")
+        }
+
+        if (srcMember != dstMember) {
+            log.warn("copy({} -> {}): source member '{}' differs from destination member '{}'", src, dst, srcMember, dstMember)
+        }
+
+        def dstPath = resolve(dstDsn, dstMember)
         Files.createDirectories(dstPath.parent)
-        def srcPath = resolve(src)
+        def srcPath = resolve(srcDsn, srcMember)
         if (Files.exists(srcPath)) {
             Files.copy(srcPath, dstPath, StandardCopyOption.REPLACE_EXISTING)
         } else {
@@ -65,7 +92,9 @@ class MacosFileService implements FileService {
     }
 
     List<String> list(String container) {
-        def dir = resolve(container)
+        def (dsn, member) = parseDsnMember(container)
+        // list() accepts member but ignores it, using only DSN
+        def dir = resolve(dsn, null)
         if (!Files.isDirectory(dir)) {
             log.debug("list({}): not a directory", container)
             return []
