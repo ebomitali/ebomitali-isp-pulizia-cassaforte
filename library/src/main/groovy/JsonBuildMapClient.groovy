@@ -23,9 +23,10 @@ class JsonBuildMapClient extends BuildMapClient {
 
     JsonBuildMapClient(String buildGroupName, PuliziaCassaforteConfig cfg) {
         this.buildGroupName = buildGroupName
-        def parsed = new JsonSlurper().parse(new File(cfg.buildMapPath))
+        String canonicalPath = new File(cfg.buildMapPath).canonicalPath
+        def parsed = new JsonSlurper().parse(new File(canonicalPath))
         data = (parsed instanceof List) ? parsed : [parsed]
-        log.debug("Loaded {} build map entries from: {}", data.size(), cfg.buildMapPath)
+        log.debug("Loaded {} build map entries from: {}", data.size(), canonicalPath)
     }
 
     List<Map<String, String>> getGeneratedObjects(String sourcePath) {

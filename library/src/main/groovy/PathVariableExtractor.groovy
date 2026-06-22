@@ -21,7 +21,7 @@ class PathVariableExtractor {
     // and can be overridden via properties or test code.
     Map<String, String> extractJobz(String buildEnv, Map<String, String> stageMap, String hlq, String fileType) {
         def key = "01|${buildEnv}"
-        // if fileType is STWSNCS, STWSJGO, or STWSJGM and buildEnv is PR then set key to fileType|PR
+        // if fileType is STWSNCS, STWSJGO and buildEnv is PR then set key to fileType|PR, STWSJGM uses the std key
         if (fileType in ['STWSNCS', 'STWSJGO'] && buildEnv == 'PR') {
             key = "${fileType}|${buildEnv}"
         }
