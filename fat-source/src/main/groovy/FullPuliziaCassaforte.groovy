@@ -379,7 +379,7 @@ class DeletionRule {
 class DeletionRulesLoader {
 
     List<DeletionRule> load(File file) {
-        log.debug("Loading deletion rules from: {}", file)
+        log.debug("Loading deletion rules from: {}", file.canonicalPath)
         def result = file.readLines()
             .findAll { it.trim() && !it.startsWith('#') }
             .collect { line ->
@@ -392,7 +392,7 @@ class DeletionRulesLoader {
                     useBuildMap:     parts[2].trim() == 'BUILD MAP'
                 )
             }
-        log.info("Loaded {} deletion rules from: {}", result.size(), file)
+        log.info("Loaded {} deletion rules from: {}", result.size(), file.canonicalPath)
         result
     }
 }
@@ -532,9 +532,10 @@ class JsonBuildMapClient extends BuildMapClient {
 
     JsonBuildMapClient(String buildGroupName, PuliziaCassaforteConfig cfg) {
         this.buildGroupName = buildGroupName
-        def parsed = new JsonSlurper().parse(new File(cfg.buildMapPath))
+        String canonicalPath = new File(cfg.buildMapPath).canonicalPath
+        def parsed = new JsonSlurper().parse(new File(canonicalPath))
         data = (parsed instanceof List) ? parsed : [parsed]
-        log.debug("Loaded {} build map entries from: {}", data.size(), cfg.buildMapPath)
+        log.debug("Loaded {} build map entries from: {}", data.size(), canonicalPath)
     }
 
     List<Map<String, String>> getGeneratedObjects(String sourcePath) {
@@ -929,11 +930,11 @@ class PathVariableExtractor {
     // and can be overridden via properties or test code.
     Map<String, String> extractJobz(String buildEnv, Map<String, String> stageMap, String hlq, String fileType) {
         def key = "01|${buildEnv}"
-        // if fileType is STWSNCS, STWSJGO, or STWSJGM and buildEnv is PR then set key to fileType|PR
+        // if fileType is STWSNCS, STWSJGO and buildEnv is PR then set key to fileType|PR, STWSJGM uses the std key
         if (fileType in ['STWSNCS', 'STWSJGO'] && buildEnv == 'PR') {
             key = "${fileType}|${buildEnv}"
-            log.trace("extractJobz: special case for fileType='{}' and buildEnv='{}', using key='{}'", fileType, buildEnv, key)
         }
+        log.debug("extractJobz: fileType='{}' buildEnv='{}' -> key='{}'", fileType, buildEnv, key)
         def c1stagep = stageMap[key]
         if (!c1stagep)
             throw new IllegalArgumentException(
@@ -1492,9 +1493,10 @@ class SfilamentoLogic {
 
         def member   = DeleteCassaforteLogic.memberName(sourcePath)
         def matching = rules.findAll { matcher.matches(it.typePattern, fileType) }
+        log.info("Sfilamento: searching restore for member '{}' fileType '{}' in environment '{}'",
+                 member, fileType, environment)
 
         for (String superEnv : envChain.getSuperiors(environment)) {
-            log.debug("Sfilamento: checking in superior environment '{}'", superEnv)
             def superVars = isJobz
                 ? extractor.extractJobz(superEnv, stageMap, hlq, fileType)
                 : extractor.extract(sourcePath, superEnv, stageMap, hlq)
@@ -1546,7 +1548,7 @@ class StageMapLoader {
                 log.trace("Parsed stagemap entry: '{}' -> '{}'", key, value)
                 [key, value]
             }
-        log.info("Loaded {} stagemap entries from: {}", result.size(), file)
+        log.info("Loaded {} stagemap entries from: {}", result.size(), file.canonicalPath)
         result
     }
 }

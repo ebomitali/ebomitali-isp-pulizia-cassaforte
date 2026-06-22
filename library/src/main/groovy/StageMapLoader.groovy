@@ -27,7 +27,7 @@ class StageMapLoader {
                 log.trace("Parsed stagemap entry: '{}' -> '{}'", key, value)
                 [key, value]
             }
-        log.info("Loaded {} stagemap entries from: {}", result.size(), file)
+        log.info("Loaded {} stagemap entries from: {}", result.size(), file.canonicalPath)
         result
     }
 }

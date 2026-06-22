@@ -1,24 +1,18 @@
 @groovy.transform.BaseScript com.ibm.dbb.groovy.ScriptLoader baseScript
-//This groovy script is intended to be called from Jenkins in a USS context,
-// managing PuliziaCassaforte z/OS library and accessing Metadatastore
-// if rules require it. It can be called from command line as well, but it is not intended 
-// to be used that way and it will not work without a proper configuration and context 
-// (e.g., DBB environment variables, access to Metadatastore if needed by rules, etc.). 
-// It takes three argumments from command line:
-// 1. The path a file containing <action>;<file to process> lines
-// 2. The environment (a string that represents the environment, e.g., "ATO")
-// 3. The build group (a string that represents the build group, e.g., "ATO")
-// This groovy script instantiate PuliziaCassaforteImpl class and call the method doPuliziaCassaforte
-// passing the three arguments.
+// This groovy script is intended to be called from DBB within a step of type task
+// Parameters are given as context/config variables
+// source is single source file, config.file_path
+// environemnt is context build_env
+// build group is context build_group
+// if no simulationEnv is set in config or it is empty, default PuliziaCassaforteConfig has fileOpsType to 'zos' and buildMapClientType to 'db2'
+// simulationEnv is set to macos set fileOpsType to 'zos' and buildMapClientType to 'json'
+// simulationEnv is set to ussux set fileOpsType to 'uss', buildMapClientType to 'db2'
+// simulationEnv is set to usszos, set fileOpsType to 'zos', buildMapClientType to 'db2', hlq is set to user
 
-if (args.length != 3) {
-    println "Usage: groovyz RunPuliziaCassaforte.groovy  <sources list path> <environment> <build group>"
-    System.exit(1)
-}
-
-String sources = args[0]
-String environment = args[1]
-String buildGroup = args[2]
+String source = config.get("file_path")
+String environment = context.get("build_env")
+String buildGroup = context.get("build_group")
+String simulationEnv = config.get("simulationEnv") ?: ''
 
 File sourcesListFile = new File(sources)
 if (!sourcesListFile.exists()) {
@@ -54,14 +48,18 @@ try {
 
 // if buildMapClientType is not set in properties, default to 'db2'
 if (!cfgProps.containsKey('buildMapClientType')) {
-    cfgProps.setProperty('buildMapClientType', 'db2')
+    cfgProps.setProperty('buildMapClientType', 'dbb')
 }
 // if fileOpsType is not set in properties, default to 'zos'
 if (!cfgProps.containsKey('fileOpsType')) {
     cfgProps.setProperty('fileOpsType', 'zos')
 }
 
-def pcloaded = loadScript(new File("FullPuliziaCassaforte.groovy"))
-def puliziaCassaforte = pcloaded.createPuliziaCassaforteImpl()
-int errors = puliziaCassaforte.doPuliziaCassaforte(sourcesListFile, environment, buildGroup, cfgProps)
+def gcl = new GroovyClassLoader(this.class.classLoader)
+gcl.parseClass("${DBB_BUILD}/groovy/cassaforte/fatSourceFile")
+def clazz = gcl.loadClass('com.intesasanpaolo.bes.pc.PuliziaCassaforteImpl')
+def puliziaCassaforteImpl = clazz.getDeclaredConstructor().newInstance()
+
+int errors = puliziaCassaforteImpl.doPuliziaCassaforte(sourcesListFile, environment, buildGroup, cfgProps)
 println "PuliziaCassaforte completed with ${errors} errors."
+if (errors > 0) System.exit(1)
