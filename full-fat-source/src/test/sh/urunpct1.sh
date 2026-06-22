@@ -39,6 +39,18 @@ write_config() {
     echo "$_cfg"
 }
 
+# Helper: write SimpleLogger properties file to TEMP_DIR, print its path
+write_simplelogger_config() {
+    _slf4j_cfg="simplelogger.properties"
+    printf 'org.slf4j.simpleLogger.defaultLogLevel=%s\n' "debug"           >  "$_slf4j_cfg"
+    printf 'org.slf4j.simpleLogger.showLogName=%s\n' "true"              >> "$_slf4j_cfg"
+    printf 'org.slf4j.simpleLogger.showThreadName=%s\n' "true"           >> "$_slf4j_cfg"
+    printf 'org.slf4j.simpleLogger.showDateTime=%s\n' "true"             >> "$_slf4j_cfg"
+    printf 'org.slf4j.simpleLogger.dateTimeFormat=%s\n' "yyyy-MM-dd HH:mm:ss:SSS" >> "$_slf4j_cfg"
+    printf 'org.slf4j.simpleLogger.logFile=%s\n' "System.out"            >> "$_slf4j_cfg"
+    echo "$_slf4j_cfg"
+}
+
 # Helper: write list file to TEMP_DIR, print its path
 list_file() {
     _lista="$TEMP_DIR/lista.csv"
@@ -51,7 +63,7 @@ lista=$(list_file "C,$SOURCE_FILE")
 
 result=0
 # Groovy script reads also PuliziaCassaforte.properties from current directory
-groovyz -Dorg.slf4j.simpleLogger -Dorg.slf4j.simpleLogger.defaultLogLevel=debug RunPuliziaCassaforte.groovy "$lista" "$ENV" "$BUILD_GROUP" || result=$?
+groovyz -Dorg.slf4j.simpleLogger -cp . -Dorg.slf4j.simpleLogger.defaultLogLevel=debug RunPuliziaCassaforte.groovy "$lista" "$ENV" "$BUILD_GROUP" || result=$?
 
 if [ "$result" -eq 0 ]; then
     echo "Test passed: no errors"

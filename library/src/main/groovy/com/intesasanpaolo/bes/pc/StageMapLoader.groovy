@@ -25,6 +25,7 @@ class StageMapLoader {
                     throw new IllegalArgumentException("Malformed stagemap row: '$line'")
                 def key   = parts[0].trim().replace('"', '')
                 def value = parts[1].trim().replace('"', '')
+                log.trace("Parsed stagemap entry: '{}' -> '{}'", key, value)
                 [key, value]
             }
         log.info("Loaded {} stagemap entries from: {}", result.size(), file.canonicalPath)

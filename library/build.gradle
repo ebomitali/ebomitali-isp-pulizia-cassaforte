@@ -50,6 +50,11 @@ dependencies {
 test {
     useJUnitPlatform()
     outputs.upToDateWhen { false }
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat 'full'
+        showStandardStreams true
+    }
 }
 
 jar {

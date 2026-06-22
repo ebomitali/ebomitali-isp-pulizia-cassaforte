@@ -16,9 +16,9 @@ Thumbs.db
 
 # Gradle
 .gradle/
-*/build/
-build/
-!src/**/build/
+**/build/
+# Re-include build dirs that are under src
+!**/src/**/build/
 gradle/wrapper/dists/gradle-8.12-bin.zip
 
 # Python

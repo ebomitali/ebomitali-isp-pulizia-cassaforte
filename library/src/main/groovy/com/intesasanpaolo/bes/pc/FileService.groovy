@@ -20,9 +20,9 @@ import groovy.util.logging.Slf4j
 @Slf4j
 trait FileService {
 
+    // all member only
     abstract boolean exists(String path)
     abstract void    delete(String path)
     abstract void    copy(String src, String dst)
-    abstract List<String> list(String container)
-
+    abstract List<String> list(String dsn)
 }

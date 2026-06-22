@@ -14,6 +14,8 @@ task generateFullFatSource {
     doLast {
         def tempDir = file("${buildDir}/temp-sources")
         tempDir.mkdirs()
+        // empty dir to ensure clean state for source blob generation
+        tempDir.eachFile { it.deleteDir() }
         
         copy {
             from project(':library').fileTree('src/main/groovy')
@@ -26,11 +28,12 @@ task generateFullFatSource {
     }
 }
 
-// Task 2: Copy tests and resources from library to fat-source
+// Task 2: Copy tests and resources from library to fat-source removing file not in library:/src/test/groovy and library:/src/test/resources
 task copyTests(type: Copy) {
     description = 'Copy tests and resources from library/src/test to fat-source/src/test'
     from project(':library').fileTree('src/test') {
-        include '**/*.*'
+        include 'groovy/**/*.*'
+        include 'resources/**/*.*'
     }
     into 'src/test'
 }

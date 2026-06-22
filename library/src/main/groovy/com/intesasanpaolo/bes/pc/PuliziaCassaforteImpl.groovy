@@ -57,6 +57,41 @@ class PuliziaCassaforteImpl {
 
     int doPuliziaCassaforte(File listToProcess, String environment, String buildGroup, Properties props) {
         log.info("Starting PuliziaCassaforte")
+
+        init(props, buildGroup)
+
+        if (!listToProcess)
+            throw new IllegalArgumentException('listToProcess argument is required')
+        if (!listToProcess.exists())
+            throw new IllegalArgumentException("listToProcess file not found: '$listToProcess'")
+
+        log.info("Processing list='{}' env='{}' buildGroup='{}'",
+                 listToProcess, environment, buildGroup)
+        int processed = 0, errors = 0
+        listToProcess.eachLine { raw ->
+            def line = raw.trim()
+            if (!line || line.startsWith('#')) return
+            def comma = line.indexOf(',')
+            if (comma < 0) {
+                log.warn("Skipping malformed line: '{}'", line)
+                errors++
+                return
+            }
+            def action     = line.substring(0, comma).trim().toUpperCase()
+            def sourcePath = line.substring(comma + 1).trim()
+
+            if (processSource(action, sourcePath, environment, buildGroup)) {
+                processed++
+            } else {
+                errors++
+            }
+        }
+
+        log.info("PuliziaCassaforte: processed={} errors={}", processed, errors)
+        return errors
+    }
+
+    private void init(Properties props, String buildGroup) {
         def cfg = PuliziaCassaforteConfig.from(props)
         if (cfg.fileOpsType)                   this.fileOpsType        = cfg.fileOpsType
         if (cfg.buildMapClientType)            this.buildMapClientType = cfg.buildMapClientType
@@ -69,11 +104,6 @@ class PuliziaCassaforteImpl {
         if (cfg.db2ConfigPath)      this.db2ConfigPath      = cfg.db2ConfigPath
         if (cfg.buildMapPath)       this.buildMapPath       = cfg.buildMapPath
         if (cfg.jobzExtensions != null) this.jobzExtensions = cfg.jobzExtensions
-
-        if (!listToProcess)
-            throw new IllegalArgumentException('listToProcess argument is required')
-        if (!listToProcess.exists())
-            throw new IllegalArgumentException("listToProcess file not found: '$listToProcess'")
 
         def effectiveCfg = new PuliziaCassaforteConfig(
             buildMapClientType: this.buildMapClientType,
@@ -125,48 +155,30 @@ class PuliziaCassaforteImpl {
             hlq:            hlq,
             jobzExtensions: jobzExtensions
         )
+    }
 
-        log.info("Processing list='{}' env='{}' buildGroup='{}'",
-                 listToProcess, environment, buildGroup)
-        int processed = 0, errors = 0
-        listToProcess.eachLine { raw ->
-            def line = raw.trim()
-            if (!line || line.startsWith('#')) return
-            def comma = line.indexOf(',')
-            if (comma < 0) {
-                log.warn("Skipping malformed line: '{}'", line)
-                errors++
-                return
-            }
-            def action     = line.substring(0, comma).trim().toUpperCase()
-            def sourcePath = line.substring(comma + 1).trim()
-            def fileType   = resolveFileType(sourcePath)
+    private boolean processSource(String action, String sourcePath, String environment, String buildGroup) {
+        def fileType = resolveFileType(sourcePath)
 
-            try {
-                switch (action) {
-                    case 'C':
-                        def vars = isJobzType(fileType)
-                            ? extractor.extractJobz(environment, stageMap, hlq)
-                            : extractor.extract(sourcePath, environment, stageMap, hlq)
-                        deleteLogic.execute(sourcePath, fileType, vars, buildGroup)
-                        processed++
-                        break
-                    case 'S':
-                        sfilamento.execute(sourcePath, fileType, environment, buildGroup)
-                        processed++
-                        break
-                    default:
-                        log.warn("Unknown action '{}' in line: '{}'", action, line)
-                        errors++
-                }
-            } catch (Exception e) {
-                log.error("ERROR processing '{}': {}", sourcePath, e.message, e)
-                errors++
+        try {
+            switch (action) {
+                case 'C':
+                    def vars = isJobzType(fileType)
+                        ? extractor.extractJobz(environment, stageMap, hlq)
+                        : extractor.extract(sourcePath, environment, stageMap, hlq)
+                    deleteLogic.execute(sourcePath, fileType, vars, buildGroup)
+                    return true
+                case 'S':
+                    sfilamento.execute(sourcePath, fileType, environment, buildGroup)
+                    return true
+                default:
+                    log.warn("Unknown action '{}' for sourcePath '{}'", action, sourcePath)
+                    return false
             }
+        } catch (Exception e) {
+            log.error("ERROR processing '{}': {}", sourcePath, e.message, e)
+            return false
         }
-
-        log.info("PuliziaCassaforte: processed={} errors={}", processed, errors)
-        return errors
     }
 
     int doPuliziaPostBuild(String sourceToProcess, String environment, String buildGroup, Properties props) {
