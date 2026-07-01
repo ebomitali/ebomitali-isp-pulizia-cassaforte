@@ -1,0 +1,1 @@
+This subproject contains sources that mimic public interfaces of IBM java library used by DBB in order to allow compilation of the Pulizia Cassaforte library code.

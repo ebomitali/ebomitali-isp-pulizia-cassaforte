@@ -31,6 +31,6 @@ test {
 }
 
 jar {
-    archiveBaseName = 'stubs-pulizia-cassaforte'
+    archiveFileName = 'stubs.jar'
 }
 
