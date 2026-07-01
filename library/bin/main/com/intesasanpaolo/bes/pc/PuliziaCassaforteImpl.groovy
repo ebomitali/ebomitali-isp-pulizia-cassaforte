@@ -182,37 +182,7 @@ class PuliziaCassaforteImpl {
     }
 
     int doPuliziaPostBuild(String sourceToProcess, String environment, String buildGroup, Properties props) {
-        log.info("Starting PuliziaPostBuild for source='{}' env='{}'", sourceToProcess, environment)
-
-        init(props, buildGroup)
-
-        if (!envChain.requiresPrevEnvClean(environment)) {
-            log.info("Environment '{}' does not require previous environment cleanup", environment)
-            return 0
-        }
-
-        if (!sourceToProcess)
-            throw new IllegalArgumentException('sourceToProcess argument is required')
-
-        def prevEnv = envChain.getPredecessor(environment)
-        if (!prevEnv) {
-            log.warn("No predecessor environment found for '{}'", environment)
-            return 0
-        }
-
-        def fileType = resolveFileType(sourceToProcess)
-
-        try {
-            def vars = isJobzType(fileType)
-                ? extractor.extractJobz(prevEnv, stageMap, hlq)
-                : extractor.extract(sourceToProcess, prevEnv, stageMap, hlq)
-            deleteLogic.execute(sourceToProcess, fileType, vars, buildGroup)
-            log.info("PuliziaPostBuild: successfully cleaned '{}' from predecessor env '{}'", sourceToProcess, prevEnv)
-            return 0
-        } catch (Exception e) {
-            log.error("ERROR in PuliziaPostBuild for '{}': {}", sourceToProcess, e.message, e)
-            return 1
-        }
+        // This method processes one file at a time 
     }
 
     private boolean isJobzType(String fileType) {

@@ -1,8 +1,17 @@
 plugins {
-    id 'base'
+    id 'java-library'
 }
 
-// Scripts in scripts/ are USS entry points, not compiled by Gradle.
-// Scripts depend on the :library jar at runtime — no Gradle dependency declaration needed.
+// Scripts in src/main/groovy/ are USS entry points, not compiled by Gradle.
+// They require compile-time access to stubs (TaskScript annotation) and library (PuliziaCassaforteImpl).
+// Dependencies declared for IDE support and validation only.
 // Run on USS with:
-//   groovyz -cp ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte.jar <script>.groovy
+//   groovyz -cp ${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte.jar:${DBB_BUILD}/groovy/pulizia-cassaforte/lib/pulizia-cassaforte-zos.jar <script>.groovy
+
+dependencies {
+    compileOnly project(':stubs')
+    compileOnly project(':library')
+}
+
+// Disable jar creation — scripts are not compiled artifacts
+jar.enabled = false
