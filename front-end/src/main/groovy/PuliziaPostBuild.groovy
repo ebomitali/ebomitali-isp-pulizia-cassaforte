@@ -2,9 +2,9 @@
 // This groovy script is intended to be called from DBB within a step of type task
 // so it should inherit from TaskScript to access DBB interface
 // Parameters are given as context/config variables
-// source is single source file, config.file_path
-// environemnt is context build_env
-// build group is context build_group
+// source is single source file, config.get("FILE_PATH")
+// environemnt is context.get("BUILD_ENV")
+// build group is context.get("BUILD_GROUP")
 // if no simulationEnv is set in config or it is empty, default PuliziaCassaforteConfig has fileOpsType to 'zos' and buildMapClientType to 'db2'
 // simulationEnv is set to macos set fileOpsType to 'zos' and buildMapClientType to 'json'
 // simulationEnv is set to ussux set fileOpsType to 'uss', buildMapClientType to 'db2'
@@ -16,9 +16,9 @@
 // context → a com.ibm.dbb.task.BuildContext object
 // log → an SLF4j logger
 
-String sourceFilePath = config.get("file_path")
-String environment    = context.get("build_env")
-String buildGroup     = context.get("build_group")
+String sourceFilePath = config.get("FILE_PATH")
+String environment    = context.get("BUILD_ENV")
+String buildGroup     = context.get("BUILD_GROUP")
 String simulationEnv  = config.get("simulationEnv") ?: ''
 
 File sourceFile = new File(sourceFilePath)
@@ -63,10 +63,10 @@ if (!cfgProps.containsKey('fileOpsType')) {
 }
 
 def gcl = new GroovyClassLoader(this.class.classLoader)
-gcl.parseClass("${DBB_BUILD}/groovy/cassaforte/fatSourceFile")
+gcl.parseClass(new File("${dbbBuild}/groovy/FullPuliziaCassaforte.groovy"))
 def clazz = gcl.loadClass('com.intesasanpaolo.bes.pc.PuliziaCassaforteImpl')
 def puliziaCassaforteImpl = clazz.getDeclaredConstructor().newInstance()
 
-int errors = puliziaCassaforteImpl.doPuliziaPostBuild(sourceFile, environment, buildGroup, cfgProps)
+int errors = puliziaCassaforteImpl.doPuliziaPostBuild(sourceFilePath, environment, buildGroup, cfgProps)
 println "PuliziaCassaforte completed with ${errors} errors."
-if (errors > 0) System.exit(1)
+return errors
