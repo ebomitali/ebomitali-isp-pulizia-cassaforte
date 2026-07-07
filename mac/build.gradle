@@ -159,9 +159,37 @@ tasks.register('testPuliziaPostBuild') {
     }
 }
 
+def dbbBuildSimDir  = layout.buildDirectory.dir('dbb-build-sim')
+def postBuildCwdDir = layout.buildDirectory.dir('postbuild-test-cwd')
+
+tasks.register('preparePuliziaPostBuildTestEnv') {
+    description = 'Deploys FullPuliziaCassaforte.groovy into the simulated $DBB_BUILD for PuliziaPostBuildSpec'
+    def fatSourceFile = project(':fat-source').file('src/main/groovy/FullPuliziaCassaforte.groovy')
+    def targetFile = dbbBuildSimDir.get().dir('groovy').file('FullPuliziaCassaforte.groovy').asFile
+    def cwdDir = postBuildCwdDir.get().asFile
+    inputs.file(fatSourceFile)
+    outputs.file(targetFile)
+    doLast {
+        targetFile.parentFile.mkdirs()
+        targetFile.text = fatSourceFile.text
+        cwdDir.mkdirs()
+    }
+}
+
 test {
     useJUnitPlatform()
     outputs.upToDateWhen { false }
     dependsOn tasks.named('testPuliziaCassaforte')
     dependsOn tasks.named('testPuliziaPostBuild')
+    dependsOn tasks.named('preparePuliziaPostBuildTestEnv')
+
+    workingDir = postBuildCwdDir.get().asFile
+    environment 'DBB_BUILD', dbbBuildSimDir.get().asFile.absolutePath
+    environment 'DBB_CONF', dbbBuildSimDir.get().asFile.absolutePath
+    environment 'DBB_HOME', dbbBuildSimDir.get().asFile.absolutePath
+
+    systemProperty 'dbbBuildSimDir', dbbBuildSimDir.get().asFile.absolutePath
+    systemProperty 'frontEndPostBuildFile', project(':front-end').file('src/main/groovy/PuliziaPostBuild.groovy').absolutePath
+    systemProperty 'buildMapFixture', file('src/test/resources/fixtures/buildmap.json').absolutePath
+    systemProperty 'stageMapFixture', file('src/test/resources/fixtures/stagemap.csv').absolutePath
 }
