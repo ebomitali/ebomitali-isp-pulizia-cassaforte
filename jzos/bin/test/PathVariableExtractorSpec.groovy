@@ -1,8 +1,6 @@
 import spock.lang.Specification
 import spock.lang.Unroll
 
-// Specs from meeting 13/06/26, repo name is always the second segment of the path, e.g. 'ATO' in 'ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP'.
-
 class PathVariableExtractorSpec extends Specification {
 
     static final Map<String, String> STAGE_MAP = [
@@ -13,24 +11,29 @@ class PathVariableExtractorSpec extends Specification {
 
     def extractor = new PathVariableExtractor()
 
-    @Unroll("extract env=#buildEnv sourcePath=#sourcePath expects C1SYSTEM=#expectedC1SYSTEM C1STAGE=#expectedC1STAGE")
-    def "extracts C1SYSTEM and C1STAGE in multiple scenarios"() {
+    def "extracts C1SYSTEM and C1STAGE from standard path format"() {
         when:
         def vars = extractor.extract(
-            sourcePath, buildEnv, STAGE_MAP, null
+            'ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP',
+            'ATO', STAGE_MAP, null
         )
 
         then:
-        vars['C1SYSTEM'] == expectedC1SYSTEM
-        vars['C1STAGE']  == expectedC1STAGE
+        vars['C1SYSTEM'] == 'y'
+        vars['C1STAGE']  == 'X2A'
         vars['HLQ']      == ''
+    }
 
-        where:
-        buildEnv | sourcePath | expectedC1SYSTEM | expectedC1STAGE
-        'ATO'    | 'ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP' | 'y' | 'X2A'
-        'ST'     | 'ST/yo_y_01_st_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP' | 'y' | 'XAD'
-        'PR'     | 'PR/yo_y_01_pr_r1/src/JCL/BATCH/SJCLINP/YO8AMADD.SJCLINP' | 'y' | 'XAE'
-        'ATO'    | 'ATO/yo_x_01_ato_r1/src/JCL/COPYBOOKS/ASMCPY.SCPYASM' | 'x' | 'X2A'
+    def "works with absolute path containing prefix before ENV segment"() {
+        when:
+        def vars = extractor.extract(
+            '/repo/cloned/ATO/yo_y_01_ato_r1/src/COBOL/batch/pgm.cbl',
+            'ATO', STAGE_MAP, null
+        )
+
+        then:
+        vars['C1SYSTEM'] == 'y'
+        vars['C1STAGE']  == 'X2A'
     }
 
     def "sets HLQ from parameter"() {

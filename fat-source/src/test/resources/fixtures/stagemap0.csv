@@ -2,7 +2,7 @@
 "01|ATI1";"I1A"
 "01|ATO";"O2A"
 "01|ST";"SAD"
-"01|PR";"PAE"
+"01|PR";"SAE"
 "01|EM";"EAB"
 "03|ATO";"M2A"
 "03|ST";"MAD"
@@ -15,6 +15,6 @@
 "12|ATO";"V2A"
 "12|ST";"VAD"
 "12|PR";"VPE"
-"STWSNCS|PR";"XPE"
-"STWSJGO|PR";"XPE"
+"STWSNCS|PR";"PAE"
+"STWSJGO|PR";"PAE"
 
