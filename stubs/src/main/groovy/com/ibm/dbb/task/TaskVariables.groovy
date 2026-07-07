@@ -74,4 +74,14 @@ class TaskVariables {
     boolean hasVariable(String name) {
         throw new UnsupportedOperationException("stub - not for execution")
     }
+
+    /**
+     * Returns the raw Object value of a task-scoped variable, or null if not
+     * set. Mirrors BuildContext.get(String) — added so TaskScript-based
+     * scripts can use the same .get("KEY") convention for both config and
+     * context.
+     */
+    Object get(String name) {
+        throw new UnsupportedOperationException("stub - not for execution")
+    }
 }

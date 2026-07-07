@@ -6,7 +6,9 @@ import org.apache.commons.cli.CommandLine
  * ============================================================================
  *  STUB CLASS -- compileOnly, off-host use only.
  *  Real implementation is provided by dbb.jar ($DBB_HOME/lib) on z/OS USS.
- *  DO NOT ship, execute, or package this class.
+ *  DO NOT ship, execute, or package this class -- it exists only so that
+ *  Groovy task scripts referencing DBB API classes can be syntax/type
+ *  checked and compiled (groovyc / IDE) outside of USS (Strategy D).
  * ============================================================================
  *
  * com.ibm.dbb.task.BuildContext
@@ -23,6 +25,11 @@ import org.apache.commons.cli.CommandLine
  * TaskVariables but were not directly quoted in the excerpts reviewed --
  * confirm exact signatures against the real dbb.jar Javadoc / API guide
  * before depending on them for anything host-critical.
+ *
+ * get(String)/getBuildFile()/getWorkingDirectory() are confirmed in active
+ * use by DbbBuildMapClient.groovy (context.get('BUILD_GROUP')) -- kept here
+ * merged with the getXxxVariable family below, which previously lived in a
+ * second, colliding class definition under src/main/java.
  */
 class BuildContext {
 
@@ -45,11 +52,23 @@ class BuildContext {
         throw new UnsupportedOperationException("stub - not for execution")
     }
 
-    // ---- typical / verify against real dbb.jar before relying on it --
     /**
-     * Returns the raw Object value of a build-scoped context variable,
-     * or null if not set. Used e.g. as context.getVariable("HLQ").
+     * Returns the raw Object value of a build-scoped context variable, or
+     * null if not set. Confirmed in active use as context.get('BUILD_GROUP').
      */
+    Object get(String key) {
+        throw new UnsupportedOperationException("stub - not for execution")
+    }
+
+    String getBuildFile() {
+        throw new UnsupportedOperationException("stub - not for execution")
+    }
+
+    File getWorkingDirectory() {
+        throw new UnsupportedOperationException("stub - not for execution")
+    }
+
+    // ---- typical / verify against real dbb.jar before relying on it --
     Object getVariable(String name) {
         throw new UnsupportedOperationException("stub - not for execution")
     }
