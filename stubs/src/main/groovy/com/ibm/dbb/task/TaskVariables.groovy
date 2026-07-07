@@ -50,7 +50,7 @@ class TaskVariables {
      * Returns the raw Object value of a task-scoped variable, or null if not
      * set. Mirrors BuildContext.get(String) so TaskScript-based scripts can
      * use the same .get("KEY") convention for both config and context.
-     * Confirmed in active use as config.get("file_path") in
+     * Confirmed in active use as config.get("FILE_PATH") in
      * front-end/src/main/groovy/PuliziaPostBuild.groovy.
      */
     Object get(String name) {
