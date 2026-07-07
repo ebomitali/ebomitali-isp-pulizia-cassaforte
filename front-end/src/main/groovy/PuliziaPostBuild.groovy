@@ -10,14 +10,20 @@
 // simulationEnv is set to ussux set fileOpsType to 'uss', buildMapClientType to 'db2'
 // simulationEnv is set to usszos, set fileOpsType to 'zos', buildMapClientType to 'db2', hlq is set to user
 
-String source = config.get("file_path")
-String environment = context.get("build_env")
-String buildGroup = context.get("build_group")
-String simulationEnv = config.get("simulationEnv") ?: ''
+// BaseScript transform with com.ibm.dbb.groovy.TaskScript allows this script to access 
+// the DBB interface and use context/config,log variables.
+// config → a com.ibm.dbb.task.TaskVariables object
+// context → a com.ibm.dbb.task.BuildContext object
+// log → an SLF4j logger
 
-File sourcesListFile = new File(sources)
-if (!sourcesListFile.exists()) {
-    println "Sources list file does not exist: ${sources}"
+String sourceFilePath = config.get("file_path")
+String environment    = context.get("build_env")
+String buildGroup     = context.get("build_group")
+String simulationEnv  = config.get("simulationEnv") ?: ''
+
+File sourceFile = new File(sourceFilePath)
+if (!sourceFile.exists()) {
+    println "Source file does not exist: ${sourceFilePath}"
     System.exit(1)
 }
 
@@ -61,6 +67,6 @@ gcl.parseClass("${DBB_BUILD}/groovy/cassaforte/fatSourceFile")
 def clazz = gcl.loadClass('com.intesasanpaolo.bes.pc.PuliziaCassaforteImpl')
 def puliziaCassaforteImpl = clazz.getDeclaredConstructor().newInstance()
 
-int errors = puliziaCassaforteImpl.doPuliziaCassaforte(sourcesListFile, environment, buildGroup, cfgProps)
+int errors = puliziaCassaforteImpl.doPuliziaPostBuild(sourceFile, environment, buildGroup, cfgProps)
 println "PuliziaCassaforte completed with ${errors} errors."
 if (errors > 0) System.exit(1)

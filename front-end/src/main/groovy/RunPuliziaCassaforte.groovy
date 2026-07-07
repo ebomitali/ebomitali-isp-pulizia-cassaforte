@@ -68,5 +68,5 @@ gcl.parseClass("${DBB_BUILD}/groovy/cassaforte/fatSourceFile")
 def clazz = gcl.loadClass('com.intesasanpaolo.bes.pc.PuliziaCassaforteImpl')
 def puliziaCassaforteImpl = clazz.getDeclaredConstructor().newInstance()
 
-int errors = puliziaCassaforte.doPuliziaCassaforte(sourcesListFile, environment, buildGroup, cfgProps)
+int errors = puliziaCassaforteImpl.doPuliziaCassaforte(sourcesListFile, environment, buildGroup, cfgProps)
 println "PuliziaCassaforte completed with ${errors} errors."

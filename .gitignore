@@ -20,6 +20,7 @@ Thumbs.db
 # Re-include build dirs that are under src
 !**/src/**/build/
 gradle/wrapper/dists/gradle-8.12-bin.zip
+**/bin
 
 # Python
 .venv/
