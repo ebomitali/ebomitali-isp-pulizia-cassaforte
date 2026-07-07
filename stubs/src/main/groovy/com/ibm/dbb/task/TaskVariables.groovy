@@ -46,6 +46,17 @@ class TaskVariables {
         throw new UnsupportedOperationException("stub - not for execution")
     }
 
+    /**
+     * Returns the raw Object value of a task-scoped variable, or null if not
+     * set. Mirrors BuildContext.get(String) so TaskScript-based scripts can
+     * use the same .get("KEY") convention for both config and context.
+     * Confirmed in active use as config.get("file_path") in
+     * front-end/src/main/groovy/PuliziaPostBuild.groovy.
+     */
+    Object get(String name) {
+        throw new UnsupportedOperationException("stub - not for execution")
+    }
+
     // ---- typical / verify against real dbb.jar before relying on it ----
     /**
      * Returns the raw Object value of a variable, or null if not set.
@@ -72,16 +83,6 @@ class TaskVariables {
     }
 
     boolean hasVariable(String name) {
-        throw new UnsupportedOperationException("stub - not for execution")
-    }
-
-    /**
-     * Returns the raw Object value of a task-scoped variable, or null if not
-     * set. Mirrors BuildContext.get(String) — added so TaskScript-based
-     * scripts can use the same .get("KEY") convention for both config and
-     * context.
-     */
-    Object get(String name) {
         throw new UnsupportedOperationException("stub - not for execution")
     }
 }

@@ -26,10 +26,14 @@ import org.apache.commons.cli.CommandLine
  * confirm exact signatures against the real dbb.jar Javadoc / API guide
  * before depending on them for anything host-critical.
  *
- * get(String)/getBuildFile()/getWorkingDirectory() are confirmed in active
- * use by DbbBuildMapClient.groovy (context.get('BUILD_GROUP')) -- kept here
- * merged with the getXxxVariable family below, which previously lived in a
- * second, colliding class definition under src/main/java.
+ * get(String) is confirmed in active use by
+ * library/src/main/groovy/com/intesasanpaolo/bes/pc/DbbBuildMapClient.groovy
+ * (context.get('BUILD_GROUP')); getBuildFile()/getWorkingDirectory() are
+ * confirmed in active use by front-end/scripts/groovy/PuliziaPostBuild.groovy
+ * and PuliziaPostBuildLocal.groovy (context.getBuildFile(),
+ * context.getWorkingDirectory()) -- kept here merged with the getXxxVariable
+ * family below, which previously lived in a second, colliding class
+ * definition under src/main/java.
  */
 class BuildContext {
 
@@ -56,14 +60,23 @@ class BuildContext {
      * Returns the raw Object value of a build-scoped context variable, or
      * null if not set. Confirmed in active use as context.get('BUILD_GROUP').
      */
-    Object get(String key) {
+    Object get(String name) {
         throw new UnsupportedOperationException("stub - not for execution")
     }
 
+    /**
+     * Returns the absolute path of the source file currently being built,
+     * e.g.:
+     *   def sourcePath = context.getBuildFile()
+     */
     String getBuildFile() {
         throw new UnsupportedOperationException("stub - not for execution")
     }
 
+    /**
+     * Returns the build's working directory, e.g.:
+     *   new File(context.getWorkingDirectory(), 'build-data/rules.csv')
+     */
     File getWorkingDirectory() {
         throw new UnsupportedOperationException("stub - not for execution")
     }
