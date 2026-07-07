@@ -8,14 +8,14 @@ This is a separate, later addition to `docs/superpowers/specs/2026-07-07-mac-mru
 
 ## Bugs found and fixed (all in `front-end/src/main/groovy/PuliziaPostBuild.groovy` unless noted)
 
-1. **`config.get("file_path")` / `context.get("build_env")` / `context.get("build_group")`** — lowercase keys, `.get()` method. `TaskVariables` (`stubs/src/main/groovy/com/ibm/dbb/task/TaskVariables.groovy`) has no `.get()` method at all, only `getStringVariable`/`getVariable`/`setVariable`/etc. Fix: use `getStringVariable` with uppercase keys, matching the documented DBB task-variable convention:
+1. **`config.get("file_path")` / `context.get("build_env")` / `context.get("build_group")`** — lowercase keys. Initially this looked like it should switch to `getStringVariable` with uppercase keys, but `library/src/main/groovy/com/intesasanpaolo/bes/pc/DbbBuildMapClient.groovy:70` already does `context.get('BUILD_GROUP') as BuildGroup` — a real, compiled-against call site, not stray legacy code. `.get(String)` with uppercase keys is the established convention here. Fix: keep `.get()`, just uppercase the keys:
    ```groovy
-   String sourceFilePath = config.getStringVariable("FILE_PATH")
-   String environment     = context.getStringVariable("BUILD_ENV")
-   String buildGroup      = context.getStringVariable("BUILD_GROUP")
+   String sourceFilePath = config.get("FILE_PATH")
+   String environment     = context.get("BUILD_ENV")
+   String buildGroup      = context.get("BUILD_GROUP")
    ```
 
-2. **Duplicate `BuildContext` class** — `stubs/src/main/java/com/ibm/dbb/task/BuildContext.java` (stale: `get(String)`, `getBuildFile()`, `getWorkingDirectory()`) and `stubs/src/main/groovy/com/ibm/dbb/task/BuildContext.groovy` (current/documented: `getStringVariable`/`setVariable`/`getVariable`/`getIntVariable`/`getBooleanVariable`/`hasVariable`) define the same class in the same Gradle source set. Verified via `unzip -l stubs/build/libs/stubs.jar` + `javap` that only one class file survives — currently the stale Java one, silently shadowing the documented Groovy one. Fix: delete `stubs/src/main/java/com/ibm/dbb/task/BuildContext.java`.
+2. **Duplicate `BuildContext` class** — `stubs/src/main/java/com/ibm/dbb/task/BuildContext.java` (`get(String)`, `getBuildFile()`, `getWorkingDirectory()` — the one `DbbBuildMapClient.groovy` actually depends on) and `stubs/src/main/groovy/com/ibm/dbb/task/BuildContext.groovy` (`getStringVariable`/`setVariable`/`getVariable`/`getIntVariable`/`getBooleanVariable`/`hasVariable`) define the same class in the same Gradle source set. Verified via `unzip -l stubs/build/libs/stubs.jar` + `javap` that only one class file survives — currently the Java one, silently shadowing the Groovy one. Since both APIs are genuinely needed (`DbbBuildMapClient` needs `.get()`, `TaskVariables`'s sibling methods are the documented DBB 3.0.3 convention for everything else), fix: merge both method sets into the single Groovy-source `BuildContext` class, delete the Java duplicate, and add a matching `get(String)` to `TaskVariables` (which had neither).
 
 3. **`gcl.parseClass("${DBB_BUILD}/groovy/cassaforte/fatSourceFile")`** — same bug pattern as `RunPuliziaCassaforte.groovy` (string literal, undefined `DBB_BUILD` binding, nonexistent path). Fix (identical to the mrun-spec design):
    ```groovy
@@ -52,12 +52,12 @@ import com.ibm.dbb.task.BuildContext
 
 class FakeTaskVariables extends TaskVariables {
     Map<String, String> vars = [:]
-    @Override String getStringVariable(String name) { vars[name] }
+    @Override Object get(String name) { vars[name] }
 }
 
 class FakeBuildContext extends BuildContext {
     Map<String, String> vars = [:]
-    @Override String getStringVariable(String name) { vars[name] }
+    @Override Object get(String name) { vars[name] }
 }
 ```
 
@@ -97,6 +97,8 @@ Per iteration:
 ## Files touched
 
 - `front-end/src/main/groovy/PuliziaPostBuild.groovy` — 5 fixes above.
+- `stubs/src/main/groovy/com/ibm/dbb/task/BuildContext.groovy` — merged with the Java stub's methods.
+- `stubs/src/main/groovy/com/ibm/dbb/task/TaskVariables.groovy` — `get(String)` added.
 - `stubs/src/main/java/com/ibm/dbb/task/BuildContext.java` — deleted.
 - `mac/src/test/groovy/FakeTaskContext.groovy` — new.
 - `mac/src/test/groovy/PuliziaPostBuildFixture.groovy` — new.
