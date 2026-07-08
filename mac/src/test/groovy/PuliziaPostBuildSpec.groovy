@@ -1,10 +1,19 @@
 import spock.lang.Specification
+import spock.lang.Shared
 import spock.lang.TempDir
+import java.nio.file.Files
 import java.nio.file.Path
 
 class PuliziaPostBuildSpec extends Specification {
 
+    // Fresh per test: DBB_BUILD (fat-source deployment) and APP_DIR (script's own dir).
+    @TempDir Path dbbBuildDirPath
+    @TempDir Path appDirPath
     @TempDir Path zosSimDirPath
+
+    // Shared across all tests in this spec: DBB_CONF and DBB_HOME.
+    @Shared Path dbbConfDirPath
+    @Shared Path dbbHomeDirPath
 
     static final String RULES  = 'SJCL*   ;LTM00.D9P${C1STAGE}.PE000.@@@@.@@@@@@@@.@@.SJCL;NO'
     static final String SOURCE = 'ATO/yo_y_01_ato_r1/src/JCL/BATCH/SJCLCA7/YO810BDD.SJCLCA7'
@@ -12,21 +21,41 @@ class PuliziaPostBuildSpec extends Specification {
 
     PuliziaPostBuildFixture fixture
     File postBuildFile
+    File sourceFile
+
+    def setupSpec() {
+        dbbConfDirPath = Files.createTempDirectory('dbb-conf')
+        dbbHomeDirPath = Files.createTempDirectory('dbb-home')
+    }
 
     def setup() {
-        def dbbBuildDir = new File(System.getProperty('dbbBuildSimDir'))
-        def cwd = new File('.').canonicalFile
         postBuildFile = new File(System.getProperty('frontEndPostBuildFile'))
 
-        fixture = new PuliziaPostBuildFixture(cwd, dbbBuildDir, zosSimDirPath.toFile())
+        fixture = new PuliziaPostBuildFixture(
+            dbbBuildDirPath.toFile(),
+            dbbHomeDirPath.toFile(),
+            appDirPath.toFile(),
+            zosSimDirPath.toFile()
+        )
         fixture.writeRules(RULES)
         fixture.writeStageMap(new File(System.getProperty('stageMapFixture')))
         fixture.writeConfig(new File(System.getProperty('buildMapFixture')).absolutePath)
+        fixture.deployFatSource(new File(System.getProperty('fatSourceFile')))
 
-        new File(cwd, SOURCE).with {
-            parentFile.mkdirs()
-            text = ''
-        }
+        sourceFile = new File(appDirPath.toFile(), SOURCE)
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = ''
+    }
+
+    private FakeBuildContext buildContext(String env, String buildGroup) {
+        new FakeBuildContext(vars: [
+            BUILD_ENV : env,
+            BUILD_GROUP: buildGroup,
+            DBB_BUILD : dbbBuildDirPath.toFile().absolutePath,
+            DBB_CONF  : dbbConfDirPath.toFile().absolutePath,
+            DBB_HOME  : dbbHomeDirPath.toFile().absolutePath,
+            APP_DIR   : appDirPath.toFile().absolutePath,
+        ])
     }
 
     def "ST env deletes stale member from ATO predecessor cassaforte library"() {
@@ -34,8 +63,8 @@ class PuliziaPostBuildSpec extends Specification {
         def atoLib = fixture.dataset(ATO_LIBRARY)
         fixture.member(atoLib, 'YO810BDD')
 
-        def config  = new FakeTaskVariables(vars: [FILE_PATH: SOURCE])
-        def context = new FakeBuildContext(vars: [BUILD_ENV: 'ST', BUILD_GROUP: 'ST'])
+        def config  = new FakeTaskVariables(vars: [FILE_PATH: sourceFile.absolutePath])
+        def context = buildContext('ST', 'ST')
         def script  = fixture.loadPostBuild(postBuildFile, config, context)
 
         when:
@@ -51,8 +80,8 @@ class PuliziaPostBuildSpec extends Specification {
         def atoLib = fixture.dataset(ATO_LIBRARY)
         fixture.member(atoLib, 'YO810BDD')
 
-        def config  = new FakeTaskVariables(vars: [FILE_PATH: SOURCE])
-        def context = new FakeBuildContext(vars: [BUILD_ENV: 'ATO', BUILD_GROUP: 'ATO'])
+        def config  = new FakeTaskVariables(vars: [FILE_PATH: sourceFile.absolutePath])
+        def context = buildContext('ATO', 'ATO')
         def script  = fixture.loadPostBuild(postBuildFile, config, context)
 
         when:

@@ -13,16 +13,6 @@ task generateFullFatSource {
     dependsOn project(':fat-source').tasks.named('compileGroovy')
 }
 
-// Task 2: Copy tests and resources from library to fat-source
-task copyTests(type: Copy) {
-    description = 'Copy tests and resources from library/src/test to fat-source/src/test'
-    from project(':library').fileTree('src/test') {
-        include '**/*.*'
-        exclude 'sh/**' // exclude shell scripts — full-fat-source has its own test scripts
-    }
-    into 'src/test'
-}
-
 // Task 3: Configure compilation and testing
 sourceSets {
     main {
@@ -75,11 +65,8 @@ task copyShLibs(type: Copy) {
     into layout.buildDirectory.dir('sh-lib')
 }
 
-// Ensure tests are copied before compilation
-//compileMainGroovy.dependsOn generateFatSource
-compileTestGroovy.dependsOn copyTests, compileGroovy
-processTestResources.dependsOn copyTests
-compileGroovy.dependsOn generateFullFatSource,copyTests
+compileTestGroovy.dependsOn compileGroovy
+compileGroovy.dependsOn generateFullFatSource
 
 // build.gradle
 tasks.register('testPuliziaCassaforte', Exec) {
@@ -120,76 +107,35 @@ tasks.register('testPuliziaCassaforte', Exec) {
 
 tasks.register('testPuliziaPostBuild') {
     group = 'verification'
-    description = 'PuliziaPostBuild is a DBB TaskScript (tested via library:test). Skipped here as standalone test.'
+    description = 'No-op placeholder: PuliziaPostBuild.groovy is covered by PuliziaPostBuildSpec (in-process Spock test, part of :mac:test).'
 
-    // PuliziaPostBuild.groovy is a DBB TaskScript with @BaseScript annotation.
-    // It requires DBB runtime and cannot run as a standalone script in this test harness.
-    // Functional testing happens in :library:test via PuliziaPostBuildLogic tests.
-    // Standalone USS testing happens on USS with groovyz and DBB context.
-    doFirst {
-        def testClasspath = sourceSets.test.runtimeClasspath.asPath
-        def projectDir = project.projectDir.absolutePath
-        def buildDir = project.layout.buildDirectory.get().asFile.absolutePath
-        def testResultsDir = "${buildDir}/test-results"
-
-        def fatSourceFile = project(':fat-source').file('src/main/groovy/FullPuliziaCassaforte.groovy').absolutePath
-        def frontEndScript = project(':front-end').file('src/main/groovy/RunPuliziaCassaforte.groovy').absolutePath
-        def stubsJar = project(':stubs').layout.buildDirectory.file('libs/stubs.jar').get().asFile.absolutePath
-        def shLibDir = layout.buildDirectory.dir('sh-lib').get().asFile.absolutePath
-        def scriptDir = "${projectDir}/src/test/sh/mac"
-
-        def groovyClasspath = "${stubsJar}:${shLibDir}/*:${scriptDir}"
-
-        environment 'PROJECT_DIR', projectDir
-        environment 'BUILD_DIR', buildDir
-        environment 'TEST_CLASSPATH', testClasspath
-        environment 'TEST_RESULTS_DIR', testResultsDir
-        environment 'GROOVY_CLASSPATH', groovyClasspath
-
-        commandLine 'bash', "${scriptDir}/mrunppb.sh", fatSourceFile, frontEndScript
-
-        // Forward any -P args the user passes on the CLI
-        if (project.hasProperty('testArgs')) {
-            args = project.testArgs.split(' ')
-        }
-    }
-
+    // Previously tried to run mrunppb.sh as an Exec-style task body (commandLine/environment
+    // calls), but this task was never declared `type: Exec` — those methods don't exist on a
+    // plain Task, so it always failed. mrunppb.sh also passes SOURCE/ENV/BUILD_GROUP as CLI
+    // args that PuliziaPostBuild.groovy never reads (it only reads config/context, the way the
+    // real DBB zBuilder injects them) — fixing the Exec type alone wouldn't have made it work.
+    // Real, working coverage now lives in PuliziaPostBuildSpec.groovy (GroovyShell + fake
+    // TaskVariables/BuildContext doubles, driving the script the way DBB actually invokes it).
     doLast {
-        println "✓ PuliziaPostBuild tested via :library:test (doPuliziaPostBuild)"
-    }
-}
-
-def dbbBuildSimDir  = layout.buildDirectory.dir('dbb-build-sim')
-def postBuildCwdDir = layout.buildDirectory.dir('postbuild-test-cwd')
-
-tasks.register('preparePuliziaPostBuildTestEnv') {
-    description = 'Deploys FullPuliziaCassaforte.groovy into the simulated $DBB_BUILD for PuliziaPostBuildSpec'
-    def fatSourceFile = project(':fat-source').file('src/main/groovy/FullPuliziaCassaforte.groovy')
-    def targetFile = dbbBuildSimDir.get().dir('groovy').file('FullPuliziaCassaforte.groovy').asFile
-    def cwdDir = postBuildCwdDir.get().asFile
-    inputs.file(fatSourceFile)
-    outputs.file(targetFile)
-    doLast {
-        targetFile.parentFile.mkdirs()
-        targetFile.text = fatSourceFile.text
-        cwdDir.mkdirs()
+        println "✓ PuliziaPostBuild.groovy covered by PuliziaPostBuildSpec (mac/src/test/groovy/PuliziaPostBuildSpec.groovy)"
     }
 }
 
 test {
     useJUnitPlatform()
-    outputs.upToDateWhen { false }
     dependsOn tasks.named('testPuliziaCassaforte')
     dependsOn tasks.named('testPuliziaPostBuild')
-    dependsOn tasks.named('preparePuliziaPostBuildTestEnv')
 
-    workingDir = postBuildCwdDir.get().asFile
-    environment 'DBB_BUILD', dbbBuildSimDir.get().asFile.absolutePath
-    environment 'DBB_CONF', dbbBuildSimDir.get().asFile.absolutePath
-    environment 'DBB_HOME', dbbBuildSimDir.get().asFile.absolutePath
-
-    systemProperty 'dbbBuildSimDir', dbbBuildSimDir.get().asFile.absolutePath
     systemProperty 'frontEndPostBuildFile', project(':front-end').file('src/main/groovy/PuliziaPostBuild.groovy').absolutePath
+    systemProperty 'fatSourceFile', project(':fat-source').file('src/main/groovy/FullPuliziaCassaforte.groovy').absolutePath
     systemProperty 'buildMapFixture', file('src/test/resources/fixtures/buildmap.json').absolutePath
     systemProperty 'stageMapFixture', file('src/test/resources/fixtures/stagemap.csv').absolutePath
+
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat 'full'
+        showStandardStreams true
+    }
+
 }
+

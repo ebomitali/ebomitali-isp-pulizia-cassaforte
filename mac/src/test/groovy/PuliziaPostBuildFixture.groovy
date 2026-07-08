@@ -1,21 +1,23 @@
 class PuliziaPostBuildFixture {
 
-    final File cwd
     final File dbbBuildDir
+    final File dbbHomeDir
+    final File appDir
     final File zosSimDir
 
-    PuliziaPostBuildFixture(File cwd, File dbbBuildDir, File zosSimDir) {
-        this.cwd = cwd
+    PuliziaPostBuildFixture(File dbbBuildDir, File dbbHomeDir, File appDir, File zosSimDir) {
         this.dbbBuildDir = dbbBuildDir
+        this.dbbHomeDir = dbbHomeDir
+        this.appDir = appDir
         this.zosSimDir = zosSimDir
     }
 
     private File rulesFile() {
-        new File(dbbBuildDir, 'build-data/rules.csv')
+        new File(dbbHomeDir, 'build-data/rules.csv')
     }
 
     private File stageMapFile() {
-        new File(dbbBuildDir, 'build-data/stagemap.csv')
+        new File(dbbHomeDir, 'build-data/stagemap.csv')
     }
 
     void writeRules(String rulesCsvContent) {
@@ -38,8 +40,15 @@ class PuliziaPostBuildFixture {
         props.setProperty('uxBasedir', zosSimDir.absolutePath)
         props.setProperty('rulesPath', rulesFile().absolutePath)
         props.setProperty('stageMapPath', stageMapFile().absolutePath)
-        def cfgFile = new File(cwd, 'PuliziaCassaforte.properties')
+        appDir.mkdirs()
+        def cfgFile = new File(appDir, 'PuliziaCassaforte.properties')
         cfgFile.withOutputStream { props.store(it, null) }
+    }
+
+    void deployFatSource(File fatSourceFile) {
+        def targetFile = new File(dbbBuildDir, 'groovy/FullPuliziaCassaforte.groovy')
+        targetFile.parentFile.mkdirs()
+        targetFile.text = fatSourceFile.text
     }
 
     File dataset(String dsName) {

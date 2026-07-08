@@ -27,27 +27,33 @@ if (!sourceFile.exists()) {
     System.exit(1)
 }
 
-// Read env var DBB_CONF
-String dbbConf = System.getenv("DBB_CONF")
+// DBB_CONF/DBB_BUILD/DBB_HOME/APP_DIR are build-scoped values set by the zBuilder on the
+// running BuildContext, not OS environment variables.
+String dbbConf = context.get("DBB_CONF")
 if (dbbConf == null) {
-    println "Environment variable DBB_CONF is not set."
+    println "Context variable DBB_CONF is not set."
     System.exit(1)
 }
-String dbbBuild = System.getenv("DBB_BUILD")
+String dbbBuild = context.get("DBB_BUILD")
 if (dbbBuild == null) {
-    println "Environment variable DBB_BUILD is not set."
+    println "Context variable DBB_BUILD is not set."
     System.exit(1)
 }
-String dbbHome = System.getenv("DBB_HOME")
+String dbbHome = context.get("DBB_HOME")
 if (dbbHome == null) {
-    println "Environment variable DBB_HOME is not set."
+    println "Context variable DBB_HOME is not set."
+    System.exit(1)
+}
+String appDir = context.get("APP_DIR")
+if (appDir == null) {
+    println "Context variable APP_DIR is not set."
     System.exit(1)
 }
 
-// Read PuliziaCassaforte property file from current directory
+// Read PuliziaCassaforte property file from the script's app directory
 Properties cfgProps = new Properties()
 try {
-    cfgProps.load(new FileInputStream("PuliziaCassaforte.properties"))
+    cfgProps.load(new FileInputStream(new File(appDir, "PuliziaCassaforte.properties")))
 } catch (IOException e) {
     println "Could not read PuliziaCassaforte.properties: ${e.message}"
     System.exit(1)
