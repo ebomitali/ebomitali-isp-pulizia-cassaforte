@@ -7,4 +7,6 @@ if [ -z "$SOURCE" ] || [ -z "$ENV" ] || [ -z "$BUILD_GROUP" ]; then
   exit 1
 fi
 
+echo "Launching: groovy -cp \"$GROOVY_CLASSPATH\" PuliziaPostBuild.groovy \"$SOURCE\" \"$ENV\" \"$BUILD_GROUP\""
 groovy -cp "$GROOVY_CLASSPATH" PuliziaPostBuild.groovy "$SOURCE" "$ENV" "$BUILD_GROUP" || result=$?
+echo "PuliziaPostBuild.groovy returned: $result"
