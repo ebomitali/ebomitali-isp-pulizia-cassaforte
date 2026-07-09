@@ -32,10 +32,10 @@ class PuliziaPostBuildFixture {
         f.text = stageMapFixture.text
     }
 
-    void writeConfig(String buildMapPath) {
+    void writeConfig(String buildMapPath, String buildMapClientType = 'json') {
         def props = new Properties()
         props.setProperty('fileOpsType', 'macos')
-        props.setProperty('buildMapClientType', 'json')
+        props.setProperty('buildMapClientType', buildMapClientType)
         props.setProperty('buildMapPath', buildMapPath)
         props.setProperty('uxBasedir', zosSimDir.absolutePath)
         props.setProperty('rulesPath', rulesFile().absolutePath)

@@ -11,7 +11,9 @@ class FakeTaskVariables extends TaskVariables {
 }
 
 class FakeBuildContext extends BuildContext {
-    Map<String, String> vars = [:]
+    // Object-valued: BUILD_GROUP may hold a real com.ibm.dbb.metadata.BuildGroup (mock or
+    // otherwise), not just a String.
+    Map<String, Object> vars = [:]
 
     @Override
     Object get(String name) {

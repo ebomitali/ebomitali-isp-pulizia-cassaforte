@@ -1120,9 +1120,13 @@ class PuliziaCassaforteConfig {
      *   <li>When {@code buildMapClientType} is {@code json}: {@code buildMapPath} must be set
      *       and point to an existing file.</li>
      * </ul>
+     * @param skipDb2Credentials  When {@code true}, skips the {@code db2} branch's
+     *        userId/pwFilePath/db2ConfigPath checks — used when a {@code BuildGroup} has
+     *        already been resolved and injected (e.g. from a running task's {@code BuildContext}),
+     *        so {@link Db2BuildMapClient}'s deferred-connection credentials are never needed.
      * @throws IllegalArgumentException on the first rule violation found.
      */
-    void validate() {
+    void validate(boolean skipDb2Credentials = false) {
         if (!rulesPath)
             throw new IllegalArgumentException('rulesPath must be defined in config')
         if (!new File(rulesPath).exists())
@@ -1134,21 +1138,23 @@ class PuliziaCassaforteConfig {
 
         def bmType = buildMapClientType ?: 'db2'
         if (bmType == 'db2') {
-            int credCount = [userId, pwFilePath, db2ConfigPath].count { it }
-            if (credCount == 0)
-                throw new IllegalArgumentException('db2 buildMapClientType requires userId, pwFilePath and db2ConfigPath')
-            if (credCount < 3)
-                throw new IllegalArgumentException('userId, pwFilePath and db2ConfigPath must all be defined or none')
-            if (!new File(pwFilePath).exists())
-                throw new IllegalArgumentException("pwFilePath not found: '$pwFilePath'")
-            if (!new File(db2ConfigPath).exists())
-                throw new IllegalArgumentException("db2ConfigPath not found: '$db2ConfigPath'")
+            if (!skipDb2Credentials) {
+                int credCount = [userId, pwFilePath, db2ConfigPath].count { it }
+                if (credCount == 0)
+                    throw new IllegalArgumentException('db2 buildMapClientType requires userId, pwFilePath and db2ConfigPath')
+                if (credCount < 3)
+                    throw new IllegalArgumentException('userId, pwFilePath and db2ConfigPath must all be defined or none')
+                if (!new File(pwFilePath).exists())
+                    throw new IllegalArgumentException("pwFilePath not found: '$pwFilePath'")
+                if (!new File(db2ConfigPath).exists())
+                    throw new IllegalArgumentException("db2ConfigPath not found: '$db2ConfigPath'")
+            }
         } else if (bmType == 'json') {
             if (!buildMapPath)
                 throw new IllegalArgumentException('json buildMapClientType requires buildMapPath')
             if (!new File(buildMapPath).exists())
                 throw new IllegalArgumentException("buildMapPath not found: '$buildMapPath'")
-        } else {
+        } else if (bmType != 'dbb') {
             throw new IllegalArgumentException("Unknown buildMapClientType: '$bmType'")
         }
     }
@@ -1257,7 +1263,7 @@ class PuliziaCassaforteImpl {
         return errors
     }
 
-    private void init(Properties props, String buildGroup) {
+    private void init(Properties props, String buildGroup, Object resolvedBuildGroup = null) {
         def cfg = PuliziaCassaforteConfig.from(props)
         if (cfg.fileOpsType)                   this.fileOpsType        = cfg.fileOpsType
         if (cfg.buildMapClientType)            this.buildMapClientType = cfg.buildMapClientType
@@ -1280,15 +1286,25 @@ class PuliziaCassaforteImpl {
             pwFilePath:         this.pwFilePath,
             db2ConfigPath:      this.db2ConfigPath
         )
-        effectiveCfg.validate()
+        effectiveCfg.validate(resolvedBuildGroup != null && this.buildMapClientType == 'db2')
 
         rulesFile    = new File(rulesPath)
         stageMapFile = new File(stagemapPath)
 
         switch (this.buildMapClientType) {
-            case 'json': this.buildMapClient = new JsonBuildMapClient(buildGroup, effectiveCfg); break
-            case 'db2':  this.buildMapClient = new Db2BuildMapClient(buildGroup, effectiveCfg);  break
-            case 'dbb':  this.buildMapClient = new DbbBuildMapClient(buildGroup, effectiveCfg);  break
+            case 'json':
+                this.buildMapClient = new JsonBuildMapClient(buildGroup, effectiveCfg)
+                break
+            case 'db2':
+                // When a BuildGroup was already resolved (e.g. from a running task's
+                // BuildContext), inject it directly — no deferred DB2 connection needed.
+                this.buildMapClient = resolvedBuildGroup != null
+                    ? new Db2BuildMapClient(resolvedBuildGroup)
+                    : new Db2BuildMapClient(buildGroup, effectiveCfg)
+                break
+            case 'dbb':
+                this.buildMapClient = new DbbBuildMapClient(buildGroup, effectiveCfg)
+                break
             default: throw new IllegalArgumentException("Unknown buildMapClientType: '${this.buildMapClientType}'")
         }
 
@@ -1347,10 +1363,11 @@ class PuliziaCassaforteImpl {
         }
     }
 
-    int doPuliziaPostBuild(String sourceToProcess, String environment, String buildGroup, Properties props) {
+    int doPuliziaPostBuild(String sourceToProcess, String environment, String buildGroup, Properties props,
+                           Object resolvedBuildGroup = null) {
         log.info("Starting PuliziaPostBuild for source='{}' env='{}'", sourceToProcess, environment)
 
-        init(props, buildGroup)
+        init(props, buildGroup, resolvedBuildGroup)
 
         if (!envChain.requiresPrevEnvClean(environment)) {
             log.info("Environment '{}' does not require previous environment cleanup", environment)

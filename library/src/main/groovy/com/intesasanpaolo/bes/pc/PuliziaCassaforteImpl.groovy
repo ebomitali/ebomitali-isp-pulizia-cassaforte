@@ -91,7 +91,7 @@ class PuliziaCassaforteImpl {
         return errors
     }
 
-    private void init(Properties props, String buildGroup) {
+    private void init(Properties props, String buildGroup, Object resolvedBuildGroup = null) {
         def cfg = PuliziaCassaforteConfig.from(props)
         if (cfg.fileOpsType)                   this.fileOpsType        = cfg.fileOpsType
         if (cfg.buildMapClientType)            this.buildMapClientType = cfg.buildMapClientType
@@ -114,15 +114,25 @@ class PuliziaCassaforteImpl {
             pwFilePath:         this.pwFilePath,
             db2ConfigPath:      this.db2ConfigPath
         )
-        effectiveCfg.validate()
+        effectiveCfg.validate(resolvedBuildGroup != null && this.buildMapClientType == 'db2')
 
         rulesFile    = new File(rulesPath)
         stageMapFile = new File(stagemapPath)
 
         switch (this.buildMapClientType) {
-            case 'json': this.buildMapClient = new JsonBuildMapClient(buildGroup, effectiveCfg); break
-            case 'db2':  this.buildMapClient = new Db2BuildMapClient(buildGroup, effectiveCfg);  break
-            case 'dbb':  this.buildMapClient = new DbbBuildMapClient(buildGroup, effectiveCfg);  break
+            case 'json':
+                this.buildMapClient = new JsonBuildMapClient(buildGroup, effectiveCfg)
+                break
+            case 'db2':
+                // When a BuildGroup was already resolved (e.g. from a running task's
+                // BuildContext), inject it directly — no deferred DB2 connection needed.
+                this.buildMapClient = resolvedBuildGroup != null
+                    ? new Db2BuildMapClient(resolvedBuildGroup)
+                    : new Db2BuildMapClient(buildGroup, effectiveCfg)
+                break
+            case 'dbb':
+                this.buildMapClient = new DbbBuildMapClient(buildGroup, effectiveCfg)
+                break
             default: throw new IllegalArgumentException("Unknown buildMapClientType: '${this.buildMapClientType}'")
         }
 
@@ -181,10 +191,11 @@ class PuliziaCassaforteImpl {
         }
     }
 
-    int doPuliziaPostBuild(String sourceToProcess, String environment, String buildGroup, Properties props) {
+    int doPuliziaPostBuild(String sourceToProcess, String environment, String buildGroup, Properties props,
+                           Object resolvedBuildGroup = null) {
         log.info("Starting PuliziaPostBuild for source='{}' env='{}'", sourceToProcess, environment)
 
-        init(props, buildGroup)
+        init(props, buildGroup, resolvedBuildGroup)
 
         if (!envChain.requiresPrevEnvClean(environment)) {
             log.info("Environment '{}' does not require previous environment cleanup", environment)

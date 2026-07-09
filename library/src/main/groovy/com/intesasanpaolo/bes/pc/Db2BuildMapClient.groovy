@@ -9,8 +9,9 @@ import com.ibm.dbb.metadata.MetadataStoreFactory
 import groovy.util.logging.Slf4j
 
 /**
- * DB2-backed implementation of {@link BuildMapClient} that queries the live DBB metadata store
+ * DB2-backed groovyz implementation of {@link BuildMapClient} that queries the live DBB metadata store
  * to resolve generated output objects for a given source file.
+ * Meant to be run a in a standalone script using groovyz on z/OS USS
  *
  * <p>Two acquisition paths for the {@link BuildGroup}:
  * <ul>
@@ -18,7 +19,7 @@ import groovy.util.logging.Slf4j
  *       constructor with {@link PuliziaCassaforteConfig} — the DB2 connection is deferred until
  *       the first call to {@link #getGeneratedObjects}, so no connection is made when no rule
  *       uses {@code useBuildMap = true}.</li>
- *   <li><b>Direct injection</b> (tests): use {@code Db2BuildMapClient(BuildGroup)} to inject
+ *   <li><b>Direct injection</b> (testing purpose): use {@code Db2BuildMapClient(BuildGroup)} to inject
  *       a mock or pre-fetched group without touching the DB2 stack.</li>
  * </ul>
  *

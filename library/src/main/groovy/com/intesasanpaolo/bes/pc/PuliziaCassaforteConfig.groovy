@@ -69,9 +69,13 @@ class PuliziaCassaforteConfig {
      *   <li>When {@code buildMapClientType} is {@code json}: {@code buildMapPath} must be set
      *       and point to an existing file.</li>
      * </ul>
+     * @param skipDb2Credentials  When {@code true}, skips the {@code db2} branch's
+     *        userId/pwFilePath/db2ConfigPath checks — used when a {@code BuildGroup} has
+     *        already been resolved and injected (e.g. from a running task's {@code BuildContext}),
+     *        so {@link Db2BuildMapClient}'s deferred-connection credentials are never needed.
      * @throws IllegalArgumentException on the first rule violation found.
      */
-    void validate() {
+    void validate(boolean skipDb2Credentials = false) {
         if (!rulesPath)
             throw new IllegalArgumentException('rulesPath must be defined in config')
         if (!new File(rulesPath).exists())
@@ -83,21 +87,23 @@ class PuliziaCassaforteConfig {
 
         def bmType = buildMapClientType ?: 'db2'
         if (bmType == 'db2') {
-            int credCount = [userId, pwFilePath, db2ConfigPath].count { it }
-            if (credCount == 0)
-                throw new IllegalArgumentException('db2 buildMapClientType requires userId, pwFilePath and db2ConfigPath')
-            if (credCount < 3)
-                throw new IllegalArgumentException('userId, pwFilePath and db2ConfigPath must all be defined or none')
-            if (!new File(pwFilePath).exists())
-                throw new IllegalArgumentException("pwFilePath not found: '$pwFilePath'")
-            if (!new File(db2ConfigPath).exists())
-                throw new IllegalArgumentException("db2ConfigPath not found: '$db2ConfigPath'")
+            if (!skipDb2Credentials) {
+                int credCount = [userId, pwFilePath, db2ConfigPath].count { it }
+                if (credCount == 0)
+                    throw new IllegalArgumentException('db2 buildMapClientType requires userId, pwFilePath and db2ConfigPath')
+                if (credCount < 3)
+                    throw new IllegalArgumentException('userId, pwFilePath and db2ConfigPath must all be defined or none')
+                if (!new File(pwFilePath).exists())
+                    throw new IllegalArgumentException("pwFilePath not found: '$pwFilePath'")
+                if (!new File(db2ConfigPath).exists())
+                    throw new IllegalArgumentException("db2ConfigPath not found: '$db2ConfigPath'")
+            }
         } else if (bmType == 'json') {
             if (!buildMapPath)
                 throw new IllegalArgumentException('json buildMapClientType requires buildMapPath')
             if (!new File(buildMapPath).exists())
                 throw new IllegalArgumentException("buildMapPath not found: '$buildMapPath'")
-        } else {
+        } else if (bmType != 'dbb') {
             throw new IllegalArgumentException("Unknown buildMapClientType: '$bmType'")
         }
     }

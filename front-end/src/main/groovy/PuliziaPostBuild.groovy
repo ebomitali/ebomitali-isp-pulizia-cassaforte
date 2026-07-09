@@ -18,8 +18,16 @@
 
 String sourceFilePath = config.get("FILE_PATH")
 String environment    = context.get("BUILD_ENV")
-String buildGroup     = context.get("BUILD_GROUP")
 String simulationEnv  = config.get("simulationEnv") ?: ''
+
+// BUILD_GROUP may already be a resolved com.ibm.dbb.metadata.BuildGroup (the normal case in a
+// running task context) or a plain group-name String (e.g. simpler test setups). Either way,
+// derive the name for logging/rule matching, and keep the object itself (when present) so it
+// can be reused directly instead of triggering a fresh DB2 connection for buildMapClientType=db2.
+def buildGroupRaw          = context.get("BUILD_GROUP")
+boolean buildGroupIsObject = buildGroupRaw != null && !(buildGroupRaw instanceof String)
+String  buildGroup         = buildGroupIsObject ? buildGroupRaw.getName() : buildGroupRaw
+Object  resolvedBuildGroup = buildGroupIsObject ? buildGroupRaw : null
 
 File sourceFile = new File(sourceFilePath)
 if (!sourceFile.exists()) {
@@ -73,6 +81,6 @@ gcl.parseClass(new File("${dbbBuild}/groovy/FullPuliziaCassaforte.groovy"))
 def clazz = gcl.loadClass('com.intesasanpaolo.bes.pc.PuliziaCassaforteImpl')
 def puliziaCassaforteImpl = clazz.getDeclaredConstructor().newInstance()
 
-int errors = puliziaCassaforteImpl.doPuliziaPostBuild(sourceFilePath, environment, buildGroup, cfgProps)
+int errors = puliziaCassaforteImpl.doPuliziaPostBuild(sourceFilePath, environment, buildGroup, cfgProps, resolvedBuildGroup)
 println "PuliziaCassaforte completed with ${errors} errors."
 return errors

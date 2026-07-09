@@ -1,6 +1,5 @@
 package com.intesasanpaolo.bes.pc
-// Mainframe-only. Must be compiled and run with groovyz in a DBB task or groovy step.
-// After upload to USS: chtag -tc IBM-1047 DbbBuildMapClient.groovy
+
 import com.ibm.dbb.build.BuildException
 import com.ibm.dbb.task.BuildContext
 import com.ibm.dbb.metadata.BuildGroup
@@ -8,14 +7,14 @@ import com.ibm.dbb.metadata.BuildMap
 import groovy.util.logging.Slf4j
 
 /**
- * DBB-task-context implementation of {@link BuildMapClient}.
+ * DBB-step-type-task implementation of {@link BuildMapClient}.
  *
  * <p>Reuses the {@link BuildGroup} already resolved by the {@code MetadataInit} built-in task
  * and available in the running {@link BuildContext} as {@code BUILD_GROUP}.  No DB2 connection
  * is made by this client — the group is simply pulled from the context on the first call to
  * {@link #getGeneratedObjects}.
  *
- * <p>Usage from a DBB task script:
+ * <p>Usage from a DBB script run by a step of type task:
  * <pre>
  *   def client = new DbbBuildMapClient(buildGroupName, cfg)
  *   client.setContext(context)   // inject the running BuildContext

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(./gradlew :mac:tasks --console=plain -q)",
+      "Bash(./gradlew :mac:tasks --all --console=plain -q)",
+      "Bash(./gradlew :mac:preparePuliziaPostBuildTestEnv --console=plain)",
+      "Bash(git commit -m ' *)",
+      "Bash(./gradlew :mac:tasks --console=plain)",
+      "Bash(./gradlew :mac:tasks --all --console=plain)",
+      "Bash(git status *)"
+    ]
+  }
+}
