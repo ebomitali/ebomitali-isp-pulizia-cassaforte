@@ -131,6 +131,12 @@ test {
     systemProperty 'buildMapFixture', file('src/test/resources/fixtures/buildmap.json').absolutePath
     systemProperty 'stageMapFixture', file('src/test/resources/fixtures/stagemap.csv').absolutePath
 
+    // CliRunner wiring (PuliziaCassaforteSpec): runs PuliziaCassaforte.groovy as a real subprocess
+    // via `java -cp <classpath> groovy.ui.GroovyMain <script> <args>`.
+    systemProperty 'java.executable', org.gradle.internal.jvm.Jvm.current().javaExecutable.absolutePath
+    systemProperty 'wrapper.classpath', sourceSets.test.runtimeClasspath.asPath
+    systemProperty 'wrapper.script', project(':front-end').file('scripts/groovy/PuliziaCassaforte.groovy').absolutePath
+
     testLogging {
         events 'passed', 'skipped', 'failed'
         exceptionFormat 'full'
@@ -138,4 +144,3 @@ test {
     }
 
 }
-
