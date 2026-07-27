@@ -1,11 +1,11 @@
-class PuliziaPostBuildFixture {
+class PuliziaFixture {
 
     final File dbbBuildDir
     final File dbbHomeDir
     final File appDir
     final File zosSimDir
 
-    PuliziaPostBuildFixture(File dbbBuildDir, File dbbHomeDir, File appDir, File zosSimDir) {
+    PuliziaFixture(File dbbBuildDir, File dbbHomeDir, File appDir, File zosSimDir) {
         this.dbbBuildDir = dbbBuildDir
         this.dbbHomeDir = dbbHomeDir
         this.appDir = appDir
@@ -17,7 +17,7 @@ class PuliziaPostBuildFixture {
     }
 
     private File stageMapFile() {
-        new File(dbbBuildDir, 'build-data/stagemap.csv')
+        new File(dbbBuildDir, 'build-data/stage-map.csv')
     }
 
     void writeRules(String rulesCsvContent) {
@@ -45,8 +45,14 @@ class PuliziaPostBuildFixture {
         cfgFile.withOutputStream { props.store(it, null) }
     }
 
-    void deployFatSource(File fatSourceFile) {
-        def targetFile = new File(dbbBuildDir, 'groovy/FullPuliziaCassaforte.groovy')
+    void deployRunPuliziaCassaforteToDbbBuild(File runPuliziaCassaforteFile) {
+        def targetFile = new File(dbbBuildDir, 'groovy/pulizia-cassaforte/RunPuliziaCassaforte.groovy')
+        targetFile.parentFile.mkdirs()
+        targetFile.text = runPuliziaCassaforteFile.text
+    }
+
+    void deployFatSourceToDbbBuild(File fatSourceFile) {
+        def targetFile = new File(dbbBuildDir, 'groovy/pulizia-cassaforte/FullPuliziaCassaforte.groovy')
         targetFile.parentFile.mkdirs()
         targetFile.text = fatSourceFile.text
     }
@@ -64,6 +70,14 @@ class PuliziaPostBuildFixture {
     Script loadPostBuild(File postBuildFile, FakeTaskVariables config, FakeBuildContext context) {
         def shell = new GroovyShell(this.class.classLoader)
         def script = shell.parse(postBuildFile)
+        script.config = config
+        script.context = context
+        script
+    }
+
+    Script loadPuliziaCassaforte(File puliziaCassaforteFile, FakeTaskVariables config, FakeBuildContext context) {
+        def shell = new GroovyShell(this.class.classLoader)
+        def script = shell.parse(puliziaCassaforteFile)
         script.config = config
         script.context = context
         script

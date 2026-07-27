@@ -8,15 +8,32 @@ class FakeTaskVariables extends TaskVariables {
     Object get(String name) {
         vars[name]
     }
+
+    @Override
+    String getStringVariable(String name) {
+        vars[name]
+    }
 }
 
 class FakeBuildContext extends BuildContext {
     // Object-valued: BUILD_GROUP may hold a real com.ibm.dbb.metadata.BuildGroup (mock or
     // otherwise), not just a String.
     Map<String, Object> vars = [:]
+    String buildFile
+    File workingDirectory
 
     @Override
     Object get(String name) {
         vars[name]
+    }
+
+    @Override
+    String getBuildFile() {
+        buildFile
+    }
+
+    @Override
+    File getWorkingDirectory() {
+        workingDirectory
     }
 }

@@ -126,7 +126,7 @@ test {
     dependsOn tasks.named('testPuliziaCassaforte')
     dependsOn tasks.named('testPuliziaPostBuild')
 
-    systemProperty 'frontEndPostBuildFile', project(':front-end').file('src/main/groovy/PuliziaPostBuild.groovy').absolutePath
+    systemProperty 'frontEndPostBuildFile', project(':front-end').file('scripts/groovy/PuliziaPostBuild.groovy').absolutePath
     systemProperty 'fatSourceFile', project(':fat-source').file('src/main/groovy/FullPuliziaCassaforte.groovy').absolutePath
     systemProperty 'buildMapFixture', file('src/test/resources/fixtures/buildmap.json').absolutePath
     systemProperty 'stageMapFixture', file('src/test/resources/fixtures/stagemap.csv').absolutePath
