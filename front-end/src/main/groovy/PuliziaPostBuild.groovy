@@ -18,7 +18,7 @@
 
 String sourceFilePath = config.get("FILE_PATH")
 String environment    = context.get("BUILD_ENV")
-String simulationEnv  = config.get("simulationEnv") ?: ''
+String simulationEnv  = config.get("simulationEnv") ?: '' // if empty use zos
 
 // BUILD_GROUP may already be a resolved com.ibm.dbb.metadata.BuildGroup (the normal case in a
 // running task context) or a plain group-name String (e.g. simpler test setups). Either way,
