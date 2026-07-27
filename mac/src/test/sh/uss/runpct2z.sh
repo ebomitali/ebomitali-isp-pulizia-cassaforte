@@ -43,7 +43,7 @@ write_config() {
     printf 'fileOpsType=%s\n'        "zos"                              >  "$_cfg"
     printf 'buildMapClientType=%s\n' "json"                             >> "$_cfg"
     printf 'buildMapPath=%s\n'       "$(resource_file 'buildmap.json')" >> "$_cfg"
-    printf 'rulesPath=%s\n'          "$(resource_file 'rulest2.csv')"   >> "$_cfg"
+    printf 'rulesPath=%s\n'          "$(resource_file 'rules.csv')"   >> "$_cfg"
     printf 'stageMapPath=%s\n'       "$(resource_file 'stagemap.csv')"  >> "$_cfg"
     echo "$_cfg"
 }

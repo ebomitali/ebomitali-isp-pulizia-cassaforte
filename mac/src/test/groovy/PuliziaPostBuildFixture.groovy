@@ -13,11 +13,11 @@ class PuliziaPostBuildFixture {
     }
 
     private File rulesFile() {
-        new File(dbbHomeDir, 'build-data/rules.csv')
+        new File(dbbBuildDir, 'build-data/rules.csv')
     }
 
     private File stageMapFile() {
-        new File(dbbHomeDir, 'build-data/stagemap.csv')
+        new File(dbbBuildDir, 'build-data/stagemap.csv')
     }
 
     void writeRules(String rulesCsvContent) {

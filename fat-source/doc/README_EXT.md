@@ -60,7 +60,7 @@ Same flow but with `buildMapClientType=db2`. Requires `DBB_CONF` set and DB2 cre
 |---|---|
 | `RunPuliziaCassaforte.groovy` | CLI frontend — parses args, loads config, delegates to `FullPuliziaCassaforte.groovy` |
 | `FullPuliziaCassaforte.groovy` | Fat source — contains all deletion logic, build map clients, rule matching, and `PuliziaCassaforteImpl` |
-| `resources/rulest2.csv` | Sample deletion rules for `runpct2z.sh` (JSON build map scenario) |
+| `resources/rules.csv` | Sample deletion rules for `runpct2z.sh` (JSON build map scenario) |
 | `resources/rulest4.csv` | Sample deletion rules for `runpct4z.sh` (DB2 build map scenario) |
 | `resources/stagemap.csv` | Maps `buildGroup\|environment` pairs to PDS suffix tokens |
 

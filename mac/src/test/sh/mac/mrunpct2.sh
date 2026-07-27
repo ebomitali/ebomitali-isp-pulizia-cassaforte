@@ -58,7 +58,7 @@ write_config() {
     printf 'buildMapClientType=%s\n' "json"                               >> "$_cfg"
     printf 'buildMapPath=%s\n'       "$(resource_file 'buildmap.json')"   >> "$_cfg"
     printf 'uxBasedir=%s\n'          "$TEMP_DIR"                          >> "$_cfg"
-    printf 'rulesPath=%s\n'          "$(resource_file 'rulest2.csv')"     >> "$_cfg"
+    printf 'rulesPath=%s\n'          "$SCRIPT_DIR/rules.csv"              >> "$_cfg"
     printf 'stageMapPath=%s\n'       "$(resource_file 'stagemap.csv')"    >> "$_cfg"
 }
 
@@ -108,6 +108,11 @@ fi
 # Copy fat source and runner script alongside the test script, then cd there.
 cp "$FAT_SOURCE_FILE" "$SCRIPT_DIR/FullPuliziaCassaforte.groovy"
 cp "$LIBRARY_FILE" "$SCRIPT_DIR/RunPuliziaCassaforte.groovy"
+
+# DBB_CONF/DBB_BUILD/DBB_HOME are checked by RunPuliziaCassaforte.groovy; dummy values for local runs
+export DBB_CONF=/dev/null
+export DBB_BUILD=/dev/null
+export DBB_HOME=/dev/null
 
 result=0
 cd "$SCRIPT_DIR"

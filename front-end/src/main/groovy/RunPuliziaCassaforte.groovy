@@ -60,11 +60,8 @@ if (!cfgProps.containsKey('fileOpsType')) {
     cfgProps.setProperty('fileOpsType', 'zos')
 }
 
-// def pcloaded = loadScript(new File("FullPuliziaCassaforte.groovy"))
-// def puliziaCassaforte = pcloaded.createPuliziaCassaforteImpl()
-
 def gcl = new GroovyClassLoader(this.class.classLoader)
-gcl.parseClass("${DBB_BUILD}/groovy/cassaforte/fatSourceFile")
+gcl.parseClass(new File("FullPuliziaCassaforte.groovy"))
 def clazz = gcl.loadClass('com.intesasanpaolo.bes.pc.PuliziaCassaforteImpl')
 def puliziaCassaforteImpl = clazz.getDeclaredConstructor().newInstance()
 
