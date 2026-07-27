@@ -50,8 +50,9 @@ abstract class BuildMapClient {
 // After upload to USS: chtag -tc IBM-1047 Db2BuildMapClient.groovy
 
 /**
- * DB2-backed implementation of {@link BuildMapClient} that queries the live DBB metadata store
+ * DB2-backed groovyz implementation of {@link BuildMapClient} that queries the live DBB metadata store
  * to resolve generated output objects for a given source file.
+ * Meant to be run a in a standalone script using groovyz on z/OS USS
  *
  * <p>Two acquisition paths for the {@link BuildGroup}:
  * <ul>
@@ -59,7 +60,7 @@ abstract class BuildMapClient {
  *       constructor with {@link PuliziaCassaforteConfig} — the DB2 connection is deferred until
  *       the first call to {@link #getGeneratedObjects}, so no connection is made when no rule
  *       uses {@code useBuildMap = true}.</li>
- *   <li><b>Direct injection</b> (tests): use {@code Db2BuildMapClient(BuildGroup)} to inject
+ *   <li><b>Direct injection</b> (testing purpose): use {@code Db2BuildMapClient(BuildGroup)} to inject
  *       a mock or pre-fetched group without touching the DB2 stack.</li>
  * </ul>
  *
@@ -160,18 +161,15 @@ class Db2BuildMapClient extends BuildMapClient {
 }
 
 // --- DbbBuildMapClient.groovy ---
-// Mainframe-only. Must be compiled and run with groovyz in a DBB task or groovy step.
-// After upload to USS: chtag -tc IBM-1047 DbbBuildMapClient.groovy
-
 /**
- * DBB-task-context implementation of {@link BuildMapClient}.
+ * DBB-step-type-task implementation of {@link BuildMapClient}.
  *
  * <p>Reuses the {@link BuildGroup} already resolved by the {@code MetadataInit} built-in task
  * and available in the running {@link BuildContext} as {@code BUILD_GROUP}.  No DB2 connection
  * is made by this client — the group is simply pulled from the context on the first call to
  * {@link #getGeneratedObjects}.
  *
- * <p>Usage from a DBB task script:
+ * <p>Usage from a DBB script run by a step of type task:
  * <pre>
  *   def client = new DbbBuildMapClient(buildGroupName, cfg)
  *   client.setContext(context)   // inject the running BuildContext
