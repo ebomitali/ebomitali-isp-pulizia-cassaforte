@@ -1,0 +1,154 @@
+// the build process is the following:
+// 1. generate the single fat source file using helper/sh/create-source-blob.sh
+// 2. copy tests from library/src/test/groovy to fat-source/src/test/groovy
+// 3. compile and test the fat source with Gradle (see library/build.gradle for test dependencies)
+
+plugins {
+    id 'groovy'
+}
+
+// Task 1: Use fat-source's generated FullPuliziaCassaforte.groovy
+task generateFullFatSource {
+    description = 'Ensure fat-source FullPuliziaCassaforte.groovy is generated'
+    dependsOn project(':fat-source').tasks.named('compileGroovy')
+}
+
+// Task 3: Configure compilation and testing
+sourceSets {
+    main {
+        groovy {
+            srcDirs = ['src/main/groovy']
+        }
+    }
+    test {
+        groovy {
+            srcDirs = ['src/test/groovy']
+        }
+        resources {
+            srcDirs = ['src/test/resources']
+        }
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+configurations {
+    shRuntime  // slf4j provider jar(s) for mrunpct2.sh standalone execution
+}
+
+dependencies {
+    compileOnly project(':stubs')
+    implementation project(':fat-source')
+    implementation 'org.apache.groovy:groovy-all:4.0.25'
+    implementation 'org.slf4j:slf4j-api:2.0.16'
+    testImplementation platform('org.spockframework:spock-bom:2.3-groovy-4.0')
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'net.bytebuddy:byte-buddy:1.14.18'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testImplementation project(':stubs')
+    // Resolves BuildContext.getCommandLine()'s return type for Groovy static compilation of FakeBuildContext (FakeTaskContext.groovy)
+    testImplementation 'commons-cli:commons-cli:1.5.0'
+    testImplementation project(':fat-source')
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+    testRuntimeOnly 'ch.qos.logback:logback-classic:1.5.15'
+    shRuntime 'org.slf4j:slf4j-simple:2.0.16'
+}
+
+// Copy slf4j-simple for use by mrunpct2.sh (groovy -cp build/sh-lib/*)
+task copyShLibs(type: Copy) {
+    description = 'Copy slf4j-simple provider for standalone shell script execution'
+    from configurations.shRuntime
+    into layout.buildDirectory.dir('sh-lib')
+}
+
+compileTestGroovy.dependsOn compileGroovy
+compileGroovy.dependsOn generateFullFatSource
+
+// build.gradle
+tasks.register('testPuliziaCassaforte', Exec) {
+    group = 'verification'
+    description = 'Runs the custom shell-based test script with project context'
+
+    // Let the task depend on whatever needs to exist first
+    dependsOn tasks.named('testClasses'), tasks.named('copyShLibs')
+
+    doFirst {
+        def testClasspath = sourceSets.test.runtimeClasspath.asPath
+        def projectDir = project.projectDir.absolutePath
+        def buildDir = project.layout.buildDirectory.get().asFile.absolutePath
+        def testResultsDir = "${buildDir}/test-results"
+
+        def fatSourceFile = project(':fat-source').file('src/main/groovy/FullPuliziaCassaforte.groovy').absolutePath
+        def frontEndScript = project(':front-end').file('src/main/groovy/RunPuliziaCassaforte.groovy').absolutePath
+        def stubsJar = project(':stubs').layout.buildDirectory.file('libs/stubs.jar').get().asFile.absolutePath
+        def shLibDir = layout.buildDirectory.dir('sh-lib').get().asFile.absolutePath
+        def scriptDir = "${projectDir}/src/test/sh"
+
+        def groovyClasspath = "${stubsJar}:${shLibDir}/*:${scriptDir}"
+
+        def dbbTempDir  = java.nio.file.Files.createTempDirectory('uss-dbb').toFile()
+        def dbbBuildDir = new File(dbbTempDir, 'build').tap { mkdirs() }
+        def dbbHomeDir  = new File(dbbTempDir, 'dbb').tap { mkdirs() }
+        def dbbConfDir  = new File(dbbTempDir, 'conf').tap { mkdirs() }
+
+        environment 'PROJECT_DIR', projectDir
+        environment 'BUILD_DIR', buildDir
+        environment 'TEST_CLASSPATH', testClasspath
+        environment 'TEST_RESULTS_DIR', testResultsDir
+        environment 'GROOVY_CLASSPATH', groovyClasspath
+        environment 'DBB_BUILD', dbbBuildDir.absolutePath
+        environment 'DBB_HOME', dbbHomeDir.absolutePath
+        environment 'DBB_CONF', dbbConfDir.absolutePath
+
+        commandLine 'bash', "${scriptDir}/runpct.sh", fatSourceFile, frontEndScript
+
+        // Forward any -P args the user passes on the CLI
+        if (project.hasProperty('testArgs')) {
+            args = project.testArgs.split(' ')
+        }
+    }
+}
+
+tasks.register('testPuliziaPostBuild') {
+    group = 'verification'
+    description = 'No-op placeholder: PuliziaPostBuild.groovy is covered by PuliziaPostBuildSpec (in-process Spock test, part of :mac:test).'
+
+    // Previously tried to run mrunppb.sh as an Exec-style task body (commandLine/environment
+    // calls), but this task was never declared `type: Exec` — those methods don't exist on a
+    // plain Task, so it always failed. mrunppb.sh also passes SOURCE/ENV/BUILD_GROUP as CLI
+    // args that PuliziaPostBuild.groovy never reads (it only reads config/context, the way the
+    // real DBB zBuilder injects them) — fixing the Exec type alone wouldn't have made it work.
+    // Real, working coverage now lives in PuliziaPostBuildSpec.groovy (GroovyShell + fake
+    // TaskVariables/BuildContext doubles, driving the script the way DBB actually invokes it).
+    doLast {
+        println "✓ PuliziaPostBuild.groovy covered by PuliziaPostBuildSpec (mac/src/test/groovy/PuliziaPostBuildSpec.groovy)"
+    }
+}
+
+test {
+    useJUnitPlatform()
+    dependsOn tasks.named('testPuliziaCassaforte')
+    dependsOn tasks.named('testPuliziaPostBuild')
+
+    systemProperty 'frontEndPostBuildFile', project(':front-end').file('scripts/groovy/PuliziaPostBuild.groovy').absolutePath
+    systemProperty 'fatSourceFile', project(':fat-source').file('src/main/groovy/FullPuliziaCassaforte.groovy').absolutePath
+    systemProperty 'buildMapFixture', file('src/test/resources/fixtures/buildmap.json').absolutePath
+    systemProperty 'stageMapFixture', file('src/test/resources/fixtures/stagemap.csv').absolutePath
+
+    // CliRunner wiring (PuliziaCassaforteSpec): runs PuliziaCassaforte.groovy as a real subprocess
+    // via `java -cp <classpath> groovy.ui.GroovyMain <script> <args>`.
+    systemProperty 'java.executable', org.gradle.internal.jvm.Jvm.current().javaExecutable.absolutePath
+    systemProperty 'wrapper.classpath', sourceSets.test.runtimeClasspath.asPath
+    systemProperty 'wrapper.script', project(':front-end').file('scripts/groovy/PuliziaCassaforte.groovy').absolutePath
+
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat 'full'
+        showStandardStreams true
+    }
+
+}

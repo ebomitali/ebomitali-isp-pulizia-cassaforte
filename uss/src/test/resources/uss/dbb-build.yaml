@@ -1,0 +1,152 @@
+---
+#
+# Licensed materials - Property of IBM
+# 5655-AC5 Copyright IBM Corp. 2024, 2025
+# All rights reserved
+# US Government users restricted rights  -  Use, duplication or
+# disclosure restricted by GSA ADP schedule contract with IBM Corp.
+#
+###############################################################
+# Include other build configuration files
+###############################################################
+version: 1.0.2
+include:
+  # IMPORTANT!  Copy and configure Languages.yaml and any other
+  # language configuration files from #DBB_HOME/samples/languages
+  # to your $DBB_BUILD directory before executing zBuilder.
+  - file: Languages.yaml
+
+#########################################
+# Executable build lifecycles
+#########################################
+lifecycles:
+
+  # build single programs from the command line
+  - lifecycle: file
+
+    cli:
+      options:
+
+        - longOption: "branch"
+          hasArg: true
+          description: "branch"   
+
+        - longOption: "buildGroup"
+          hasArg: true
+          description: "Build Group"
+
+        - longOption: "comment"
+          hasArg: true
+          description: "Build Comment" 
+
+        - longOption: "continueOnError"
+          hasArg: true
+          description: "Continue build in case of error"
+
+        - longOption: "encoding"
+          hasArg: true
+          description: "Unless set in the application configuration, overrides the default encoding used when writing out log files in the Finish task."
+
+        - longOption: "environment"
+          hasArg: true
+          description: "Build Environment"
+
+        - longOption: "proc"
+          hasArg: true
+          description: "Processor"
+
+        - longOption: "twxxx"
+          hasArg: true
+          description: "Value for overwriting TW000 in datasets library"
+
+        - longOption: "udc"
+          hasArg: true
+          description: "id UDC"      
+
+        - longOption: "cli_uid"
+          hasArg: true
+          description: "Build Unique Identifier"
+
+        - longOption: "user"
+          hasArg: true
+          description: "User Identifier for build"
+
+    # define the list of tasks to execute during the build lifecycle
+    tasks:
+      - Start
+      - ScannerInit
+      - CLICustomParameters
+      - MetadataInit
+      - FileAnalysis
+      - Languages
+      - PuliziaPostBuild
+      - Finish
+
+#########################################################################
+# Basic task configurations that can be referenced by multiple lifecycles
+#########################################################################
+tasks:
+
+  # basic build initialization
+  - task: Start
+
+  # initialize metadata store
+  - task: MetadataInit
+    variables:
+
+      - name: type
+        value: db2
+
+      - name: db2Conf
+        value: ${DBB_CONF}/db2Connection.conf
+
+      - name: buildGroup
+        select:
+          - condition: { exists: "CLI_BUILDGROUP" }
+            value: "${CLI_BUILDGROUP}"
+      
+      - name: mainBuildBranch
+        select:
+          - condition: { exists: "CLI_BRANCH" }
+            value: "${CLI_BRANCH}"      
+        value: "master"
+
+      - name: resultLabel
+        select:
+          - condition: { exists: "CLI_UID" }
+            value: "${CUSTOM_RESULT_LABEL}"   
+
+  # initialize dependency scanners
+  - task: ScannerInit
+    variables:
+      - name: scanners
+        value:
+        -  scanner: COBOL
+           extensions: SCB2B,SCB2C
+
+
+  # create simple build list
+  - task: FileAnalysis
+
+  # create full build list
+  - task: FullAnalysis
+
+  # create a build list containing impacted files
+  - task: ImpactAnalysis
+
+  # create a build list of topic branch changes flowing back to the main build branch
+  - task: MergeAnalysis
+
+  # build finialization
+  - task: Finish
+
+  # default empty Languages stage
+  # to be replaced by content of Languges.yaml
+  - stage: Languages
+    tasks:
+
+  # Creates custom context variables
+  - task: CLICustomParameters
+
+  - task: PuliziaPostBuild
+

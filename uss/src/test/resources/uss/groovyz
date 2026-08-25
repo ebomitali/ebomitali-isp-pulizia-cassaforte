@@ -1,0 +1,125 @@
+#! /bin/sh
+#                                                                    
+# Licensed materials - Property of IBM
+# 5655-AC5 Copyright IBM Corp. 2018, 2025
+# All rights reserved
+# US Government users restricted rights  -  Use, duplication or
+# disclosure restricted by GSA ADP schedule contract with IBM Corp.
+#
+#######################################################################
+##
+##  DBB Groovy invocation script which automatically sets appropriate 
+##  environment variables for DBB.
+##
+#######################################################################
+if [ -z "${DBB_HOME:+set}" ]; then
+   echo "DBB_HOME must be set"
+   exit 1
+fi
+
+if [ -z "${DBB_CONF:+set}" ]; then
+   export DBB_CONF=$DBB_HOME/conf
+fi
+
+# build arg list trapping/removing classpath
+unset CP LP SIMPLE_LOGGER_ON DBB_DAEMON_PORT DBB_DAEMON_HOST DBB_PERSONAL_DAEMON hasFileEncoding      
+
+for arg in "$@"                                                    
+do                                                                      
+  #echo arg $1                                                      #debug
+  case "$1" in                                                          
+    -cp|-classpath)             CP="$2"; shift; shift;; 
+    -DBB_DAEMON_PORT)           export DBB_DAEMON_PORT="$2"; shift; shift;;      
+    -DBB_DAEMON_HOST)           export DBB_DAEMON_HOST="$2"; shift; shift;;                    
+    -DBB_PERSONAL_DAEMON)       export DBB_PERSONAL_DAEMON="p"; shift;;                    
+    -Djava.library.path=*)      LP=$1; shift;;
+    -Dorg.slf4j.simpleLogger)   SIMPLE_LOGGER_ON=true; shift;; 
+    -Djava11)                   shift;; # Enabled by default as of DBB v3.0.2, remove it
+    -Dfile.encoding=*)          hasFileEncoding=true; JAVA_OPTS="$JAVA_OPTS $1"; shift;;        
+    # JVM arguments may not get properly applied unless passed through $JAVA_OPTS, $JDK_JAVA_OPTIONS may be used when arguments contain whitespace
+    -D*|-X*)                    JAVA_OPTS="$JAVA_OPTS $1"; shift;;
+  esac
+done
+                                                                
+LP=$(echo $LP | awk -F '=' '{print $2}')      # strip key from key=value
+
+# daemon
+if test "$DBB_PERSONAL_DAEMON" ; then
+	$DBB_HOME/lib/pclient groovyz "$@"
+	rc=$?
+	echo "** Build finished"
+	exit $rc
+else
+	if test "$DBB_DAEMON_PORT" ; then
+		if test "$DBB_DAEMON_HOST" ;
+		then
+			$DBB_HOME/lib/sclient $DBB_DAEMON_HOST $DBB_DAEMON_PORT groovyz "$@"
+			rc=$?
+			echo "** Build finished"
+			exit $rc
+		else
+			$DBB_HOME/lib/sclient 127.0.0.1 $DBB_DAEMON_PORT groovyz "$@"
+			rc=$?
+			echo "** Build finished"
+			exit $rc
+		fi
+	fi
+fi
+                                                              
+# create and export the appropriate LIBPATH & CLASSPATH                                                                        
+if test "$LP" ; then                                                    
+    #echo add LP $LP                                                #debug
+    LIBPATH="$LP:$DBB_HOME/lib:/usr/lib/java_runtime64:$LIBPATH"                                
+else                                                                    
+    LIBPATH="$DBB_HOME/lib:/usr/lib/java_runtime64:$LIBPATH"                                    
+fi                                                                      
+export LIBPATH                                                          
+#echo LIBPATH $LIBPATH                                              #debug
+                                                                        
+if test "$CP" ; then                                                    
+    #echo add CP $CP                                                #debug
+    CLASSPATH="$CP:$DBB_HOME/lib/*:/usr/include/java_classes/isfjcall.jar:$CLASSPATH"                          
+else                                                                    
+    CLASSPATH="$DBB_HOME/lib/*:/usr/include/java_classes/isfjcall.jar:$CLASSPATH"                              
+fi
+
+# Add simplelogger config to the classpath if org.slf4j.simpleLogger property is set
+if [ "$SIMPLE_LOGGER_ON" = true ] ; then
+    CLASSPATH="$CLASSPATH:$DBB_CONF/logging"
+else
+    JAVA_OPTS="$JAVA_OPTS -Dorg.slf4j.simpleLogger.defaultLogLevel=off"
+fi
+
+export CLASSPATH="$DBB_HOME/groovy/lib/*:$CLASSPATH"   
+#echo CLASSPATH $CLASSPATH                                          #debug
+
+#Unset GROOVY_HOME so that the packaged installation is always used
+unset GROOVY_HOME
+
+#Set JAVA_HOME to DBB_JAVA_HOME if exists
+JAVA_HOME=${DBB_JAVA_HOME:-$JAVA_HOME}
+#echo JAVA_HOME $JAVA_HOME                                          #debug
+
+java_version=$($JAVA_HOME/bin/java -version 2>&1 | awk -F '"' '/version/ {print $2}' | cut -d '.' -f 1,2)
+major_java_version=$(echo "$java_version" | cut -d '.' -f 1)
+if [[ "$java_version" == "1.8" ]]; then
+	echo "Detected Java 8, as of DBB 3.0 Java 8 is no longer supported and JAVA_HOME must be set to Java 11 or higher"
+    exit 1
+elif [[ "$major_java_version" == "21" ]] && [ -z "${hasFileEncoding:+set}" ]; then
+    # Automatically pass COMPAT if file.encoding was not already passed in. To default file.encoding
+    # to the system encoding
+    JAVA_OPTS="$JAVA_OPTS -Dfile.encoding=COMPAT"
+fi
+
+# Suppress reflection warnings introduced in Java11
+export JAVA_OPTS="$JAVA_OPTS --add-opens=java.base/sun.nio.fs=ALL-UNNAMED"
+
+#Required to turn off this setting for multi-thread MVSJob
+export _BPX_SHAREAS=NO
+
+#echo $CMD "$@"                                                     #debug
+CMD="$DBB_HOME/groovy/bin/groovy"
+$CMD "$@"
+rc=$?
+echo "** Build finished"
+exit $rc
