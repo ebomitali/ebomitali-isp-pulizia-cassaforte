@@ -21,13 +21,12 @@ class PuliziaTemporaneiImplSpec extends Specification {
         def datasetDir2 = new File(baseDir, 'MY/TEMP/XYZ')
         [datasetDir1, datasetDir2].each { it.mkdirs() }
 
-        def propsFile = new File(configDir, 'test.properties')
-        propsFile.text = """fileOpsType=macos
-uxBasedir=${baseDir.absolutePath}
-"""
+        def props = new Properties()
+        props.setProperty('fileOpsType', 'macos')
+        props.setProperty('uxBasedir', baseDir.absolutePath)
 
         when:
-        int count = impl.doPuliziaTemporanei('MY.TEMP.*', propsFile.absolutePath)
+        int count = impl.doPuliziaTemporanei('MY.TEMP.*', props)
 
         then:
         count == 2

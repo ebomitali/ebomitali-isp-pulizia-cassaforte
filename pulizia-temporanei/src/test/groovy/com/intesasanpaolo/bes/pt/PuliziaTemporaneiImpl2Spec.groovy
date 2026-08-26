@@ -31,9 +31,6 @@ class PuliziaTemporaneiImpl2Spec extends Specification {
     @TempDir
     File simDsnDir
 
-    @TempDir
-    File configDir
-
     void "execute via impl to delete matching datasets"() {
         given:
         // Create simulated DSN directory structure
@@ -44,10 +41,9 @@ class PuliziaTemporaneiImpl2Spec extends Specification {
         ]
         paths.each { new File(simDsnDir, it).mkdirs() }
 
-        def configFile = new File(configDir, 'test.properties')
-        configFile.text = """fileOpsType=macos
-uxBasedir=${simDsnDir.absolutePath}
-"""
+        def cfg = new Properties()
+        cfg.setProperty('fileOpsType', 'macos')
+        cfg.setProperty('uxBasedir', simDsnDir.absolutePath)
 
         // Verify setup
         assert new File(simDsnDir, 'MY/TEMP/ABC').exists()
@@ -58,7 +54,7 @@ uxBasedir=${simDsnDir.absolutePath}
         // Load and instantiate from JAR classes
         def implClass = Class.forName('com.intesasanpaolo.bes.pt.PuliziaTemporaneiImpl')
         def impl = implClass.getDeclaredConstructor().newInstance()
-        int count = impl.doPuliziaTemporanei('MY.TEMP.*', configFile.absolutePath)
+        int count = impl.doPuliziaTemporanei('MY.TEMP.*', cfg)
 
         then:
         count == 2
@@ -76,15 +72,14 @@ uxBasedir=${simDsnDir.absolutePath}
         ]
         paths.each { new File(simDsnDir, it).mkdirs() }
 
-        def configFile = new File(configDir, 'test.properties')
-        configFile.text = """fileOpsType=macos
-uxBasedir=${simDsnDir.absolutePath}
-"""
+        def cfg = new Properties()
+        cfg.setProperty('fileOpsType', 'macos')
+        cfg.setProperty('uxBasedir', simDsnDir.absolutePath)
 
         when:
         def implClass = Class.forName('com.intesasanpaolo.bes.pt.PuliziaTemporaneiImpl')
         def impl = implClass.getDeclaredConstructor().newInstance()
-        int count = impl.doPuliziaTemporanei('MY.TEMP.*', configFile.absolutePath)
+        int count = impl.doPuliziaTemporanei('MY.TEMP.*', cfg)
 
         then:
         count == 0
@@ -99,15 +94,14 @@ uxBasedir=${simDsnDir.absolutePath}
         ]
         paths.each { new File(simDsnDir, it).mkdirs() }
 
-        def configFile = new File(configDir, 'test.properties')
-        configFile.text = """fileOpsType=macos
-uxBasedir=${simDsnDir.absolutePath}
-"""
+        def cfg = new Properties()
+        cfg.setProperty('fileOpsType', 'macos')
+        cfg.setProperty('uxBasedir', simDsnDir.absolutePath)
 
         when:
         def implClass = Class.forName('com.intesasanpaolo.bes.pt.PuliziaTemporaneiImpl')
         def impl = implClass.getDeclaredConstructor().newInstance()
-        int count = impl.doPuliziaTemporanei('MY.TEMP.ABC', configFile.absolutePath)
+        int count = impl.doPuliziaTemporanei('MY.TEMP.ABC', cfg)
 
         then:
         count == 1
@@ -125,15 +119,14 @@ uxBasedir=${simDsnDir.absolutePath}
         ]
         paths.each { new File(simDsnDir, it).mkdirs() }
 
-        def configFile = new File(configDir, 'test.properties')
-        configFile.text = """fileOpsType=macos
-uxBasedir=${simDsnDir.absolutePath}
-"""
+        def cfg = new Properties()
+        cfg.setProperty('fileOpsType', 'macos')
+        cfg.setProperty('uxBasedir', simDsnDir.absolutePath)
 
         when:
         def implClass = Class.forName('com.intesasanpaolo.bes.pt.PuliziaTemporaneiImpl')
         def impl = implClass.getDeclaredConstructor().newInstance()
-        int count = impl.doPuliziaTemporanei('MY.TEMP.%', configFile.absolutePath)
+        int count = impl.doPuliziaTemporanei('MY.TEMP.%', cfg)
 
         then:
         count == 2
@@ -152,18 +145,17 @@ uxBasedir=${simDsnDir.absolutePath}
         ]
         paths.each { new File(simDsnDir, it).mkdirs() }
 
-        def configFile = new File(configDir, 'test.properties')
-        configFile.text = """fileOpsType=macos
-uxBasedir=${simDsnDir.absolutePath}
-"""
+        def cfg = new Properties()
+        cfg.setProperty('fileOpsType', 'macos')
+        cfg.setProperty('uxBasedir', simDsnDir.absolutePath)
 
         when:
         def implClass = Class.forName('com.intesasanpaolo.bes.pt.PuliziaTemporaneiImpl')
         def impl = implClass.getDeclaredConstructor().newInstance()
-        int count = impl.doPuliziaTemporanei('MY.TEMP.*', configFile.absolutePath)
+        int count = impl.doPuliziaTemporanei('MY.TEMP.*', cfg)
 
         then:
-        count == 2
+        count == 3
         !new File(simDsnDir, 'MY/TEMP/A').exists()
         !new File(simDsnDir, 'MY/TEMP/B').exists()
         !new File(simDsnDir, 'MY/TEMP/AB').exists()
