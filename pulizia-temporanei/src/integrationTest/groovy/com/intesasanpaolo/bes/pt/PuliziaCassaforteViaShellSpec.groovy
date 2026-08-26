@@ -184,7 +184,6 @@ class PuliziaCassaforteViaShellSpec extends Specification {
     private CliResult runPuliziaTemporanei(List<String> dsnPatternArgs) {
         def cfgFile = new File(workDirPath.toFile(), 'PuliziaTemporanei.properties').absolutePath
         def groovyClasspath = System.getProperty('groovyClasspath')
-        log.info("GROOVY_CLASSPATH: ${groovyClasspath}")
         def env = ['GROOVY_CLASSPATH': groovyClasspath]
         def result = CliRunner.runShellScript(
             workDirPath.toFile(),
