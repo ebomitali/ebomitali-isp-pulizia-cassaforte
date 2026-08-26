@@ -67,13 +67,39 @@ configurations {
     integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
+task generateFullFatSource {
+    description = 'Generate the single fat source file from sources'
+    doLast {
+        def tempDir = file("${buildDir}/temp-sources")
+        tempDir.mkdirs()
+        def fatDir = file("${buildDir}/fat-source")
+        fatDir.mkdirs()
+
+        copy {
+            from fileTree('src/main/groovy')
+            into "${tempDir}"
+            include '**/*.groovy'
+            exclude '**/fe/RunPuliziaTemporanei.groovy'
+        }
+        
+        exec {
+            commandLine 'sh', "${rootProject.projectDir}/helper/sh/create-source-blob.sh", "${tempDir}", "${buildDir}/fat-source/FullPuliziaTemporanei.groovy"
+        }
+    }
+}
+
 tasks.register('integrationTest', Test) {
     description = 'Run integration tests'
     group = 'verification'
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     useJUnitPlatform()
-    dependsOn jar
+    dependsOn jar, generateFullFatSource
+
+    doFirst {
+        systemProperty 'puliziaCassaforteJar', jar.archiveFile.get().asFile.absolutePath
+        systemProperty 'fatSourceFile', "${buildDir}/fat-source/FullPuliziaTemporanei.groovy"
+    }
 }
 
 check.dependsOn integrationTest
