@@ -36,12 +36,6 @@ class PuliziaTemporaneiFixture {
         targetFile.setExecutable(true)
     }
 
-    void deployLogbackConfigToWorkDir(File logbackConfigFile) {
-        def targetFile = new File(workDir, 'logback.xml')
-        targetFile.parentFile.mkdirs()
-        targetFile.text = logbackConfigFile.text
-    }
-
     void deploySlf4jJar(Collection<File> jarFiles) {
         def libDir = new File(workDir, 'lib')
         libDir.mkdirs()

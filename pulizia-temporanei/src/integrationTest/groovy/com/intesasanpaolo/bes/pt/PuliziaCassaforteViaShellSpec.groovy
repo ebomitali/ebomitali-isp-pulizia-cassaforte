@@ -70,12 +70,6 @@ class PuliziaCassaforteViaShellSpec extends Specification {
         }
         fixture.deployRunPuliziaTemporaneiToWorkDir(feEntryPointFile)
 
-        // Deploy logback config to workDir so subprocess can find it
-        def logbackConfigResource = getClass().getResource('/logback.xml')
-        if (logbackConfigResource) {
-            def logbackConfigFile = new File(logbackConfigResource.toURI())
-            fixture.deployLogbackConfigToWorkDir(logbackConfigFile)
-        }
 
         // Deploy SLF4J jars to workDir/lib for subprocess use
         def slf4jApiJarPath = System.getProperty('slf4jApiJar')
