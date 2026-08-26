@@ -7,7 +7,7 @@ import spock.lang.Specification
  * Integration test for pulizia-temporanei module.
  * Tests the full implementation using the compiled JAR classes.
  */
-class PuliziaTemporaneiJarIntegrationSpec extends Specification {
+class PuliziaTemporaneiImpl2Spec extends Specification {
 
     void "jar contains all necessary classes"() {
         when:
@@ -120,7 +120,8 @@ uxBasedir=${simDsnDir.absolutePath}
         def paths = [
             'MY/TEMP/A',
             'MY/TEMP/B',
-            'MY/TEMP/AB'
+            'MY/TEMP/AB',
+            'NOT/MATCH/DSN'
         ]
         paths.each { new File(simDsnDir, it).mkdirs() }
 
@@ -139,5 +140,32 @@ uxBasedir=${simDsnDir.absolutePath}
         !new File(simDsnDir, 'MY/TEMP/A').exists()
         !new File(simDsnDir, 'MY/TEMP/B').exists()
         new File(simDsnDir, 'MY/TEMP/AB').exists()
+    }
+
+    void "execute via impl with wildcard asterisk"() {
+        given:
+        def paths = [
+            'MY/TEMP/A',
+            'MY/TEMP/B',
+            'MY/TEMP/AB',
+            'NOT/MATCH/DSN'
+        ]
+        paths.each { new File(simDsnDir, it).mkdirs() }
+
+        def configFile = new File(configDir, 'test.properties')
+        configFile.text = """fileOpsType=macos
+uxBasedir=${simDsnDir.absolutePath}
+"""
+
+        when:
+        def implClass = Class.forName('com.intesasanpaolo.bes.pt.PuliziaTemporaneiImpl')
+        def impl = implClass.getDeclaredConstructor().newInstance()
+        int count = impl.doPuliziaTemporanei('MY.TEMP.*', configFile.absolutePath)
+
+        then:
+        count == 2
+        !new File(simDsnDir, 'MY/TEMP/A').exists()
+        !new File(simDsnDir, 'MY/TEMP/B').exists()
+        !new File(simDsnDir, 'MY/TEMP/AB').exists()
     }
 }
