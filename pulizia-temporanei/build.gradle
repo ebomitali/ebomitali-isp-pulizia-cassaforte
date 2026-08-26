@@ -43,6 +43,7 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
     testRuntimeOnly 'ch.qos.logback:logback-classic:1.5.16'
+    // SLF4J provider for subprocess - deployed to workDir/lib, not in main classpath
     testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.13'
 }
 
@@ -100,11 +101,14 @@ tasks.register('integrationTest', Test) {
 
     doFirst {
         def jarPath = jar.archiveFile.get().asFile.absolutePath
-        // Include all testRuntimeClasspath jars plus working directory for logback.xml
-        def allJars = configurations.testRuntimeClasspath.files.collect { it.absolutePath }
-        def groovyClasspath = ([jarPath] + allJars + ['.']).join(':')
+        // Include testRuntimeClasspath jars but exclude SLF4J jars (they go to workDir/lib)
+        def allJars = configurations.testRuntimeClasspath.files
+            .findAll { !it.name.startsWith('slf4j-') }
+            .collect { it.absolutePath }
+        // Include . for logback.xml and ./lib for SLF4J jars deployed to workDir
+        def groovyClasspath = ([jarPath] + allJars + ['.', './lib']).join(':')
 
-        // Collect SLF4J jars for deployment to workDir/lib
+        // Find SLF4J jars for deployment to workDir/lib
         def slf4jApiJar = configurations.testRuntimeClasspath.files.find { it.name.startsWith('slf4j-api') }
         def slf4jSimpleJar = configurations.testRuntimeClasspath.files.find { it.name.startsWith('slf4j-simple') }
 

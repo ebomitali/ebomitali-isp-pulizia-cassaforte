@@ -21,7 +21,8 @@
       "Bash(./gradlew :pulizia-temporanei:integrationTest --rerun-tasks --info)",
       "Bash(./gradlew :pulizia-temporanei:integrationTest)",
       "Bash(git commit -m ' *)",
-      "Bash(./gradlew :pulizia-temporanei:dependencies --configuration testRuntimeClasspath)"
+      "Bash(./gradlew :pulizia-temporanei:dependencies --configuration testRuntimeClasspath)",
+      "Bash(chmod +x /Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/pulizia-cassaforte-ptemp/pulizia-temporanei/src/integrationTest/resources/run-pulizia-temporanei.sh)"
     ]
   }
 }

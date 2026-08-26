@@ -77,14 +77,14 @@ class PuliziaCassaforteViaShellSpec extends Specification {
             fixture.deployLogbackConfigToWorkDir(logbackConfigFile)
         }
 
-        // Deploy SLF4J jars to workDir/lib
+        // Deploy SLF4J jars to workDir/lib for subprocess use
         def slf4jApiJarPath = System.getProperty('slf4jApiJar')
         def slf4jSimpleJarPath = System.getProperty('slf4jSimpleJar')
         def jarFiles = []
         if (slf4jApiJarPath) jarFiles << new File(slf4jApiJarPath)
         if (slf4jSimpleJarPath) jarFiles << new File(slf4jSimpleJarPath)
         if (jarFiles) {
-            fixture.deploySlf4jJars(jarFiles)
+            fixture.deploySlf4jJar(jarFiles)
         }
 
         System.setProperty('wrapper.script', deployedShellScript.absolutePath)
@@ -184,10 +184,8 @@ class PuliziaCassaforteViaShellSpec extends Specification {
     private CliResult runPuliziaTemporanei(List<String> dsnPatternArgs) {
         def cfgFile = new File(workDirPath.toFile(), 'PuliziaTemporanei.properties').absolutePath
         def groovyClasspath = System.getProperty('groovyClasspath')
-        def workDirLib = new File(workDirPath.toFile(), 'lib').absolutePath
-        def classpath = [groovyClasspath, workDirLib].join(':')
-        log.info("GROOVY_CLASSPATH: ${classpath}")
-        def env = ['GROOVY_CLASSPATH': classpath]
+        log.info("GROOVY_CLASSPATH: ${groovyClasspath}")
+        def env = ['GROOVY_CLASSPATH': groovyClasspath]
         def result = CliRunner.runShellScript(
             workDirPath.toFile(),
             deployedShellScript,
@@ -205,9 +203,7 @@ class PuliziaCassaforteViaShellSpec extends Specification {
 
     private CliResult runPuliziaTemporaneiWithArgs(List<String> args) {
         def groovyClasspath = System.getProperty('groovyClasspath')
-        def workDirLib = new File(workDirPath.toFile(), 'lib').absolutePath
-        def classpath = [groovyClasspath, workDirLib].join(':')
-        def env = ['GROOVY_CLASSPATH': classpath]
+        def env = ['GROOVY_CLASSPATH': groovyClasspath]
         def result = CliRunner.runShellScript(
             workDirPath.toFile(),
             deployedShellScript,

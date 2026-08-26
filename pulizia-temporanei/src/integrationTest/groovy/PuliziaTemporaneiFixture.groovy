@@ -42,7 +42,7 @@ class PuliziaTemporaneiFixture {
         targetFile.text = logbackConfigFile.text
     }
 
-    void deploySlf4jJars(Collection<File> jarFiles) {
+    void deploySlf4jJar(Collection<File> jarFiles) {
         def libDir = new File(workDir, 'lib')
         libDir.mkdirs()
         jarFiles.each { jarFile ->
