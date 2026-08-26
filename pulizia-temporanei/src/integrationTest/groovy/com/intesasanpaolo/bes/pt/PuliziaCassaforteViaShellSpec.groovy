@@ -70,6 +70,13 @@ class PuliziaCassaforteViaShellSpec extends Specification {
         }
         fixture.deployRunPuliziaTemporaneiToWorkDir(feEntryPointFile)
 
+        // Deploy logback config to workDir so subprocess can find it
+        def logbackConfigResource = getClass().getResource('/logback.xml')
+        if (logbackConfigResource) {
+            def logbackConfigFile = new File(logbackConfigResource.toURI())
+            fixture.deployLogbackConfigToWorkDir(logbackConfigFile)
+        }
+
         System.setProperty('wrapper.script', deployedShellScript.absolutePath)
     }
 
@@ -166,8 +173,9 @@ class PuliziaCassaforteViaShellSpec extends Specification {
 
     private CliResult runPuliziaTemporanei(List<String> dsnPatternArgs) {
         def cfgFile = new File(workDirPath.toFile(), 'PuliziaTemporanei.properties').absolutePath
-        def jarFile = System.getProperty('puliziaCassaforteJar')
-        def env = ['GROOVY_CLASSPATH': jarFile]
+        def groovyClasspath = System.getProperty('groovyClasspath')
+        log.info("GROOVY_CLASSPATH: ${groovyClasspath}")
+        def env = ['GROOVY_CLASSPATH': groovyClasspath]
         def result = CliRunner.runShellScript(
             workDirPath.toFile(),
             deployedShellScript,
@@ -184,8 +192,8 @@ class PuliziaCassaforteViaShellSpec extends Specification {
     }
 
     private CliResult runPuliziaTemporaneiWithArgs(List<String> args) {
-        def jarFile = System.getProperty('puliziaCassaforteJar')
-        def env = ['GROOVY_CLASSPATH': jarFile]
+        def groovyClasspath = System.getProperty('groovyClasspath')
+        def env = ['GROOVY_CLASSPATH': groovyClasspath]
         def result = CliRunner.runShellScript(
             workDirPath.toFile(),
             deployedShellScript,

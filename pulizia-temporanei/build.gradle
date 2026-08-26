@@ -42,6 +42,7 @@ dependencies {
     testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+    testRuntimeOnly 'ch.qos.logback:logback-classic:1.5.16'
 }
 
 test {
@@ -57,8 +58,8 @@ sourceSets {
         resources {
             srcDirs = ['src/integrationTest/resources']
         }
-        compileClasspath += sourceSets.main.output + configurations.testRuntimeClasspath
-        runtimeClasspath += output + compileClasspath
+        compileClasspath += sourceSets.main.output + configurations.testCompileClasspath
+        runtimeClasspath += output + compileClasspath + configurations.testRuntimeClasspath
     }
 }
 
@@ -97,7 +98,13 @@ tasks.register('integrationTest', Test) {
     dependsOn jar, generateFullFatSource
 
     doFirst {
-        systemProperty 'puliziaCassaforteJar', jar.archiveFile.get().asFile.absolutePath
+        def jarPath = jar.archiveFile.get().asFile.absolutePath
+        // Include all testRuntimeClasspath jars plus working directory for logback.xml
+        def allJars = configurations.testRuntimeClasspath.files.collect { it.absolutePath }
+        def groovyClasspath = ([jarPath] + allJars + ['.']).join(':')
+
+        systemProperty 'puliziaCassaforteJar', jarPath
+        systemProperty 'groovyClasspath', groovyClasspath
         systemProperty 'fatSourceFile', "${buildDir}/fat-source/FullPuliziaTemporanei.groovy"
         systemProperty 'feEntryPointFile', 'src/main/groovy/com/intesasanpaolo/bes/fe/RunPuliziaTemporanei.groovy'
     }

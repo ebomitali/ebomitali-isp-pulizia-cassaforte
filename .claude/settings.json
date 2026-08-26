@@ -20,7 +20,8 @@
       "Bash(./gradlew :pulizia-temporanei:integrationTest --rerun-tasks)",
       "Bash(./gradlew :pulizia-temporanei:integrationTest --rerun-tasks --info)",
       "Bash(./gradlew :pulizia-temporanei:integrationTest)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(./gradlew :pulizia-temporanei:dependencies --configuration testRuntimeClasspath)"
     ]
   }
 }

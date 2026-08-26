@@ -1,7 +1,5 @@
-#!/usr/bin/env groovy
-
-import com.intesasanpaolo.bes.pt.PuliziaTemporaneiImpl
-
+// Entry point for running PuliziaTemporanei from the command line 
+// via groovy RunPuliziaTemporanei.groovy
 // Simple argument parser without CliBuilder to avoid classpath issues
 String dsnPattern = null
 String configFile = 'PuliziaTemporanei.properties'
