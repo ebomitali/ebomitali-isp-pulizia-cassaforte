@@ -42,6 +42,17 @@ class PuliziaTemporaneiFixture {
         targetFile.text = logbackConfigFile.text
     }
 
+    void deploySlf4jJars(Collection<File> jarFiles) {
+        def libDir = new File(workDir, 'lib')
+        libDir.mkdirs()
+        jarFiles.each { jarFile ->
+            if (jarFile && jarFile.exists()) {
+                def targetFile = new File(libDir, jarFile.name)
+                targetFile.bytes = jarFile.bytes
+            }
+        }
+    }
+
     File dataset(String dsName) {
         def dir = new File(zosSimDir, dsName)
         dir.mkdirs()

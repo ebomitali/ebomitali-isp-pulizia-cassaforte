@@ -43,6 +43,7 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
     testRuntimeOnly 'ch.qos.logback:logback-classic:1.5.16'
+    testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.13'
 }
 
 test {
@@ -103,10 +104,16 @@ tasks.register('integrationTest', Test) {
         def allJars = configurations.testRuntimeClasspath.files.collect { it.absolutePath }
         def groovyClasspath = ([jarPath] + allJars + ['.']).join(':')
 
+        // Collect SLF4J jars for deployment to workDir/lib
+        def slf4jApiJar = configurations.testRuntimeClasspath.files.find { it.name.startsWith('slf4j-api') }
+        def slf4jSimpleJar = configurations.testRuntimeClasspath.files.find { it.name.startsWith('slf4j-simple') }
+
         systemProperty 'puliziaCassaforteJar', jarPath
         systemProperty 'groovyClasspath', groovyClasspath
         systemProperty 'fatSourceFile', "${buildDir}/fat-source/FullPuliziaTemporanei.groovy"
         systemProperty 'feEntryPointFile', 'src/main/groovy/com/intesasanpaolo/bes/fe/RunPuliziaTemporanei.groovy'
+        systemProperty 'slf4jApiJar', slf4jApiJar?.absolutePath ?: ''
+        systemProperty 'slf4jSimpleJar', slf4jSimpleJar?.absolutePath ?: ''
     }
 
     testLogging {
