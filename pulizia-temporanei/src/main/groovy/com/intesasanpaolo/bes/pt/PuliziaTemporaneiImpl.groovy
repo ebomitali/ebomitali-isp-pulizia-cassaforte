@@ -28,29 +28,16 @@ class PuliziaTemporaneiImpl {
     DeleteTemporaneiLogic deleteLogic = null
 
     /**
-     * Execute dataset deletion from command line.
-     * Loads configuration from properties file.
+     * Execute dataset deletion.
+     * Accepts configuration Properties directly (optional).
+     * If no cfgProps provided, defaults to empty Properties with fileOpsType='zos'.
      *
      * @param dsnPattern DSN pattern to delete (e.g., "MY.TEMP.*")
-     * @param configFile Path to properties file (default: PuliziaTemporanei.properties)
+     * @param cfgProps Configuration Properties (optional; defaults to empty Properties)
      * @return count of deleted datasets
      */
-    int doPuliziaTemporanei(String dsnPattern, String configFile = 'PuliziaTemporanei.properties') {
-        Properties props = new Properties()
-        new File(configFile).withInputStream { props.load(it) }
-        return doPuliziaTemporanei(dsnPattern, props)
-    }
-
-    /**
-     * Execute dataset deletion with provided properties.
-     *
-     * @param dsnPattern DSN pattern to delete
-     * @param props Configuration Properties
-     * @return count of deleted datasets
-     * @throws IllegalArgumentException if dsnPattern is null or empty
-     * @throws IllegalArgumentException if configuration is invalid
-     */
-    int doPuliziaTemporanei(String dsnPattern, Properties props) {
+    int doPuliziaTemporanei(String dsnPattern, Properties cfgProps = null) {
+        Properties props = cfgProps ?: new Properties()
         log.info("Starting PuliziaTemporanei for DSN pattern: '{}'", dsnPattern)
 
         init(props)
@@ -60,6 +47,20 @@ class PuliziaTemporaneiImpl {
         }
 
         return deleteLogic.execute(dsnPattern.trim())
+    }
+
+    /**
+     * Execute dataset deletion, loading config from file.
+     * Convenience method that reads properties from a file and delegates to main method.
+     *
+     * @param dsnPattern DSN pattern to delete
+     * @param configFile Path to properties file (e.g., "PuliziaTemporanei.properties")
+     * @return count of deleted datasets
+     */
+    int doPuliziaTemporaneiFromFile(String dsnPattern, String configFile) {
+        Properties props = new Properties()
+        new File(configFile).withInputStream { props.load(it) }
+        return doPuliziaTemporanei(dsnPattern, props)
     }
 
     /**

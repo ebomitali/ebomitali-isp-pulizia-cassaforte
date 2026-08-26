@@ -3,6 +3,8 @@
 // Sources merged: 22 files from '/Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/pulizia-cassaforte-main/fat-source/build/temp-sources'
 // ============================================================
 
+package com.intesasanpaolo.bes.pc
+
 import com.ibm.dbb.build.BuildException
 import com.ibm.dbb.metadata.BuildGroup
 import com.ibm.dbb.metadata.BuildMap
@@ -48,8 +50,9 @@ abstract class BuildMapClient {
 // After upload to USS: chtag -tc IBM-1047 Db2BuildMapClient.groovy
 
 /**
- * DB2-backed implementation of {@link BuildMapClient} that queries the live DBB metadata store
+ * DB2-backed groovyz implementation of {@link BuildMapClient} that queries the live DBB metadata store
  * to resolve generated output objects for a given source file.
+ * Meant to be run a in a standalone script using groovyz on z/OS USS
  *
  * <p>Two acquisition paths for the {@link BuildGroup}:
  * <ul>
@@ -57,7 +60,7 @@ abstract class BuildMapClient {
  *       constructor with {@link PuliziaCassaforteConfig} — the DB2 connection is deferred until
  *       the first call to {@link #getGeneratedObjects}, so no connection is made when no rule
  *       uses {@code useBuildMap = true}.</li>
- *   <li><b>Direct injection</b> (tests): use {@code Db2BuildMapClient(BuildGroup)} to inject
+ *   <li><b>Direct injection</b> (testing purpose): use {@code Db2BuildMapClient(BuildGroup)} to inject
  *       a mock or pre-fetched group without touching the DB2 stack.</li>
  * </ul>
  *
@@ -158,18 +161,15 @@ class Db2BuildMapClient extends BuildMapClient {
 }
 
 // --- DbbBuildMapClient.groovy ---
-// Mainframe-only. Must be compiled and run with groovyz in a DBB task or groovy step.
-// After upload to USS: chtag -tc IBM-1047 DbbBuildMapClient.groovy
-
 /**
- * DBB-task-context implementation of {@link BuildMapClient}.
+ * DBB-step-type-task implementation of {@link BuildMapClient}.
  *
  * <p>Reuses the {@link BuildGroup} already resolved by the {@code MetadataInit} built-in task
  * and available in the running {@link BuildContext} as {@code BUILD_GROUP}.  No DB2 connection
  * is made by this client — the group is simply pulled from the context on the first call to
  * {@link #getGeneratedObjects}.
  *
- * <p>Usage from a DBB task script:
+ * <p>Usage from a DBB script run by a step of type task:
  * <pre>
  *   def client = new DbbBuildMapClient(buildGroupName, cfg)
  *   client.setContext(context)   // inject the running BuildContext
@@ -499,7 +499,6 @@ class EnvironmentChain {
  * All operations require a member component and will throw {@link IllegalArgumentException} on
  * dataset-only or non-z/OS path references.
  */
-@Slf4j
 trait FileService {
 
     // all member only
@@ -938,7 +937,7 @@ class PathVariableExtractor {
         def c1stagep = stageMap[key]
         if (!c1stagep)
             throw new IllegalArgumentException(
-                "No stage-map entry for '${key}' (jobz path, env='${buildEnv}')"
+                "No stagemap entry for '${key}' (jobz path, env='${buildEnv}')"
             )
         def result = [C1STAGE: c1stagep, C1STAGEP: c1stagep, C1SYSTEM: '', HLQ: hlq ?: '']
         log.debug("extractJobz (special case): env='{}' C1STAGE='{}' C1STAGEP='{}' HLQ='{}'", 
@@ -964,7 +963,7 @@ class PathVariableExtractor {
         def c1stage  = stageMap[key]
         if (!c1stage)
             throw new IllegalArgumentException(
-                "No stage-map entry for '${key}' (path: '${sourcePath}')"
+                "No stagemap entry for '${key}' (path: '${sourcePath}')"
             )
 
         def result = [C1STAGE: c1stage, C1SYSTEM: c1system, HLQ: hlq ?: '']
@@ -1118,9 +1117,13 @@ class PuliziaCassaforteConfig {
      *   <li>When {@code buildMapClientType} is {@code json}: {@code buildMapPath} must be set
      *       and point to an existing file.</li>
      * </ul>
+     * @param skipDb2Credentials  When {@code true}, skips the {@code db2} branch's
+     *        userId/pwFilePath/db2ConfigPath checks — used when a {@code BuildGroup} has
+     *        already been resolved and injected (e.g. from a running task's {@code BuildContext}),
+     *        so {@link Db2BuildMapClient}'s deferred-connection credentials are never needed.
      * @throws IllegalArgumentException on the first rule violation found.
      */
-    void validate() {
+    void validate(boolean skipDb2Credentials = false) {
         if (!rulesPath)
             throw new IllegalArgumentException('rulesPath must be defined in config')
         if (!new File(rulesPath).exists())
@@ -1132,21 +1135,23 @@ class PuliziaCassaforteConfig {
 
         def bmType = buildMapClientType ?: 'db2'
         if (bmType == 'db2') {
-            int credCount = [userId, pwFilePath, db2ConfigPath].count { it }
-            if (credCount == 0)
-                throw new IllegalArgumentException('db2 buildMapClientType requires userId, pwFilePath and db2ConfigPath')
-            if (credCount < 3)
-                throw new IllegalArgumentException('userId, pwFilePath and db2ConfigPath must all be defined or none')
-            if (!new File(pwFilePath).exists())
-                throw new IllegalArgumentException("pwFilePath not found: '$pwFilePath'")
-            if (!new File(db2ConfigPath).exists())
-                throw new IllegalArgumentException("db2ConfigPath not found: '$db2ConfigPath'")
+            if (!skipDb2Credentials) {
+                int credCount = [userId, pwFilePath, db2ConfigPath].count { it }
+                if (credCount == 0)
+                    throw new IllegalArgumentException('db2 buildMapClientType requires userId, pwFilePath and db2ConfigPath')
+                if (credCount < 3)
+                    throw new IllegalArgumentException('userId, pwFilePath and db2ConfigPath must all be defined or none')
+                if (!new File(pwFilePath).exists())
+                    throw new IllegalArgumentException("pwFilePath not found: '$pwFilePath'")
+                if (!new File(db2ConfigPath).exists())
+                    throw new IllegalArgumentException("db2ConfigPath not found: '$db2ConfigPath'")
+            }
         } else if (bmType == 'json') {
             if (!buildMapPath)
                 throw new IllegalArgumentException('json buildMapClientType requires buildMapPath')
             if (!new File(buildMapPath).exists())
                 throw new IllegalArgumentException("buildMapPath not found: '$buildMapPath'")
-        } else {
+        } else if (bmType != 'dbb') {
             throw new IllegalArgumentException("Unknown buildMapClientType: '$bmType'")
         }
     }
@@ -1221,6 +1226,41 @@ class PuliziaCassaforteImpl {
 
     int doPuliziaCassaforte(File listToProcess, String environment, String buildGroup, Properties props) {
         log.info("Starting PuliziaCassaforte")
+
+        init(props, buildGroup)
+
+        if (!listToProcess)
+            throw new IllegalArgumentException('listToProcess argument is required')
+        if (!listToProcess.exists())
+            throw new IllegalArgumentException("listToProcess file not found: '$listToProcess'")
+
+        log.info("Processing list='{}' env='{}' buildGroup='{}'",
+                 listToProcess, environment, buildGroup)
+        int processed = 0, errors = 0
+        listToProcess.eachLine { raw ->
+            def line = raw.trim()
+            if (!line || line.startsWith('#')) return
+            def comma = line.indexOf(',')
+            if (comma < 0) {
+                log.warn("Skipping malformed line: '{}'", line)
+                errors++
+                return
+            }
+            def action     = line.substring(0, comma).trim().toUpperCase()
+            def sourcePath = line.substring(comma + 1).trim()
+
+            if (processSource(action, sourcePath, environment, buildGroup)) {
+                processed++
+            } else {
+                errors++
+            }
+        }
+
+        log.info("PuliziaCassaforte: processed={} errors={}", processed, errors)
+        return errors
+    }
+
+    private void init(Properties props, String buildGroup, Object resolvedBuildGroup = null) {
         def cfg = PuliziaCassaforteConfig.from(props)
         if (cfg.fileOpsType)                   this.fileOpsType        = cfg.fileOpsType
         if (cfg.buildMapClientType)            this.buildMapClientType = cfg.buildMapClientType
@@ -1234,11 +1274,6 @@ class PuliziaCassaforteImpl {
         if (cfg.buildMapPath)       this.buildMapPath       = cfg.buildMapPath
         if (cfg.jobzExtensions != null) this.jobzExtensions = cfg.jobzExtensions
 
-        if (!listToProcess)
-            throw new IllegalArgumentException('listToProcess argument is required')
-        if (!listToProcess.exists())
-            throw new IllegalArgumentException("listToProcess file not found: '$listToProcess'")
-
         def effectiveCfg = new PuliziaCassaforteConfig(
             buildMapClientType: this.buildMapClientType,
             rulesPath:          this.rulesPath,
@@ -1248,15 +1283,25 @@ class PuliziaCassaforteImpl {
             pwFilePath:         this.pwFilePath,
             db2ConfigPath:      this.db2ConfigPath
         )
-        effectiveCfg.validate()
+        effectiveCfg.validate(resolvedBuildGroup != null && this.buildMapClientType == 'db2')
 
         rulesFile    = new File(rulesPath)
         stageMapFile = new File(stagemapPath)
 
         switch (this.buildMapClientType) {
-            case 'json': this.buildMapClient = new JsonBuildMapClient(buildGroup, effectiveCfg); break
-            case 'db2':  this.buildMapClient = new Db2BuildMapClient(buildGroup, effectiveCfg);  break
-            case 'dbb':  this.buildMapClient = new DbbBuildMapClient(buildGroup, effectiveCfg);  break
+            case 'json':
+                this.buildMapClient = new JsonBuildMapClient(buildGroup, effectiveCfg)
+                break
+            case 'db2':
+                // When a BuildGroup was already resolved (e.g. from a running task's
+                // BuildContext), inject it directly — no deferred DB2 connection needed.
+                this.buildMapClient = resolvedBuildGroup != null
+                    ? new Db2BuildMapClient(resolvedBuildGroup)
+                    : new Db2BuildMapClient(buildGroup, effectiveCfg)
+                break
+            case 'dbb':
+                this.buildMapClient = new DbbBuildMapClient(buildGroup, effectiveCfg)
+                break
             default: throw new IllegalArgumentException("Unknown buildMapClientType: '${this.buildMapClientType}'")
         }
 
@@ -1289,52 +1334,65 @@ class PuliziaCassaforteImpl {
             hlq:            hlq,
             jobzExtensions: jobzExtensions
         )
-
-        log.info("Processing list='{}' env='{}' buildGroup='{}'",
-                 listToProcess, environment, buildGroup)
-        int processed = 0, errors = 0
-        listToProcess.eachLine { raw ->
-            def line = raw.trim()
-            if (!line || line.startsWith('#')) return
-            def comma = line.indexOf(',')
-            if (comma < 0) {
-                log.warn("Skipping malformed line: '{}'", line)
-                errors++
-                return
-            }
-            def action     = line.substring(0, comma).trim().toUpperCase()
-            def sourcePath = line.substring(comma + 1).trim()
-            def fileType   = resolveFileType(sourcePath)
-
-            try {
-                switch (action) {
-                    case 'C':
-                        def vars = isJobzType(fileType)
-                            ? extractor.extractJobz(environment, stageMap, hlq, fileType)
-                            : extractor.extract(sourcePath, environment, stageMap, hlq)
-                        deleteLogic.execute(sourcePath, fileType, vars, buildGroup)
-                        processed++
-                        break
-                    case 'S':
-                        sfilamento.execute(sourcePath, fileType, environment, buildGroup)
-                        processed++
-                        break
-                    default:
-                        log.warn("Unknown action '{}' in line: '{}'", action, line)
-                        errors++
-                }
-            } catch (Exception e) {
-                log.error("ERROR processing '{}': {}", sourcePath, e.message, e)
-                errors++
-            }
-        }
-
-        log.info("PuliziaCassaforte: processed={} errors={}", processed, errors)
-        return errors
     }
 
-    int doPuliziaPostBuild(String sourceToProcess, String environment, String buildGroup, Properties props) {
-        // This method processes one file at a time 
+    private boolean processSource(String action, String sourcePath, String environment, String buildGroup) {
+        def fileType = resolveFileType(sourcePath)
+
+        try {
+            switch (action) {
+                case 'C':
+                    def vars = isJobzType(fileType)
+                        ? extractor.extractJobz(environment, stageMap, hlq)
+                        : extractor.extract(sourcePath, environment, stageMap, hlq)
+                    deleteLogic.execute(sourcePath, fileType, vars, buildGroup)
+                    return true
+                case 'S':
+                    sfilamento.execute(sourcePath, fileType, environment, buildGroup)
+                    return true
+                default:
+                    log.warn("Unknown action '{}' for sourcePath '{}'", action, sourcePath)
+                    return false
+            }
+        } catch (Exception e) {
+            log.error("ERROR processing '{}': {}", sourcePath, e.message, e)
+            return false
+        }
+    }
+
+    int doPuliziaPostBuild(String sourceToProcess, String environment, String buildGroup, Properties props,
+                           Object resolvedBuildGroup = null) {
+        log.info("Starting PuliziaPostBuild for source='{}' env='{}'", sourceToProcess, environment)
+
+        init(props, buildGroup, resolvedBuildGroup)
+
+        if (!envChain.requiresPrevEnvClean(environment)) {
+            log.info("Environment '{}' does not require previous environment cleanup", environment)
+            return 0
+        }
+
+        if (!sourceToProcess)
+            throw new IllegalArgumentException('sourceToProcess argument is required')
+
+        def prevEnv = envChain.getPredecessor(environment)
+        if (!prevEnv) {
+            log.warn("No predecessor environment found for '{}'", environment)
+            return 0
+        }
+
+        def fileType = resolveFileType(sourceToProcess)
+
+        try {
+            def vars = isJobzType(fileType)
+                ? extractor.extractJobz(prevEnv, stageMap, hlq)
+                : extractor.extract(sourceToProcess, prevEnv, stageMap, hlq)
+            deleteLogic.execute(sourceToProcess, fileType, vars, buildGroup)
+            log.info("PuliziaPostBuild: successfully cleaned '{}' from predecessor env '{}'", sourceToProcess, prevEnv)
+            return 0
+        } catch (Exception e) {
+            log.error("ERROR in PuliziaPostBuild for '{}': {}", sourceToProcess, e.message, e)
+            return 1
+        }
     }
 
     private boolean isJobzType(String fileType) {
@@ -1522,7 +1580,7 @@ class SfilamentoLogic {
 
 // --- StageMapLoader.groovy ---
 /**
- * Loads the ISP stage-map CSV into a lookup map.
+ * Loads the ISP stagemap CSV into a lookup map.
  *
  * <p>CSV format (semicolon-delimited, keys and values wrapped in double-quotes,
  * with optional leading whitespace per line):
@@ -1562,6 +1620,7 @@ class StageMapLoader {
  * <pre>
  *   //DATASET.NAME(MEMBER)  →  &lt;baseDir&gt;/DATASET.NAME/MEMBER   (PDS member = file)
  *   //DATASET.NAME          →  &lt;baseDir&gt;/DATASET.NAME           (PDS = directory)
+ *   /path/to/file           →  /path/to/file                     (USS path, passed through)
  * </pre>
  *
  * <p>Only z/OS syntax (//DSN(MEMBER)) is supported. Unix paths are rejected with

@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs -I {} find {} -type d)",
+      "Bash(./gradlew pulizia-temporanei:integrationTest -i)",
+      "Bash(./gradlew pulizia-temporanei:integrationTest --no-rebuild)",
+      "Bash(./gradlew pulizia-temporanei:integrationTest --no-rebuild -q)",
+      "Bash(./gradlew pulizia-temporanei:compileIntegrationTestGroovy --no-rebuild -i)",
+      "Bash(./gradlew pulizia-temporanei:clean pulizia-temporanei:integrationTest)",
+      "Bash(./gradlew pulizia-temporanei:integrationTest)",
+      "Bash(xargs cat)",
+      "Bash(./gradlew dependencies *)",
+      "Bash(find ~/.m2/repository -name \"groovy-all-4.0.25.jar\" -o -name \"groovy-4.0.25.jar\" 2>/dev/null | head -1)",
+      "Read(//Users/bomitalievelino/.m2/repository/**)",
+      "Bash(./gradlew pulizia-temporanei:generateFullFatSource -m)",
+      "Bash(./gradlew pulizia-temporanei:integrationTest -q)",
+      "Bash(./gradlew pulizia-temporanei:processIntegrationTestResources)",
+      "Bash(./gradlew pulizia-temporanei:integrationTest -m)",
+      "Bash(./gradlew :pulizia-temporanei:generateFullFatSource --rerun-tasks)",
+      "Bash(./gradlew :pulizia-temporanei:integrationTest --rerun-tasks)",
+      "Bash(./gradlew :pulizia-temporanei:integrationTest --rerun-tasks --info)",
+      "Bash(./gradlew :pulizia-temporanei:integrationTest)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}

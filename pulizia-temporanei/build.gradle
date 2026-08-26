@@ -99,6 +99,13 @@ tasks.register('integrationTest', Test) {
     doFirst {
         systemProperty 'puliziaCassaforteJar', jar.archiveFile.get().asFile.absolutePath
         systemProperty 'fatSourceFile', "${buildDir}/fat-source/FullPuliziaTemporanei.groovy"
+        systemProperty 'feEntryPointFile', 'src/main/groovy/com/intesasanpaolo/bes/fe/RunPuliziaTemporanei.groovy'
+    }
+
+    testLogging {
+        events "passed", "skipped", "failed", "standard_out", "standard_error"
+        exceptionFormat "full"
+        showStandardStreams true
     }
 }
 

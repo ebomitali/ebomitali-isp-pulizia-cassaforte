@@ -14,6 +14,12 @@ import java.nio.file.*
  *   library = LTM00.D9PO1.PE000.@@@@.@@@@@@@@.@@.ZARA  (stage O1 for ATO)
  *   member  = TESTMEM  (stem of the source filename)
  * </pre>
+ *
+ * list of path
+ * edux0-jobs/$HXERI3.STWSJGO
+ * edux0-jobs/@HXGO2J.STWSJGO
+ * ATO/hx_o_01_ato_r1/src/JCL/BATCH/SJCLDEL/HXZZ1WK.SJCLDEL
+ * ATO/qu_c_01_ato_r1/src/ASSEMBLER/COPYBOOKS/CFELEM.SCPYASM 
  */
 class PuliziaCassaforteImplSpec extends Specification {
 

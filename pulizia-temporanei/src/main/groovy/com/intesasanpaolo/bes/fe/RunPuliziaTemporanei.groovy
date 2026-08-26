@@ -2,7 +2,7 @@
 
 import com.intesasanpaolo.bes.pt.PuliziaTemporaneiImpl
 
-// Simple argument parser without CliBuilder to avoid classpath issues in integration tests
+// Simple argument parser without CliBuilder to avoid classpath issues
 String dsnPattern = null
 String configFile = 'PuliziaTemporanei.properties'
 boolean showHelp = false
@@ -39,34 +39,15 @@ if (dsnPattern == null) {
     System.exit(1)
 }
 
-String dbbBuild = System.getenv("DBB_BUILD")
-if (dbbBuild == null) {
-    println "Environment variable DBB_BUILD is not set."
-    System.exit(1)
-}
-
-// Read PuliziaCassaforte property file from current directory
-Properties cfgProps = new Properties()
 try {
-    cfgProps.load(new FileInputStream("PuliziaCassaforte.properties"))
-} catch (IOException e) {
-    println "PuliziaTemporanei.properties not found, using default values"
-}
-
-// if fileOpsType is not set in properties, default to 'zos'
-if (!cfgProps.containsKey('fileOpsType')) {
-    cfgProps.setProperty('fileOpsType', 'zos')
-}
-
-
-try {
-
+    // Load fat source from current directory (FullPuliziaTemporanei.groovy)
     def gcl = new GroovyClassLoader(this.class.classLoader)
-    gcl.parseClass(new File("FullPuliziaTemporanei.groovy"))
+    gcl.parseClass(new File('FullPuliziaTemporanei.groovy'))
     def clazz = gcl.loadClass('com.intesasanpaolo.bes.pt.PuliziaTemporaneiImpl')
 
+    println("Running PuliziaTemporanei with DSN pattern: ${dsnPattern}")
     def impl = clazz.getDeclaredConstructor().newInstance()
-    int count = impl.doPuliziaTemporanei(dsnPattern, configFile)
+    int count = impl.doPuliziaTemporaneiFromFile(dsnPattern, configFile)
     println("Successfully deleted ${count} dataset(s)")
     System.exit(0)
 } catch (Exception e) {
