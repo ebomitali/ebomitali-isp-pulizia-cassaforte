@@ -25,7 +25,12 @@
       "Bash(chmod +x /Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/pulizia-cassaforte-ptemp/pulizia-temporanei/src/integrationTest/resources/run-pulizia-temporanei.sh)",
       "Bash(./gradlew :pulizia-temporanei:test)",
       "Bash(./gradlew :pulizia-temporanei:clean :pulizia-temporanei:jar)",
-      "Bash(./gradlew :pulizia-temporanei:test --rerun-tasks)"
+      "Bash(./gradlew :pulizia-temporanei:test --rerun-tasks)",
+      "Bash(./gradlew :pulizia-temporanei:test :pulizia-temporanei:integrationTest)",
+      "Bash(./gradlew :pulizia-temporanei:compileGroovy)",
+      "Bash(./gradlew :pulizia-temporanei:clean :pulizia-temporanei:test)",
+      "Bash(./gradlew :pulizia-temporanei:test --tests PuliziaTemporaneiImplSpec.doPuliziaTemporanei*)",
+      "Bash(./gradlew :pulizia-temporanei:test --tests \"*PuliziaTemporaneiImplSpec*defaults*\")"
     ]
   }
 }

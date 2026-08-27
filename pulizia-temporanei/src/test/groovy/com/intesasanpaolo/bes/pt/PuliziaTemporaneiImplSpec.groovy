@@ -118,4 +118,42 @@ class PuliziaTemporaneiImplSpec extends Specification {
         count == 1
         !datasetDir.exists()
     }
+
+    void "doPuliziaTemporanei with cliHlq and cliUid constructs DSN pattern and deletes"() {
+        given:
+        def datasetDir1 = new File(baseDir, 'MYHLQ/TWX_0000/UID123/QUAL1')
+        def datasetDir2 = new File(baseDir, 'MYHLQ/TWX_0000/UID123/QUAL2')
+        def datasetDir3 = new File(baseDir, 'OTHERHLQ/TWX_0000/UID456/QUAL1')
+        [datasetDir1, datasetDir2, datasetDir3].each { it.mkdirs() }
+
+        def props = new Properties()
+        props.setProperty('fileOpsType', 'macos')
+        props.setProperty('uxBasedir', baseDir.absolutePath)
+
+        when:
+        int count = impl.doPuliziaTemporanei('MYHLQ', 'UID123', props)
+
+        then:
+        count == 2
+        !datasetDir1.exists()
+        !datasetDir2.exists()
+        datasetDir3.exists()
+    }
+
+    void "doPuliziaTemporanei with cliHlq and cliUid trims whitespace"() {
+        given:
+        def datasetDir = new File(baseDir, 'MYHLQ/TWX_0000/UID123/QUAL1')
+        datasetDir.mkdirs()
+
+        def props = new Properties()
+        props.setProperty('fileOpsType', 'macos')
+        props.setProperty('uxBasedir', baseDir.absolutePath)
+
+        when:
+        int count = impl.doPuliziaTemporanei('  MYHLQ  ', '  UID123  ', props)
+
+        then:
+        count == 1
+        !datasetDir.exists()
+    }
 }

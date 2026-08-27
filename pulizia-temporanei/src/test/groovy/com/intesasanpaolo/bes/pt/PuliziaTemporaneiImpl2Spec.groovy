@@ -160,4 +160,29 @@ class PuliziaTemporaneiImpl2Spec extends Specification {
         !new File(simDsnDir, 'MY/TEMP/B').exists()
         !new File(simDsnDir, 'MY/TEMP/AB').exists()
     }
+
+    void "execute via impl with cliHlq and cliUid builds DSN pattern"() {
+        given:
+        def paths = [
+            'MYHLQ/TWX_0000/UID123/QUAL1',
+            'MYHLQ/TWX_0000/UID123/QUAL2',
+            'OTHERHLQ/TWX_0000/UID456/QUAL1'
+        ]
+        paths.each { new File(simDsnDir, it).mkdirs() }
+
+        def cfg = new Properties()
+        cfg.setProperty('fileOpsType', 'macos')
+        cfg.setProperty('uxBasedir', simDsnDir.absolutePath)
+
+        when:
+        def implClass = Class.forName('com.intesasanpaolo.bes.pt.PuliziaTemporaneiImpl')
+        def impl = implClass.getDeclaredConstructor().newInstance()
+        int count = impl.doPuliziaTemporanei('MYHLQ', 'UID123', cfg)
+
+        then:
+        count == 2
+        !new File(simDsnDir, 'MYHLQ/TWX_0000/UID123/QUAL1').exists()
+        !new File(simDsnDir, 'MYHLQ/TWX_0000/UID123/QUAL2').exists()
+        new File(simDsnDir, 'OTHERHLQ/TWX_0000/UID456/QUAL1').exists()
+    }
 }
