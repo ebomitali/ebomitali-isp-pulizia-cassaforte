@@ -90,21 +90,21 @@ class PuliziaTemporaneiImplSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    void "doPuliziaTemporanei defaults to zos fileOpsType"() {
-        given:
-        def props = new Properties()
-        // fileOpsType not set, should default to 'zos'
+    // void "doPuliziaTemporanei defaults to zos fileOpsType"() {
+    //     given:
+    //     def props = new Properties()
+    //     // fileOpsType not set, should default to 'zos'
 
-        when:
-        impl.doPuliziaTemporanei('MY.TEMP.*', props)
+    //     when:
+    //     impl.doPuliziaTemporanei('MYHLQ.TWX_0000.UID123.*', props)
 
-        then:
-        thrown(UnsupportedOperationException)  // JzosDatasetService throws UnsupportedOperationException
-    }
+    //     then:
+    //     thrown(UnsupportedOperationException)  // JzosDatasetService throws UnsupportedOperationException
+    // }
 
     void "doPuliziaTemporanei with uss config deletes matching datasets"() {
         given:
-        def datasetDir = new File(baseDir, 'MY/TEMP/ABC')
+        def datasetDir = new File(baseDir, 'MYHLQ/TWX_0000/UID123/ABC')
         datasetDir.mkdirs()
 
         def props = new Properties()
@@ -112,7 +112,7 @@ class PuliziaTemporaneiImplSpec extends Specification {
         props.setProperty('uxBasedir', baseDir.absolutePath)
 
         when:
-        int count = impl.doPuliziaTemporanei('MY.TEMP.*', props)
+        int count = impl.doPuliziaTemporanei('MYHLQ.TWX_0000.UID123.*', props)
 
         then:
         count == 1

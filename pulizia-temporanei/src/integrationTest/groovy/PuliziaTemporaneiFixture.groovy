@@ -36,13 +36,14 @@ class PuliziaTemporaneiFixture {
         targetFile.setExecutable(true)
     }
 
-    void deploySlf4jJar(Collection<File> jarFiles) {
+    void deployRuntimeJar(Collection<File> jarFiles) {
         def libDir = new File(workDir, 'lib')
         libDir.mkdirs()
         jarFiles.each { jarFile ->
             if (jarFile && jarFile.exists()) {
                 def targetFile = new File(libDir, jarFile.name)
                 targetFile.bytes = jarFile.bytes
+                println "Deployed runtime jar: ${targetFile.absolutePath}"
             }
         }
     }

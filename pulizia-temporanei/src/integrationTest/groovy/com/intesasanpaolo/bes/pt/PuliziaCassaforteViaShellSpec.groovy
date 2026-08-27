@@ -71,16 +71,17 @@ class PuliziaCassaforteViaShellSpec extends Specification {
         fixture.deployRunPuliziaTemporaneiToWorkDir(feEntryPointFile)
 
 
-        // Deploy SLF4J jars to workDir/lib for subprocess use
+        // Deploy runtime jars (SLF4J, stubs) to workDir/lib for subprocess use
         def slf4jApiJarPath = System.getProperty('slf4jApiJar')
         def slf4jSimpleJarPath = System.getProperty('slf4jSimpleJar')
+        def stubJarPath = System.getProperty('stubJar')
         def jarFiles = []
         if (slf4jApiJarPath) jarFiles << new File(slf4jApiJarPath)
         if (slf4jSimpleJarPath) jarFiles << new File(slf4jSimpleJarPath)
+        if (stubJarPath) jarFiles << new File(stubJarPath)
         if (jarFiles) {
-            fixture.deploySlf4jJar(jarFiles)
+            fixture.deployRuntimeJar(jarFiles)
         }
-
         System.setProperty('wrapper.script', deployedShellScript.absolutePath)
     }
 
