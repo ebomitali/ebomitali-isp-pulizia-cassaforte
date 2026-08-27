@@ -28,6 +28,20 @@ class PuliziaTemporaneiImpl {
     DeleteTemporaneiLogic deleteLogic = null
 
     /**
+     * Convenience overload for CLI-style inputs: build the DSN pattern from HLQ and UID.
+     *
+     * @param cliHlq CLI HLQ (e.g., "MY.TEMP")
+     * @param cliUid CLI UID (e.g., "ABC123")
+     * @param cfgProps Configuration Properties (optional; defaults to empty Properties)
+     * @return count of deleted datasets
+     */
+    int doPuliziaTemporanei(String cliHlq, String cliUid, Properties cfgProps = null) {
+        String dsnPattern = "${cliHlq.trim()}.TWX000.${cliUid.trim()}.*" // Assuming cliHlq represents the dataset pattern for now
+
+        return doPuliziaTemporanei(dsnPattern, cfgProps)
+    }
+
+    /**
      * Execute dataset deletion.
      * Accepts configuration Properties directly (optional).
      * If no cfgProps provided, defaults to empty Properties with fileOpsType='zos'.
