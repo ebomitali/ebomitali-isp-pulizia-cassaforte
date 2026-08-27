@@ -30,7 +30,11 @@
       "Bash(./gradlew :pulizia-temporanei:compileGroovy)",
       "Bash(./gradlew :pulizia-temporanei:clean :pulizia-temporanei:test)",
       "Bash(./gradlew :pulizia-temporanei:test --tests PuliziaTemporaneiImplSpec.doPuliziaTemporanei*)",
-      "Bash(./gradlew :pulizia-temporanei:test --tests \"*PuliziaTemporaneiImplSpec*defaults*\")"
+      "Bash(./gradlew :pulizia-temporanei:test --tests \"*PuliziaTemporaneiImplSpec*defaults*\")",
+      "Bash(./gradlew :pulizia-temporanei:integrationTest --tests '*delete*asterisk*')",
+      "Bash(./gradlew :pulizia-temporanei:integrationTest --tests '*delete*asterisk*' --rerun-tasks)",
+      "Bash(./gradlew :pulizia-temporanei:generateFullFatSource)",
+      "Bash(jar -tf /Users/bomitalievelino/Documents/Workspace/isp-ibm-mauden/repo/pulizia-cassaforte-ptemp/stubs/build/libs/stubs.jar)"
     ]
   }
 }

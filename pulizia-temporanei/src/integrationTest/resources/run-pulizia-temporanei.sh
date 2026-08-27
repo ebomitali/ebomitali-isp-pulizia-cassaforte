@@ -6,4 +6,18 @@ echo "Run groovy -Dorg.slf4j.simpleLogger.defaultLogLevel=info -cp lib/* RunPuli
 # echo "Current working directory: $(pwd)"
 # echo "Working directory contents: $(ls -la)"
 # echo "Working directory contents: $(ls -la lib)"
-groovy -Dorg.slf4j.simpleLogger.defaultLogLevel=info -cp "lib/*" RunPuliziaTemporanei.groovy "$@" || exit $?
+# Build classpath from lib directory - concat all jars
+if [ -d "lib" ]; then
+    for jar in lib/*.jar; do
+        if [ -f "$jar" ]; then
+            if [ -z "$CLASSPATH" ]; then
+                CLASSPATH="$jar"
+            else
+                CLASSPATH="${CLASSPATH}:$jar"
+            fi
+        fi
+    done
+fi
+
+export CLASSPATH
+groovy -Dorg.slf4j.simpleLogger.defaultLogLevel=info -cp "$CLASSPATH" RunPuliziaTemporanei.groovy "$@" || exit $?

@@ -39,12 +39,19 @@ if (dsnPattern == null) {
 
 try {
     // Load fat source from current directory (FullPuliziaTemporanei.groovy)
+    def fatFile = new File('FullPuliziaTemporanei.groovy')
+    if (!fatFile.exists()) {
+        System.err.println("ERROR: FullPuliziaTemporanei.groovy not found in current directory")
+        System.exit(1)
+    }
+
     def gcl = new GroovyClassLoader(this.class.classLoader)
-    gcl.parseClass(new File('FullPuliziaTemporanei.groovy'))
+    gcl.parseClass(fatFile)
+    // After parsing, load the specific implementation class we need
     def clazz = gcl.loadClass('com.intesasanpaolo.bes.pt.PuliziaTemporaneiImpl')
+    def impl = clazz.getDeclaredConstructor().newInstance()
 
     println("Running PuliziaTemporanei with DSN pattern: ${dsnPattern}")
-    def impl = clazz.getDeclaredConstructor().newInstance()
     int count = impl.doPuliziaTemporaneiFromFile(dsnPattern, configFile)
     println("Successfully deleted ${count} dataset(s)")
     System.exit(0)

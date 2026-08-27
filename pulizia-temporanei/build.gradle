@@ -85,7 +85,7 @@ task generateFullFatSource {
             include '**/*.groovy'
             exclude '**/fe/RunPuliziaTemporanei.groovy'
         }
-        
+
         exec {
             commandLine 'sh', "${rootProject.projectDir}/helper/sh/create-source-blob.sh", "${tempDir}", "${buildDir}/fat-source/FullPuliziaTemporanei.groovy"
         }
