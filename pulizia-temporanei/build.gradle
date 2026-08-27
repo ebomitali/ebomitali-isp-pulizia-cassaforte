@@ -72,7 +72,7 @@ configurations {
 }
 
 task generateFullFatSource {
-    description = 'Generate the single fat source file from sources'
+    description = 'Generate the fat source files from sources'
     doLast {
         def tempDir = file("${buildDir}/temp-sources")
         tempDir.mkdirs()
@@ -88,6 +88,26 @@ task generateFullFatSource {
 
         exec {
             commandLine 'sh', "${rootProject.projectDir}/helper/sh/create-source-blob.sh", "${tempDir}", "${buildDir}/fat-source/FullPuliziaTemporanei.groovy"
+        }
+    }
+    doLast {
+        def tempDir = file("${buildDir}/temp-sources")
+        tempDir.mkdirs()
+        def fatDir = file("${buildDir}/fat-source")
+        fatDir.mkdirs()
+
+        copy {
+            from fileTree('src/main/groovy')
+            into "${tempDir}"
+            include '**/*.groovy'
+            exclude '**/fe/RunPuliziaTemporanei.groovy'
+            exclude '**/pt/JzosDatasetService.groovy'
+            // after testing on z/OS remove alse
+            // exclude '**/pt/UssDatasetService.groovy'
+        }
+
+        exec {
+            commandLine 'sh', "${rootProject.projectDir}/helper/sh/create-source-blob.sh", "${tempDir}", "${buildDir}/fat-source/FullPuliziaTemporaneiZos.groovy"
         }
     }
 }
