@@ -1,0 +1,155 @@
+plugins {
+    id 'groovy'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+sourceSets {
+    main {
+        groovy {
+            srcDirs = ['src/main/groovy']
+        }
+        java {
+            srcDirs = ['src/main/java']
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+    test {
+        groovy {
+            srcDirs = ['src/test/groovy']
+        }
+        java {
+            srcDirs = ['src/test/java']
+        }
+        resources {
+            srcDirs = ['src/test/resources']
+        }
+    }
+}
+
+dependencies {
+    compileOnly project(':stubs')
+    implementation 'org.apache.groovy:groovy-all:4.0.25'
+    implementation 'org.slf4j:slf4j-api:2.0.16'
+
+    // testImplementation project(':stubs')
+    testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly project(':stubs')
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+    testRuntimeOnly 'ch.qos.logback:logback-classic:1.5.16'
+    // SLF4J provider for subprocess - deployed to workDir/lib, not in main classpath
+    testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.13'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+// Integration tests
+sourceSets {
+    integrationTest {
+        groovy {
+            srcDirs = ['src/integrationTest/groovy']
+        }
+        resources {
+            srcDirs = ['src/integrationTest/resources']
+        }
+        compileClasspath += sourceSets.main.output + configurations.testCompileClasspath
+        runtimeClasspath += output + compileClasspath + configurations.testRuntimeClasspath
+    }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+task generateFullFatSource {
+    description = 'Generate the fat source files from sources'
+    doLast {
+        def tempDir = file("${buildDir}/temp-sources")
+        tempDir.mkdirs()
+        def fatDir = file("${buildDir}/fat-source")
+        fatDir.mkdirs()
+
+        copy {
+            from fileTree('src/main/groovy')
+            into "${tempDir}"
+            include '**/*.groovy'
+            exclude '**/fe/RunPuliziaTemporanei.groovy'
+        }
+
+        exec {
+            commandLine 'sh', "${rootProject.projectDir}/helper/sh/create-source-blob.sh", "${tempDir}", "${buildDir}/fat-source/FullPuliziaTemporanei.groovy"
+        }
+    }
+    doLast {
+        def tempDir = file("${buildDir}/temp-sources")
+        tempDir.mkdirs()
+        def fatDir = file("${buildDir}/fat-source")
+        fatDir.mkdirs()
+
+        copy {
+            from fileTree('src/main/groovy')
+            into "${tempDir}"
+            include '**/*.groovy'
+            exclude '**/fe/RunPuliziaTemporanei.groovy'
+            exclude '**/pt/JzosDatasetService.groovy'
+            // after testing on z/OS remove alse
+            // exclude '**/pt/UssDatasetService.groovy'
+        }
+
+        exec {
+            commandLine 'sh', "${rootProject.projectDir}/helper/sh/create-source-blob.sh", "${tempDir}", "${buildDir}/fat-source/FullPuliziaTemporaneiZos.groovy"
+        }
+    }
+}
+
+tasks.register('integrationTest', Test) {
+    description = 'Run integration tests'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    useJUnitPlatform()
+    dependsOn jar, generateFullFatSource
+
+    doFirst {
+        def jarPath = jar.archiveFile.get().asFile.absolutePath
+        // Include testRuntimeClasspath jars but exclude SLF4J jars (they go to workDir/lib)
+        def allJars = configurations.testRuntimeClasspath.files
+            .findAll { !it.name.startsWith('slf4j-') }
+            .collect { it.absolutePath }
+        // Include . for logback.xml and ./lib for SLF4J jars deployed to workDir
+        def groovyClasspath = ([jarPath] + allJars + ['.', './lib']).join(':')
+
+        // Find stub jar for deployment to workDir/lib
+        def stubJar = configurations.testRuntimeClasspath.files.find { it.name.startsWith('stub') }
+        println "Stub jar: ${stubJar?.absolutePath ?: 'not found'}"
+        // Find SLF4J jars for deployment to workDir/lib
+        def slf4jApiJar = configurations.testRuntimeClasspath.files.find { it.name.startsWith('slf4j-api') }
+        def slf4jSimpleJar = configurations.testRuntimeClasspath.files.find { it.name.startsWith('slf4j-simple') }
+
+        systemProperty 'puliziaCassaforteJar', jarPath
+        systemProperty 'groovyClasspath', groovyClasspath
+        systemProperty 'fatSourceFile', "${buildDir}/fat-source/FullPuliziaTemporanei.groovy"
+        systemProperty 'feEntryPointFile', 'src/main/groovy/com/intesasanpaolo/bes/fe/RunPuliziaTemporanei.groovy'
+        systemProperty 'slf4jApiJar', slf4jApiJar?.absolutePath ?: ''
+        systemProperty 'slf4jSimpleJar', slf4jSimpleJar?.absolutePath ?: ''
+        systemProperty 'stubJar', stubJar?.absolutePath ?: ''
+    }
+
+    testLogging {
+        events "passed", "skipped", "failed", "standard_out", "standard_error"
+        exceptionFormat "full"
+        showStandardStreams true
+    }
+}
+
+check.dependsOn integrationTest
